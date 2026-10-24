@@ -27,7 +27,7 @@ def finite(value, name, minimum=None, maximum=None):
         raise ValueError(f'{name} is outside supported limits')
     return n
 
-def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None):
+def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None, requirements=None):
     """Validate and normalize a design.
 
     auto_place: None (default) auto-places only components missing x_mm or y_mm (or with
@@ -81,6 +81,13 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
             normalized['nc_pins'] = canonical_nc
         if 'current_draw_ma' in c:
             normalized['current_draw_ma'] = finite(c['current_draw_ma'], f'{ref}.current_draw_ma', 0, 1e6)
+        if 'tolerance_pct' in c:
+            tolerance = finite(c['tolerance_pct'], f'{ref}.tolerance_pct', 0, 100)
+            if tolerance == 100:
+                raise ValueError(f'{ref}.tolerance_pct must be less than 100')
+            normalized['tolerance_pct'] = tolerance
+        from .placement_constraints import normalize_bypass_metadata
+        normalize_bypass_metadata(c, normalized)
         cs.append(normalized); refs[ref] = normalized
     used, ns, names = {}, [], set()
     for net in nets:
@@ -130,7 +137,9 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
                 continue
             if canonical not in used:
                 warnings.append(f"Unassigned pin {c['ref']}.{pin['number']} ({pin['name']})")
-    auto_placed = _auto_place(cs, ns, cat, width, height, movable) if movable else []
+    from .placement_constraints import resolve_bypasses, inspect_placement
+    bypasses, placement_issues = resolve_bypasses(cs, ns)
+    auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
               'bom':[{'ref':c['ref'],'value':c['value'],'footprint':cat[c['part_id']]['footprint'],'lcsc':('' if c['part_id'] in ('R','C') else cat[c['part_id']]['lcsc']),'price_usd':cat[c['part_id']]['price_usd']} for c in cs]}
     if any(c['part_id'] in ('R','C') for c in cs):
@@ -138,6 +147,11 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     for pad in pad_positions(design):
         if not (0 < pad['x_mm']-pad['radius_mm'] and pad['x_mm']+pad['radius_mm'] < width and 0 < pad['y_mm']-pad['radius_mm'] and pad['y_mm']+pad['radius_mm'] < height):
             raise ValueError(f"{pad['connection']} pad extends beyond the board edge; adjust placement")
+    if requirements is not None:
+        from .requirements import normalize_requirements
+        design['requirements'] = normalize_requirements(requirements, width, height)
+    design['placement_checks'] = inspect_placement(cs, ns, cat, bypasses, placement_issues)
+    warnings.extend(item['message'] for item in design['placement_checks']['issues'])
     from .electrical import inspect_electrical
     design['electrical_checks'], design['power_budget'] = inspect_electrical(design, cat)
     design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]
@@ -239,7 +253,7 @@ def build_board(design, build_dir):
     src = build.parent/'src'; src.mkdir(exist_ok=True)
     # Revalidate even callers passing a handcrafted normalized design.
     auto_placed = list(design.get('auto_placed') or [])
-    design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'])
+    design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'], requirements=design.get('requirements'))
     design['auto_placed'] = auto_placed or design['auto_placed']
     atomic_json(build/'design.json', design)
     write_board(design,build/'board.kicad_pcb')
@@ -263,4 +277,4 @@ def build_board(design, build_dir):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
     if backend!='skidl':
         write_netlist(design,build/'board.net')
-    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}
+    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'placement_checks':design['placement_checks'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}

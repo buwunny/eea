@@ -66,12 +66,15 @@ def _snap_range(lo, hi):
     return [i * GRID for i in range(start, stop + 1)]
 
 
-def _place_once(todo, fixed, nets, catalog, width, height, margin):
+def _place_once(todo, fixed, nets, catalog, width, height, margin, bypass_constraints=()):
     """todo/fixed: lists of component dicts. Mutates todo entries with x/y/rotation."""
     boxes, pads_by_net = [], {}
     pin_net = {p: n['name'] for n in nets for p in n['connections']}
     net_size = {n['name']: len(n['connections']) for n in nets}
     by_part = {c['ref']: catalog[c['part_id']] for c in todo + fixed}
+    by_ref = {c['ref']: c for c in todo + fixed}
+    bypass_by_ref = {c['capacitor']: c for c in bypass_constraints}
+    from .placement_constraints import bypass_distance
 
     def register(c):
         part = by_part[c['ref']]
@@ -114,7 +117,7 @@ def _place_once(todo, fixed, nets, catalog, width, height, margin):
 
     def search(c, kind):
         part = by_part[c['ref']]
-        if kind == 'connector':
+        if kind == 'connector' or c['ref'] in bypass_by_ref:
             rots = (0, 90, 180, 270)
         elif kind == 'ic':
             rots = (0,)
@@ -145,7 +148,17 @@ def _place_once(todo, fixed, nets, catalog, width, height, margin):
                             s += 0.5  # prefer the catalog orientation unless it helps
                     else:
                         s = cost(c, part, rot, x, y, kind) + (0.2 if rot else 0.0)
-                    key = (s, y, x, rot)
+                    constraint = bypass_by_ref.get(c['ref'])
+                    if constraint:
+                        owner = by_ref[constraint['owner']]
+                        distance, _, _ = bypass_distance(c, owner, constraint, catalog, x, y, rot)
+                        ground_distance, _, _ = bypass_distance(c, owner, constraint, catalog, x, y, rot, ground=True)
+                        # A cap's local supply loop takes priority over distant common
+                        # power/ground pads (notably USB), using actual pad positions.
+                        key = (max(0, distance - constraint['max_distance_mm']), distance + ground_distance,
+                               distance, s, y, x, rot)
+                    else:
+                        key = (s, y, x, rot)
                     if best is None or key < best[0]:
                         best = (key, x, y, rot)
         if best is None:
@@ -169,7 +182,12 @@ def _place_once(todo, fixed, nets, catalog, width, height, margin):
         for c in sorted(groups[k], key=lambda c: (-area(c), c['ref'])):
             if not search(c, k):
                 raise _Fail(c['ref'])
-    rest = list(groups['passive'])
+    constrained = sorted((c for c in groups['passive'] if c['ref'] in bypass_by_ref),
+                         key=lambda c: (bypass_by_ref[c['ref']]['source'] != 'explicit', c['ref']))
+    for c in constrained:
+        if not search(c, 'passive'):
+            raise _Fail(c['ref'])
+    rest = [c for c in groups['passive'] if c['ref'] not in bypass_by_ref]
     while rest:
         nxt = max(rest, key=lambda c: (connectivity(c), -rest.index(c)))
         rest.remove(nxt)
@@ -194,19 +212,22 @@ def suggest_board(components, catalog, width, height):
     return max(sw, math.ceil(width)), max(sh, math.ceil(height))
 
 
-def auto_place(components, nets, catalog, width, height, movable_refs):
+def auto_place(components, nets, catalog, width, height, movable_refs, bypass_constraints=None):
     """Place components whose ref is in movable_refs; the rest are fixed obstacles.
 
     components are normalized dicts (x_mm/y_mm/rotation_deg set). Returns the ordered
     list of auto-placed refs. Raises ValueError if the parts cannot fit the board.
     """
+    if bypass_constraints is None:
+        from .placement_constraints import resolve_bypasses
+        bypass_constraints, _ = resolve_bypasses(components, nets)
     last = None
     for margin in TIERS:
         snapshot = [dict(c) for c in components]
         todo = [c for c in snapshot if c['ref'] in movable_refs]
         fixed = [c for c in snapshot if c['ref'] not in movable_refs]
         try:
-            _place_once(todo, fixed, nets, catalog, width, height, margin)
+            _place_once(todo, fixed, nets, catalog, width, height, margin, bypass_constraints)
         except _Fail as exc:
             last = str(exc)
             continue
