@@ -50,6 +50,16 @@
     "max_ratings": {
       "power_w": 0.125,
       "voltage_v": 150
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "C": {
@@ -102,6 +112,16 @@
     "required_support_parts": [],
     "max_ratings": {
       "voltage_v": 50
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "LED": {
@@ -158,6 +178,16 @@
       "if_max_ma": 20,
       "vr_max_v": 5,
       "vf_typ_v": 2.0
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "NE555": {
@@ -304,6 +334,16 @@
       "vcc_max_v": 16,
       "i_out_max_ma": 200,
       "vcc_min_v": 4.5
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "USB_C_Receptacle_PowerOnly": {
@@ -500,6 +540,16 @@
       "vbus_max_v": 5.5,
       "current_default_a": 0.9,
       "current_max_a": 3
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "AMS1117_3V3": {
@@ -581,6 +631,16 @@
       "i_out_max_ma": 800,
       "dropout_v": 1.1,
       "vout_v": 3.3
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "PinHeader_1x04": {
@@ -660,6 +720,16 @@
     "max_ratings": {
       "current_per_pin_a": 3,
       "voltage_v": 250
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "2N7002": {
@@ -732,6 +802,16 @@
       "vds_max_v": 60,
       "id_max_ma": 115,
       "vgs_max_v": 20
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "1N4148": {
@@ -787,6 +867,16 @@
       "vr_max_v": 75,
       "if_max_ma": 150,
       "trr_ns": 4
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Crystal_16MHz": {
@@ -871,6 +961,16 @@
       "load_cap_pf": 9,
       "tolerance_ppm": 10,
       "drive_level_uw_max": 100
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Button_Tactile_SMD": {
@@ -942,6 +1042,16 @@
       "current_ma": 50,
       "voltage_v": 12,
       "contact_resistance_mohm": 100
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Buzzer_Magnetic": {
@@ -1000,6 +1110,16 @@
       "current_ma_max": 30,
       "tone_freq_hz": 2700,
       "spl_db_at_10cm": 85
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "WS2812B": {
@@ -1085,6 +1205,16 @@
       "vdd_min_v": 3.7,
       "i_max_ma_per_led": 60,
       "data_rate_khz": 800
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "ATtiny85_SOIC8": {
@@ -1226,6 +1356,16 @@
       "vcc_min_v": 2.7,
       "i_per_pin_ma": 40,
       "f_max_mhz_at_4v5": 20
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Capacitor_Electrolytic": {
@@ -1280,6 +1420,16 @@
       "voltage_v": 16,
       "capacitance_uf": 100,
       "temp_max_c": 105
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "LM358": {
@@ -1424,6 +1574,16 @@
       "i_out_ma": 20,
       "gbw_mhz": 1,
       "output_high_v_below_vcc": 1.5
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "MMBT3904": {
@@ -1497,6 +1657,16 @@
       "ic_max_ma": 200,
       "pd_mw": 200,
       "hfe_min": 100
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "NTC_10k_0805": {
@@ -1555,6 +1725,16 @@
       "b_value_k": 3950,
       "temp_min_c": -40,
       "temp_max_c": 125
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "LDR_GL5528": {
@@ -1613,6 +1793,16 @@
       "p_max_mw": 100,
       "r_light_10lux_ohms": "8k-20k",
       "r_dark_ohms": 1000000
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Potentiometer_10k": {
@@ -1682,6 +1872,16 @@
       "r_total_ohms": 10000,
       "power_mw": 100,
       "tolerance_pct": 25
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "Switch_Slide_SPDT": {
@@ -1787,6 +1987,16 @@
     "max_ratings": {
       "current_ma": 50,
       "voltage_v": 12
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
     }
   },
   "ESP32_C3_WROOM_02": {
@@ -2084,6 +2294,20 @@
       "peak_current_ma": 350,
       "gpio_max_v": 3.6,
       "flash_mb": 4
-    }
+    },
+    "footprint_review": {
+      "status": "unreviewed",
+      "source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+      "manufacturer_drawing": null,
+      "reviewed_by": null,
+      "limitations": [
+        "Verify land pattern against manufacturer drawing before fabrication",
+        "Courtyard and mechanical keepouts are not certified"
+      ]
+    },
+    "placement_requirements": [
+      "Place antenna at board edge",
+      "Manufacturer antenna keepout must be reviewed; no automatic RF keepout is claimed"
+    ]
   }
 }

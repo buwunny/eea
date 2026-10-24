@@ -66,6 +66,21 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
         y = finite((height/2 if ref in movable else 8 + (i // 5)*8) if c.get('y_mm') is None else c['y_mm'], f'{ref}.y_mm', 0, height)
         rot = finite(c.get('rotation_deg') or 0, f'{ref}.rotation_deg') % 360
         normalized = {'ref':ref, 'part_id':pid, 'value':value, 'x_mm':x, 'y_mm':y, 'rotation_deg':rot}
+        nc = c.get('nc_pins', [])
+        if not isinstance(nc, list) or any(not isinstance(pin, str) for pin in nc):
+            raise ValueError(f'{ref}.nc_pins must be a list of pin numbers or names')
+        canonical_nc = []
+        for pin in nc:
+            matches = [p['number'] for p in cat[pid]['pins'] if p['number'] == pin]
+            if not matches:
+                matches = [p['number'] for p in cat[pid]['pins'] if p['name'].upper() == pin.upper()]
+            if not matches:
+                raise ValueError(f'unknown no-connect pin {ref}.{pin}')
+            canonical_nc.extend(number for number in matches if number not in canonical_nc)
+        if canonical_nc:
+            normalized['nc_pins'] = canonical_nc
+        if 'current_draw_ma' in c:
+            normalized['current_draw_ma'] = finite(c['current_draw_ma'], f'{ref}.current_draw_ma', 0, 1e6)
         cs.append(normalized); refs[ref] = normalized
     used, ns, names = {}, [], set()
     for net in nets:
@@ -100,10 +115,20 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
                 used[canonical] = name
                 if canonical not in resolved:
                     resolved.append(canonical)
-        ns.append({'name':name,'connections':resolved})
+        normalized_net = {'name':name,'connections':resolved}
+        if 'voltage_v' in net:
+            normalized_net['voltage_v'] = finite(net['voltage_v'], f'{name}.voltage_v', -1000, 1000)
+        if 'max_current_ma' in net:
+            normalized_net['max_current_ma'] = finite(net['max_current_ma'], f'{name}.max_current_ma', 0, 1e6)
+        ns.append(normalized_net)
     for c in cs:
         for pin in cat[c['part_id']]['pins']:
-            if f"{c['ref']}.{pin['number']}" not in used:
+            canonical = f"{c['ref']}.{pin['number']}"
+            if pin['number'] in c.get('nc_pins', []):
+                if canonical in used:
+                    raise ValueError(f'{canonical} is marked no-connect but assigned to a net')
+                continue
+            if canonical not in used:
                 warnings.append(f"Unassigned pin {c['ref']}.{pin['number']} ({pin['name']})")
     auto_placed = _auto_place(cs, ns, cat, width, height, movable) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
@@ -113,6 +138,10 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     for pad in pad_positions(design):
         if not (0 < pad['x_mm']-pad['radius_mm'] and pad['x_mm']+pad['radius_mm'] < width and 0 < pad['y_mm']-pad['radius_mm'] and pad['y_mm']+pad['radius_mm'] < height):
             raise ValueError(f"{pad['connection']} pad extends beyond the board edge; adjust placement")
+    from .electrical import inspect_electrical
+    design['electrical_checks'], design['power_budget'] = inspect_electrical(design, cat)
+    design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]
+    warnings.extend(item['message'] for item in design['electrical_checks']['issues'])
     return design
 
 def pad_positions(design):
@@ -220,4 +249,4 @@ def build_board(design, build_dir):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
     if backend!='skidl':
         write_netlist(design,build/'board.net')
-    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}
+    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}

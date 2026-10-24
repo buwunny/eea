@@ -216,6 +216,17 @@ def main():
     for pid, part in d.items():
         app, support, funcs, ratings = INFO[pid]
         part['typical_application'], part['required_support_parts'], part['max_ratings'] = app, support, ratings
+        part['footprint_review'] = {
+            'status': 'unreviewed',
+            'source': part.get('footprint_source', SRC),
+            'manufacturer_drawing': None,
+            'reviewed_by': None,
+            'limitations': ['Verify land pattern against manufacturer drawing before fabrication',
+                            'Courtyard and mechanical keepouts are not certified'],
+        }
+        if pid == 'ESP32_C3_WROOM_02':
+            part['placement_requirements'] = ['Place antenna at board edge',
+                'Manufacturer antenna keepout must be reviewed; no automatic RF keepout is claimed']
         for pin in part['pins']:
             pin['function'] = funcs[pin['number']]
     PATH.write_text(json.dumps(d, indent=2, ensure_ascii=False) + '\n')
