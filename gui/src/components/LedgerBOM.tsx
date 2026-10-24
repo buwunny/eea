@@ -6,10 +6,18 @@ export default function LedgerBOM({
   parts,
   cost,
   canDownload,
+  projectId,
+  canExport,
+  exporting,
+  onExport,
 }: {
   parts: Part[];
   cost: number;
   canDownload: boolean;
+  projectId?: string;
+  canExport?: boolean;
+  exporting?: boolean;
+  onExport?: () => void;
 }) {
   const table = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
@@ -86,16 +94,22 @@ export default function LedgerBOM({
       {canDownload ? (
         <a
           className="download-button"
-          href={api("/artifacts/gerbers.zip")}
+          href={api(
+            `/artifacts/manufacturing/gerbers.zip?project=${encodeURIComponent(projectId || "")}`,
+          )}
           download
         >
           <Download size={16} />
           Gerbers (.zip)
         </a>
       ) : (
-        <button className="download-button" disabled>
+        <button
+          className="download-button"
+          disabled={!canExport || exporting}
+          onClick={onExport}
+        >
           <Download size={16} />
-          Export unavailable
+          {exporting ? "Exporting…" : "Export files"}
         </button>
       )}
     </section>

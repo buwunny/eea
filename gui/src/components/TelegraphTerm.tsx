@@ -14,7 +14,11 @@ const prompts = [
     "Design a USB-C powered AMS1117 3.3 V regulator board using the curated parts. Verify and export manufacturing files.",
   ],
 ];
-export default function TelegraphTerm() {
+export default function TelegraphTerm({
+  workspacePath,
+}: {
+  workspacePath?: string;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
   const [copied, setCopied] = useState("");
@@ -29,7 +33,7 @@ export default function TelegraphTerm() {
         fontSize: 14,
         lineHeight: 1.15,
         cursorBlink: true,
-                theme: {
+        theme: {
           background: "#0e0b09",
           foreground: "#e6dcc8",
           cursor: "#cfa95f",
@@ -149,7 +153,7 @@ export default function TelegraphTerm() {
         <span className={`status-dot ${connected ? "online" : ""}`} />
       </div>
       <div className="terminal-path">
-        <span>~/workspace</span>
+        <span title={workspacePath}>{workspacePath || "~/workspace"}</span>
         <span>{connected ? "Connected" : "Offline"}</span>
       </div>
       <div ref={host} className="terminal-host" />

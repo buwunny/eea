@@ -12,6 +12,8 @@ import LedgerBOM from "./components/LedgerBOM";
 import { Commit, emptyTelemetry, Simulation, Telemetry } from "./types";
 import { demoSimulation, demoTelemetry } from "./demo";
 import { api, wsUrl } from "./api";
+import ProjectControls, { ProjectInfo } from "./components/ProjectControls";
+import ExportDialog from "./components/ExportDialog";
 
 /** Tally-counter readout: each digit sits in its own number wheel. */
 function Counter({ text }: { text: string }) {
@@ -33,6 +35,11 @@ function Counter({ text }: { text: string }) {
 }
 
 export default function App() {
+  const [project, setProject] = useState<ProjectInfo | null>(null);
+  const projectRef = useRef<ProjectInfo | null>(null);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportReady, setExportReady] = useState(false);
+  const [exportRequest, setExportRequest] = useState(0);
   const [compact, setCompact] = useState(window.innerWidth < 1050);
   const [shortWindow, setShortWindow] = useState(window.innerHeight < 740);
   const [activeInstrument, setActiveInstrument] = useState(0);
@@ -91,12 +98,49 @@ export default function App() {
       const response = await fetch(api("/api/git/log"));
       if (response.ok) {
         const data = await response.json();
+        if (data.projectId && data.projectId !== projectRef.current?.id) return;
         setCommits(data.commits ?? []);
       }
     } catch {
       /* Reconnect will refresh history. */
     }
   };
+  const refreshExports = async () => {
+    const id = projectRef.current?.id;
+    if (!id) return;
+    try {
+      const response = await fetch(
+        api(`/api/exports?project=${encodeURIComponent(id)}`),
+      );
+      const info = await response.json();
+      if (response.ok && id === projectRef.current?.id)
+        setExportReady(info.ready === true);
+    } catch {
+      /* Next file update retries. */
+    }
+  };
+  function selectProject(next: ProjectInfo) {
+    if (projectRef.current?.id === next.id) return;
+    projectRef.current = next;
+    setProject(next);
+    setLive(emptyTelemetry);
+    setSimulation(null);
+    setPcb(null);
+    setModels({ glb: null, wrl: null });
+    setCommits([]);
+    setSelected("latest");
+    setDrcHistory([]);
+    setUnconnectedHistory([]);
+    setError("");
+    setExportReady(false);
+    setExportBusy(false);
+    lastGitHead.current = undefined;
+    clearInterval(demoTimer.current);
+    setDemoStep(null);
+    setDemoRunning(false);
+    void refreshHistory();
+    void refreshExports();
+  }
   useEffect(() => {
     let disposed = false;
     let socket: WebSocket;
@@ -112,7 +156,13 @@ export default function App() {
         if (disposed) return;
         try {
           const message = JSON.parse(e.data);
+          if (message.type === "PROJECT_CHANGED") {
+            selectProject(message.project);
+            return;
+          }
           if (message.type !== "FILE_UPDATED") return;
+          if (message.projectId && message.projectId !== projectRef.current?.id)
+            return;
           const { file, payload } = message;
           if (file === "telemetry.json" && payload) {
             setLive({
@@ -140,7 +190,12 @@ export default function App() {
               void refreshHistory();
             }
           }
-          if (file === "build/board.kicad_pcb") setPcb(payload);
+          if (file === "build/board.kicad_pcb") {
+            setPcb(payload);
+            setExportReady(false);
+            void refreshExports();
+          }
+          if (file.startsWith("manufacturing/")) void refreshExports();
           if (file === "build/sim_results.json") setSimulation(payload);
           if (file === "build/board_3d.glb")
             setModels((current) => ({ ...current, glb: payload }));
@@ -211,11 +266,25 @@ export default function App() {
       <main>
         <div className="workbench-heading">
           <div>
-            <h1>
+            <h1 title={project?.path}>
               {["The Aether-Forge", "EEA"].includes(telemetry.project_name)
-                ? "Untitled project"
+                ? project?.name || "Untitled project"
                 : telemetry.project_name}
             </h1>
+          </div>
+          <div className="project-actions">
+            <ProjectControls
+              project={project}
+              onSelected={selectProject}
+              disabled={exportBusy || !connected}
+            />
+            <ExportDialog
+              project={project}
+              disabled={isDemo || !connected}
+              onBusy={setExportBusy}
+              request={exportRequest}
+              onReady={setExportReady}
+            />
           </div>
           <div className="connection">
             <Radio size={14} />
@@ -246,7 +315,10 @@ export default function App() {
             initial={[27, 46, 27]}
             compactIndex={compact ? activePane : undefined}
           >
-            <TelegraphTerm />
+            <TelegraphTerm
+              key={project?.id || "initial"}
+              workspacePath={project?.path}
+            />
             <div className="center-column">
               <AetherScope
                 pcbUrl={pcb}
@@ -269,7 +341,9 @@ export default function App() {
                 <div>
                   <small>NETS</small>
                   <Counter
-                    text={telemetry.metrics.net_count.toString().padStart(2, "0")}
+                    text={telemetry.metrics.net_count
+                      .toString()
+                      .padStart(2, "0")}
                   />
                 </div>
                 <div>
@@ -376,9 +450,11 @@ export default function App() {
                     <LedgerBOM
                       parts={telemetry.bom}
                       cost={telemetry.metrics.estimated_cost_usd}
-                      canDownload={
-                        !isDemo && live.stages.MANUFACTURING === "completed"
-                      }
+                      canDownload={!isDemo && exportReady}
+                      projectId={project?.id}
+                      canExport={!isDemo && !!pcb && !!project && connected}
+                      exporting={exportBusy}
+                      onExport={() => setExportRequest((value) => value + 1)}
                     />
                   )}
                 </div>

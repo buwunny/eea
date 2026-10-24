@@ -37,6 +37,23 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(top, str(workspace))
             self.assertEqual(len(json.loads((workspace / "telemetry.json").read_text())["stages"]), 6)
 
+    def test_moved_project_refreshes_all_cli_configs_without_losing_other_servers(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as directory:
+            original = initializer.initialize(Path(directory) / 'original', name='My test')
+            config_path = original / '.mcp.json'
+            config = json.loads(config_path.read_text())
+            config['mcpServers']['other'] = {'command': 'custom'}
+            config_path.write_text(json.dumps(config))
+            moved = Path(directory) / 'moved project'
+            shutil.move(original, moved)
+            initializer.initialize(moved, refresh_mcp=True)
+            for relative in ('.mcp.json', '.gemini/settings.json', '.agents/mcp_config.json'):
+                settings = json.loads((moved / relative).read_text())
+                self.assertEqual(settings['mcpServers']['ee-anything']['env']['EEA_WORKSPACE'], str(moved))
+            self.assertEqual(json.loads((moved / '.mcp.json').read_text())['mcpServers']['other'], {'command': 'custom'})
+            self.assertEqual(json.loads((moved / '.eea-project.json').read_text())['name'], 'My test')
+
 
 if __name__ == "__main__":
     unittest.main()

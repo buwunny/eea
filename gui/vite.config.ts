@@ -1,14 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+const bridge = process.env.EEA_BRIDGE_URL || "http://127.0.0.1:3001";
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: Number(process.env.EEA_GUI_PORT || 5173),
     strictPort: true,
     proxy: {
-      "/api": "http://localhost:3001",
-      "/artifacts": "http://localhost:3001",
-      "/ws": { target: "ws://localhost:3001", ws: true },
+      "/api": bridge,
+      "/artifacts": bridge,
+      "/ws": { target: bridge.replace(/^http/, "ws"), ws: true },
     },
   },
 });

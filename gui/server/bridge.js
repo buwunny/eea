@@ -1,4 +1,18 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
+import {
+  defaultProjectsDirectory,
+  defaultStateDirectory,
+  describeProject,
+  validateProject,
+  initializeProject,
+  createProject,
+  directoryListing,
+  projectIsBusy,
+  readRegistry,
+  rememberProject,
+} from "./projects.js";
+import { exportInfo, generateExports } from "./exports.js";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
@@ -21,11 +35,14 @@ const trackedFiles = [
   "build/board_3d.wrl",
   "build/board_3d.glb",
   "build/drc_report.json",
+  "manufacturing/export_report.json",
+  "manufacturing/gerbers.zip",
 ];
 const jsonFiles = new Set([
   "telemetry.json",
   "build/sim_results.json",
   "build/drc_report.json",
+  "manufacturing/export_report.json",
 ]);
 const contentTypes = {
   ".json": "application/json",
@@ -101,8 +118,72 @@ function response(res, status, value) {
 export async function startBridge({
   workspace: bridgeWorkspace = workspace,
   port: bridgePort = port,
+  stateDirectory = defaultStateDirectory,
+  exporter = generateExports,
 } = {}) {
-  const workspace = path.resolve(bridgeWorkspace);
+  let workspace = path.resolve(bridgeWorkspace);
+  const registry = await readRegistry(stateDirectory);
+  if (
+    bridgeWorkspace ===
+      path.resolve(
+        process.env.EEA_WORKSPACE || path.join(here, "../../workspace"),
+      ) &&
+    !process.env.EEA_WORKSPACE &&
+    registry.active
+  ) {
+    try {
+      workspace = await validateProject(registry.active);
+    } catch {
+      /* Keep the default when a remembered project was moved. */
+    }
+  }
+  let project = { ...(await describeProject(workspace)), id: randomUUID() };
+  let watcher;
+  let projectMutation = false;
+  let exportRunning = false;
+  async function body(req) {
+    let text = "";
+    for await (const chunk of req) {
+      text += chunk;
+      if (text.length > 65536) throw new Error("Request too large");
+    }
+    return text ? JSON.parse(text) : {};
+  }
+  async function canSwitch() {
+    if (exportRunning || (await projectIsBusy(workspace))) {
+      const error = new Error(
+        "A tool is running. Stop the CLI or wait for it to finish before switching projects.",
+      );
+      error.status = 409;
+      throw error;
+    }
+  }
+  async function activate(target) {
+    const next = { ...target, id: randomUUID() };
+    const nextWatcher = await watchWorkspace(target.path, next.id);
+    try {
+      await rememberProject(stateDirectory, {
+        path: project.path,
+        name: project.name,
+      });
+      await rememberProject(stateDirectory, target);
+    } catch (error) {
+      await nextWatcher.close();
+      throw error;
+    }
+    await watcher.close();
+    workspace = target.path;
+    project = next;
+    watcher = nextWatcher;
+    telemetrySockets.clients.forEach((client) =>
+      send(client, { type: "PROJECT_CHANGED", project }),
+    );
+    terminalSockets.clients.forEach((client) =>
+      client.close(1012, "Project changed"),
+    );
+    await Promise.all(trackedFiles.map((file) => update(file)));
+    return project;
+  }
   const git = async (...args) =>
     (
       await exec("git", args, {
@@ -131,6 +212,79 @@ export async function startBridge({
     }
     try {
       const url = new URL(req.url, "http://127.0.0.1");
+      const requestProjectId = project.id;
+      if (
+        url.searchParams.has("project") &&
+        url.searchParams.get("project") !== project.id
+      )
+        return response(res, 409, {
+          error: "The active project changed. Refresh this view.",
+        });
+      if (req.method === "GET" && url.pathname === "/api/projects")
+        return response(res, 200, {
+          active: project,
+          recent: (await readRegistry(stateDirectory)).recent || [],
+          defaultDirectory: defaultProjectsDirectory,
+        });
+      if (req.method === "GET" && url.pathname === "/api/projects/directories")
+        return response(
+          res,
+          200,
+          await directoryListing(url.searchParams.get("path") || undefined),
+        );
+      if (
+        req.method === "POST" &&
+        ["/api/projects/new", "/api/projects/open"].includes(url.pathname)
+      ) {
+        const input = await body(req);
+        const operation = checkoutQueue.then(async () => {
+          if (input.projectId && input.projectId !== project.id)
+            throw new Error("The active project changed. Try again.");
+          projectMutation = true;
+          try {
+            await canSwitch();
+            const target = url.pathname.endsWith("/new")
+              ? await createProject(
+                  input.parentPath || defaultProjectsDirectory,
+                  input.name,
+                )
+              : await initializeProject(await validateProject(input.path));
+            return await activate(target);
+          } finally {
+            projectMutation = false;
+          }
+        });
+        checkoutQueue = operation.catch(() => {});
+        return response(res, 200, { project: await operation });
+      }
+      if (req.method === "GET" && url.pathname === "/api/exports")
+        return response(res, 200, await exportInfo(workspace, project.id));
+      if (req.method === "POST" && url.pathname === "/api/exports") {
+        const input = await body(req);
+        if (exportRunning || projectMutation)
+          return response(res, 409, {
+            error: "Another project operation is running",
+          });
+        exportRunning = true;
+        const operation = checkoutQueue.then(async () => {
+          if (input.projectId && input.projectId !== project.id)
+            throw new Error("The active project changed. Try again.");
+          if (await projectIsBusy(workspace))
+            throw new Error(
+              "An MCP tool is running. Wait for it to finish before exporting.",
+            );
+          const report = await exporter(workspace);
+          return { ...(await exportInfo(workspace, project.id)), report };
+        });
+        checkoutQueue = operation.catch(() => {});
+        try {
+          const result = await operation;
+          return response(res, result.ready ? 200 : 422, result);
+        } finally {
+          exportRunning = false;
+        }
+      }
+
       if (req.method === "GET" && url.pathname === "/api/git/log") {
         let log = "";
         try {
@@ -139,6 +293,7 @@ export async function startBridge({
           /* No history yet. */
         }
         return response(res, 200, {
+          projectId: requestProjectId,
           commits: log
             .trim()
             .split("\n")
@@ -188,11 +343,24 @@ export async function startBridge({
         );
         if (!target)
           return response(res, 404, { error: "Artifact unavailable" });
+        if (
+          path.basename(target) === "gerbers.zip" &&
+          !(await exportInfo(workspace, project.id)).ready
+        )
+          return response(res, 409, {
+            error:
+              "Export is stale or incomplete. Generate manufacturing files again.",
+          });
         res.writeHead(200, {
           "Content-Type":
             contentTypes[path.extname(target)] || "application/octet-stream",
           "Cache-Control": "no-store",
           "X-Content-Type-Options": "nosniff",
+          ...([".zip", ".csv"].includes(path.extname(target))
+            ? {
+                "Content-Disposition": `attachment; filename="${path.basename(target)}"`,
+              }
+            : {}),
         });
         const stream = createReadStream(target);
         stream.on("error", () => res.destroy());
@@ -200,7 +368,7 @@ export async function startBridge({
       }
       return response(res, 404, { error: "Not found" });
     } catch (error) {
-      return response(res, 400, { error: error.message });
+      return response(res, error.status || 400, { error: error.message });
     }
   });
   const terminalSockets = new WebSocketServer({
@@ -242,7 +410,11 @@ export async function startBridge({
         name: "xterm-256color",
         cols: 100,
         rows: 30,
-        env: { ...process.env, TERM: "xterm-256color" },
+        env: {
+          ...process.env,
+          EEA_WORKSPACE: workspace,
+          TERM: "xterm-256color",
+        },
       });
     } catch (error) {
       send(socket, {
@@ -285,51 +457,68 @@ export async function startBridge({
       } catch {}
     });
   });
-  async function update(file, socket) {
+  async function update(
+    file,
+    socket,
+    root = workspace,
+    projectId = project.id,
+  ) {
     try {
-      const absolute = path.join(workspace, file);
+      const absolute = path.join(root, file);
       const stat = await fs.stat(absolute);
       const payload = jsonFiles.has(file)
         ? JSON.parse(await fs.readFile(absolute, "utf8"))
-        : `/artifacts/${file}?t=${stat.mtimeMs}`;
-      const value = { type: "FILE_UPDATED", file, payload };
+        : `/artifacts/${file}?project=${encodeURIComponent(projectId)}&t=${stat.mtimeMs}`;
+      if (projectId !== project.id) return;
+      const value = { type: "FILE_UPDATED", projectId, file, payload };
       if (socket) send(socket, value);
       else telemetrySockets.clients.forEach((client) => send(client, value));
-    } catch {
-      /* Atomic updates and files not yet created are expected. */
+    } catch (error) {
+      if (error.code === "ENOENT" && projectId === project.id) {
+        const value = { type: "FILE_UPDATED", projectId, file, payload: null };
+        if (socket) send(socket, value);
+        else telemetrySockets.clients.forEach((client) => send(client, value));
+      }
     }
   }
   telemetrySockets.on("connection", (socket) => {
+    send(socket, { type: "PROJECT_CHANGED", project });
     trackedFiles.forEach((file) => {
       void update(file, socket);
     });
   });
-  const watcher = chokidar.watch(
-    trackedFiles.map((file) => path.join(workspace, file)),
-    {
-      ignoreInitial: true,
-      awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
-    },
-  );
-  watcher.on("add", (absolute) => {
-    void update(path.relative(workspace, absolute));
-  });
-  watcher.on("change", (absolute) => {
-    void update(path.relative(workspace, absolute));
-  });
-  watcher.on("unlink", (absolute) =>
-    telemetrySockets.clients.forEach((client) =>
-      send(client, {
-        type: "FILE_UPDATED",
-        file: path.relative(workspace, absolute),
-        payload: null,
-      }),
-    ),
-  );
-  await new Promise((resolve, reject) => {
-    watcher.once("ready", resolve);
-    watcher.once("error", reject);
-  });
+  async function watchWorkspace(root, projectId) {
+    const nextWatcher = chokidar.watch(
+      trackedFiles.map((file) => path.join(root, file)),
+      {
+        ignoreInitial: true,
+        awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+      },
+    );
+    nextWatcher.on("add", (absolute) => {
+      void update(path.relative(root, absolute), undefined, root, projectId);
+    });
+    nextWatcher.on("change", (absolute) => {
+      void update(path.relative(root, absolute), undefined, root, projectId);
+    });
+    nextWatcher.on("unlink", (absolute) => {
+      if (projectId === project.id)
+        telemetrySockets.clients.forEach((client) =>
+          send(client, {
+            type: "FILE_UPDATED",
+            projectId,
+            file: path.relative(root, absolute),
+            payload: null,
+          }),
+        );
+    });
+    await new Promise((resolve, reject) => {
+      nextWatcher.once("ready", resolve);
+      nextWatcher.once("error", reject);
+    });
+    return nextWatcher;
+  }
+  watcher = await watchWorkspace(workspace, project.id);
   await new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(bridgePort, "127.0.0.1", resolve);

@@ -90,14 +90,15 @@ class FlowTests(unittest.TestCase):
                 self.assertNotEqual(live['activity']['updated_at'], first['activity']['updated_at'])
                 self.assertEqual(live['activity']['message'], 'Routing test net')
                 return {'status': 'degraded', 'backend': 'python-grid-astar', 'unconnected_items': 2, 'warnings': ['Two links remain']}
-            real_record = server.record
+            from utils import tool_runner
+            real_record = tool_runner.record
             def delayed_record(*args, **kwargs):
                 saving = json.loads((workspace / 'telemetry.json').read_text())
                 self.assertEqual(saving['activity']['status'], 'running')
                 self.assertEqual(saving['activity']['message'], 'Saving workspace history')
                 time.sleep(1.1)
                 return real_record(*args, **kwargs)
-            with patch('server.record', side_effect=delayed_record):
+            with patch('utils.tool_runner.record', side_effect=delayed_record):
                 report = server.execute('autoroute_pcb', 'AUTOROUTING', operation)
             final = json.loads((workspace / 'telemetry.json').read_text())
             self.assertEqual(final['stages']['AUTOROUTING'], 'failed')

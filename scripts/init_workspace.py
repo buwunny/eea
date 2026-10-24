@@ -3,11 +3,12 @@ import json
 import os
 from pathlib import Path
 import subprocess
+from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def initialize(workspace=None):
+def initialize(workspace=None, name=None, refresh_mcp=False):
     workspace = Path(workspace or os.environ.get("EEA_WORKSPACE", ROOT / "workspace")).resolve()
     for directory in ("src", "build", "manufacturing", ".gemini", ".agents"):
         (workspace / directory).mkdir(parents=True, exist_ok=True)
@@ -21,7 +22,7 @@ def initialize(workspace=None):
         ".mcp.json": json.dumps(config, indent=2) + "\n",
         ".gemini/settings.json": json.dumps(config, indent=2) + "\n",
         "project_spec.md": "# Untitled circuit\n\nDescribe the circuit, power supply, constraints, and acceptance criteria here.\n",
-        "telemetry.json": json.dumps({"project_name": "EEA", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
+        "telemetry.json": json.dumps({"project_name": name or "EEA", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
         ".gitignore": "__pycache__/\n*.pyc\n",
         "AGENTS.md": """# EEA circuit workspace
 
@@ -40,16 +41,33 @@ The UI watches tool-generated files. Do not write telemetry.json or fabricate pr
         path = workspace / relative
         if not path.exists():
             path.write_text(content)
-    antigravity = workspace / ".agents/mcp_config.json"
-    existing = json.loads(antigravity.read_text()) if antigravity.exists() else {}
-    if not isinstance(existing, dict) or not isinstance(existing.get("mcpServers", {}), dict):
-        raise ValueError(f"Expected an object with an mcpServers map in {antigravity}")
-    servers = existing.setdefault("mcpServers", {})
-    if "ee-anything" not in servers:
-        servers["ee-anything"] = config["mcpServers"]["ee-anything"]
-        temporary = antigravity.with_suffix(".json.tmp")
-        temporary.write_text(json.dumps(existing, indent=2) + "\n")
-        os.replace(temporary, antigravity)
+    config_paths = [".mcp.json", ".gemini/settings.json", ".agents/mcp_config.json"] if refresh_mcp else [".agents/mcp_config.json"]
+    for relative in config_paths:
+        target = workspace / relative
+        existing = json.loads(target.read_text()) if target.exists() else {}
+        if not isinstance(existing, dict) or not isinstance(existing.get("mcpServers", {}), dict):
+            raise ValueError(f"Expected an object with an mcpServers map in {target}")
+        servers = existing.setdefault("mcpServers", {})
+        if "ee-anything" not in servers:
+            servers["ee-anything"] = config["mcpServers"]["ee-anything"]
+        elif refresh_mcp:
+            entry = servers["ee-anything"]
+            if not isinstance(entry, dict):
+                raise ValueError(f"Invalid ee-anything configuration in {target}")
+            if any(str(argument).endswith("mcp-server/server.py") for argument in entry.get("args", [])):
+                entry.update(command="uv", args=config["mcpServers"]["ee-anything"]["args"])
+            entry["env"] = {**entry.get("env", {}), "EEA_WORKSPACE": str(workspace)}
+        contents = json.dumps(existing, indent=2) + "\n"
+        if not target.exists() or target.read_text() != contents:
+            temporary = target.with_suffix(".json.tmp")
+            temporary.write_text(contents)
+            os.replace(temporary, target)
+    metadata = workspace / ".eea-project.json"
+    if not metadata.exists():
+        project_name = name or json.loads((workspace / 'telemetry.json').read_text()).get('project_name')
+        if project_name in (None, 'EEA', 'The Aether-Forge'):
+            project_name = workspace.name
+        metadata.write_text(json.dumps({'version': 1, 'name': project_name, 'created_at': datetime.now(timezone.utc).isoformat()}, indent=2) + '\n')
     if not (workspace / ".git").exists():
         subprocess.run(["git", "init", "-q", str(workspace)], check=True)
         subprocess.run(["git", "-C", str(workspace), "add", "-A"], check=True)
@@ -58,4 +76,10 @@ The UI watches tool-generated files. Do not write telemetry.json or fabricate pr
 
 
 if __name__ == "__main__":
-    print(f"Workspace ready: {initialize()}")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--workspace')
+    parser.add_argument('--name')
+    parser.add_argument('--refresh-mcp', action='store_true')
+    args = parser.parse_args()
+    print(f"Workspace ready: {initialize(args.workspace, args.name, args.refresh_mcp)}")

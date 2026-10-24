@@ -7,6 +7,9 @@ from pathlib import Path
 import shutil
 import subprocess
 import zipfile
+import tempfile
+import os
+import math
 from .telemetry import progress
 from .pcb_builder import pad_positions
 
@@ -56,35 +59,82 @@ def verify_drc(workspace):
     return report
 
 
-def export_manufacturing(workspace,bom):
-    workspace=Path(workspace); manufacturing=workspace/'manufacturing'; manufacturing.mkdir(exist_ok=True)
-    if not (workspace/'build/board.kicad_pcb').exists(): raise ValueError('Synthesize a board before export')
-    with (manufacturing/'bom.csv').open('w',newline='') as file:
-        writer=csv.writer(file); writer.writerow(['Comment','Designator','Footprint','LCSC Part #'])
-        for item in bom: writer.writerow([item['value'],item['ref'],item['footprint'],item.get('lcsc','')])
-    # Never leave a previous successful archive available after a failed new export.
-    (manufacturing/'gerbers.zip').unlink(missing_ok=True)
-    staging=manufacturing/'gerbers'
-    if staging.exists():
-        for old in staging.iterdir():
-            if old.is_file(): old.unlink()
-    staging.mkdir(exist_ok=True)
-    report={'backend':'kicad-cli','manufacturing_ready':False,'verified':False,'artifacts':['manufacturing/bom.csv']}
+def convert_positions(source, destination):
+    """Translate native KiCad positions to JLCPCB's five-column CPL schema."""
+    with Path(source).open(newline='', encoding='utf-8-sig') as stream:
+        reader = csv.DictReader(stream)
+        required = {'Ref', 'PosX', 'PosY', 'Rot', 'Side'}
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError('KiCad position export is missing required columns')
+        rows = list(reader)
+    if not rows:
+        raise ValueError('KiCad position export contains no components')
+    with Path(destination).open('w', newline='', encoding='utf-8') as stream:
+        writer = csv.writer(stream)
+        writer.writerow(['Designator', 'Mid X', 'Mid Y', 'Layer', 'Rotation'])
+        for row in rows:
+            values = [float(row[key]) for key in ('PosX', 'PosY', 'Rot')]
+            if not all(math.isfinite(value) for value in values):
+                raise ValueError('Non-finite component coordinates in position export')
+            side = row['Side'].strip().lower()
+            if side not in ('top', 'bottom', 'front', 'back'):
+                raise ValueError(f'Unknown placement layer {side}')
+            writer.writerow([row['Ref'], f'{values[0]:.6f}mm', f'{values[1]:.6f}mm',
+                             'Top' if side in ('top', 'front') else 'Bottom', f'{values[2] % 360:g}'])
+
+
+def export_manufacturing(workspace, bom):
+    workspace = Path(workspace)
+    manufacturing = workspace / 'manufacturing'
+    manufacturing.mkdir(exist_ok=True)
+    board = workspace / 'build/board.kicad_pcb'
+    if not board.exists():
+        raise ValueError('Synthesize a board before export')
+    digest = hashlib.sha256(board.read_bytes()).hexdigest()
+    # Invalidate a previous successful archive before attempting a new export.
+    (manufacturing / 'gerbers.zip').unlink(missing_ok=True)
+    report = {'backend': 'kicad-cli', 'status': 'degraded', 'manufacturing_ready': False,
+              'verified': False, 'board_sha256': digest, 'artifacts': ['manufacturing/bom.csv']}
+    with (manufacturing / 'bom.csv').open('w', newline='', encoding='utf-8') as stream:
+        writer = csv.writer(stream)
+        writer.writerow(['Comment', 'Designator', 'Footprint', 'LCSC Part #'])
+        for item in bom:
+            writer.writerow([item['value'], item['ref'], item['footprint'], item.get('lcsc', '')])
     try:
-        _run(['pcb','export','gerbers','--output','manufacturing/gerbers/','build/board.kicad_pcb'],workspace)
-        _run(['pcb','export','drill','--output','manufacturing/gerbers/','build/board.kicad_pcb'],workspace)
-        _run(['pcb','export','pos','--format','csv','--units','mm','--output','manufacturing/cpl.csv','build/board.kicad_pcb'],workspace)
-        files=list(staging.iterdir())
-        if not files: raise RuntimeError('KiCad produced no fabrication files')
-        with zipfile.ZipFile(manufacturing/'gerbers.zip','w',zipfile.ZIP_DEFLATED) as archive:
-            for path in files:
-                if path.is_file(): archive.write(path,path.name)
-        drc=json.loads((workspace/'build/drc_report.json').read_text()) if (workspace/'build/drc_report.json').exists() else {}
-        same_board=drc.get('board_sha256')==hashlib.sha256((workspace/'build/board.kicad_pcb').read_bytes()).hexdigest()
-        ready=same_board and drc.get('verified') is True and drc.get('drc_errors')==0 and drc.get('unconnected_items')==0
-        report.update(status='success' if ready else 'degraded',manufacturing_ready=ready,verified=ready,warnings=[] if ready else ['Exports exist, but no passing native DRC report is available'],artifacts=report['artifacts']+['manufacturing/gerbers.zip','manufacturing/cpl.csv'])
-    except (OSError,RuntimeError,subprocess.TimeoutExpired) as error:
-        (manufacturing/'cpl.csv').unlink(missing_ok=True)
-        report.update(status='degraded',warnings=[str(error),'BOM only; no Gerber archive was generated'])
-    (manufacturing/'export_report.json').write_text(json.dumps(report,indent=2)+'\n')
+        drc_path = workspace / 'build/drc_report.json'
+        drc = json.loads(drc_path.read_text()) if drc_path.exists() else {}
+        if not (drc.get('verified') is True and drc.get('board_sha256') == digest and drc.get('drc_errors') == 0 and drc.get('unconnected_items') == 0):
+            raise RuntimeError('Export blocked: run native DRC on the current board and fix all errors and unconnected items')
+        with tempfile.TemporaryDirectory(prefix='.export-', dir=manufacturing) as staging:
+            staging = Path(staging)
+            gerbers = staging / 'gerbers'
+            gerbers.mkdir()
+            _run(['pcb', 'export', 'gerbers', '--layers', 'F.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts', '--no-protel-ext', '--output', str(gerbers) + os.sep, str(board)], workspace)
+            _run(['pcb', 'export', 'drill', '--output', str(gerbers) + os.sep, str(board)], workspace)
+            raw_positions = staging / 'positions-kicad.csv'
+            _run(['pcb', 'export', 'pos', '--format', 'csv', '--units', 'mm', '--output', str(raw_positions), str(board)], workspace)
+            convert_positions(raw_positions, staging / 'cpl.csv')
+            names = {file.name for file in gerbers.iterdir() if file.is_file() and file.stat().st_size > 0}
+            required = {f'{board.stem}-{layer}.gbr' for layer in ('F_Cu', 'B_Cu', 'Edge_Cuts')}
+            if not required.issubset(names):
+                raise RuntimeError('KiCad did not produce all copper and board-outline Gerbers')
+            if not any(name.endswith('.drl') for name in names):
+                raise RuntimeError('KiCad did not produce drill files')
+            with zipfile.ZipFile(staging / 'gerbers.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+                for name in sorted(names):
+                    archive.write(gerbers / name, name)
+            if hashlib.sha256(board.read_bytes()).hexdigest() != digest:
+                raise RuntimeError('The board changed during export. Generate files again after the tool finishes.')
+            os.replace(staging / 'cpl.csv', manufacturing / 'cpl.csv')
+            os.replace(staging / 'gerbers.zip', manufacturing / 'gerbers.zip')
+        report.update(status='success', manufacturing_ready=True, verified=True,
+                      summary='Gerbers, drill, BOM and pick-and-place files exported', warnings=[],
+                      artifacts=['manufacturing/gerbers.zip', 'manufacturing/bom.csv', 'manufacturing/cpl.csv'])
+    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
+        (manufacturing / 'gerbers.zip').unlink(missing_ok=True)
+        (manufacturing / 'cpl.csv').unlink(missing_ok=True)
+        report.update(summary=str(error), warnings=[str(error), 'BOM only; fabrication files are unavailable'])
+    temporary = manufacturing / '.export_report.json.tmp'
+    temporary.write_text(json.dumps(report, indent=2) + '\n')
+    os.replace(temporary, manufacturing / 'export_report.json')
     return report

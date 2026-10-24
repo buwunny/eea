@@ -21,6 +21,14 @@ The **Run demo** button replays a sample 555 tuning sequence in the browser with
 
 KiCanvas is served locally from `gui/public/vendor/kicanvas/`, with its license and a record of local changes. Its native panels are disabled; EEA provides fit, flip, and download controls. The viewer and PCB files require no requests to kicanvas.org or Google Fonts.
 
+## Projects and exports
+
+Use **New** to create a project folder and **Open** to select an existing EEA project or a recent project. The folder browser works in both the web and desktop versions. Each project keeps its own board, telemetry, manufacturing files, CLI configuration, and Git history. Switching closes the embedded terminal session; start your CLI again in the new terminal. A running tool must finish or be stopped before switching.
+
+Projects default to `~/eea-projects`. Recent projects and the last active folder are stored under the platform data directory (`~/.local/share/eea` on Linux). `EEA_PROJECTS_DIR` and `EEA_STATE_DIR` can override those locations. An explicit `EEA_WORKSPACE` takes priority over the remembered project.
+
+Use **Export** in the project toolbar (or **Export files** under Parts) to run native DRC and generate fabrication files without asking the AI CLI. The dialog offers Gerbers plus drill files in a ZIP, a BOM CSV, and a JLCPCB-format pick-and-place CSV. Generation is blocked until native DRC passes for the current board. Incomplete or stale archives cannot be downloaded; regenerate after changing the board. BOM part codes and assembly rotations still need sourcing review.
+
 ## Connect an AI CLI
 
 The application opens an ordinary shell. Start your chosen CLI yourself in that shell. Claude Code reads `.mcp.json`; Gemini CLI reads `.gemini/settings.json`. Both configurations are provided in the repository and generated workspace. `npm run setup` also registers EEA for Antigravity CLI in `workspace/.agents/mcp_config.json`, preserving other servers and existing EEA overrides. Launch `agy` from `workspace/` (the embedded terminal starts there), then use `/mcp` to inspect or reload `ee-anything`. See the [Antigravity MCP documentation](https://antigravity.google/docs/mcp). Other MCP clients can register this generic stdio command, replacing the paths:
