@@ -1,5 +1,6 @@
 """Catalog integrity: datasheet fields, pad/footprint agreement, and buildable boards."""
 import json
+import ctypes.util
 import os
 from pathlib import Path
 import re
@@ -99,6 +100,8 @@ def light_sensor(ldr_value='1k', coordinates=True):
 class NewPartSimulationTests(unittest.TestCase):
     def run_sensor(self, ldr_value):
         from utils.simulation import simulate
+        if not shutil.which('ngspice') and not ctypes.util.find_library('ngspice'):
+            self.skipTest('native ngspice executable or shared library unavailable')
         components, nets = light_sensor(ldr_value)
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'EEA_WORKSPACE': directory}):
             workspace = Path(directory)
