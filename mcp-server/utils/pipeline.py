@@ -171,7 +171,7 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
     drc_warnings = drc.get('drc_warnings', drc.get('warning_count', 0))
     if drc_warnings:
         warnings.append(f'Native DRC reports {drc_warnings} warnings; inspect get_drc_findings before fabrication')
-        next_action += ' Review DRC warnings with get_drc_findings(severity="warning").'
+        next_action += ' ' + (drc.get('next_action') or 'Review DRC warnings with get_drc_findings(severity="warning").')
     if skip_simulation:
         warnings.append('Functional simulation was explicitly skipped')
     result = {'status': status, 'stages': stages, 'failed_stage': failed, 'next_action': next_action, 'summary': summary,

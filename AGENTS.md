@@ -166,6 +166,8 @@ Plus extras: `2N7002`, `1N4148`, `MMBT3904`, `LM358` (behavioral SPICE model), `
 | `list_design_blocks()` / `list_example_compositions()` / `compose_design(blocks, connections)` | Pre-validated circuit blocks with typed ports (`utils/design_blocks.py`). `compose_design` renumbers refs, merges nets, checks power/rating mistakes and estimates board size. Writes no files. |
 | `calc_555_astable` / `calc_led_resistor` / `calc_voltage_divider` | Pure E24 calculators (`utils/calculators.py`); no telemetry or commits. |
 
+**DRC loop:** never finish a board while DRC reports errors or unconnected items. Read the `next_action` returned by `run_drc_verification` / `build_and_verify`, adjust placement, board size or clearance, and rerun. Stop after 5 attempts, or 2 without fewer errors, and report what remains. `lib_footprint_issues` (footprint library not configured) and `silk_over_copper` (silkscreen clipped by solder mask) are expected on this self-contained board: do not chase them, just mention them in the summary. Fix other warnings only when within your control, otherwise list each with a reason.
+
 Components may omit `x_mm`/`y_mm`; `utils/placement.py` auto-places them (connectors on an edge, ICs central, passives near connected pins). `run_spice_simulation` reuses `build/design.json` when `components`/`nets` are omitted and skips parts without a SPICE model. Freerouting uses 6 passes for boards with ≤30 pads (override with `max_passes`, `time_budget_s` or `EEA_ROUTER_MAX_PASSES` / `EEA_ROUTER_TIME_BUDGET_S`).
 
 ---

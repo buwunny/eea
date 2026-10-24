@@ -1,8 +1,12 @@
+import ProgressGauge from "./ProgressGauge";
 import { STAGES, Telemetry } from "../types";
 const labels = ["Plan", "PCB", "Sim", "Route", "DRC", "Export"];
 export default function NixieStepper({ telemetry }: { telemetry: Telemetry }) {
+  const states = STAGES.map((st) => telemetry.stages[st] ?? "pending");
+  const done = states.filter((st) => st === "completed").length;
   return (
     <section className="instrument sequence">
+      <ProgressGauge done={done} total={STAGES.length} failed={states.includes("failed")} />
       <div className="tubes">
         {STAGES.map((stage, i) => {
           let state = telemetry.stages[stage] ?? "pending";

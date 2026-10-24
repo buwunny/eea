@@ -14,6 +14,30 @@ from .telemetry import progress, atomic_json
 from .pcb_builder import pad_positions
 
 
+# Warning types a synthesized board cannot fix: footprints are embedded, not library-backed, and silkscreen is cosmetic.
+EXPECTED_WARNING_TYPES = {'lib_footprint_issues', 'lib_footprint_mismatch', 'silk_over_copper'}
+
+
+def drc_next_action(report):
+    """Explicit instruction for the agent: keep fixing errors, then summarize unfixable warnings and stop."""
+    if report.get('verified') is not True:
+        return 'DRC unverified (kicad-cli unavailable or failed); report this and do not claim the board passed.'
+    errors, unconnected = report.get('drc_errors') or 0, report.get('unconnected_items') or 0
+    if errors or unconnected:
+        kinds = sorted({f['type'] for f in report.get('findings', []) if f['severity'] == 'error' or f['category'] == 'unconnected'})
+        return (f'NEXT: {errors} error(s), {unconnected} unconnected item(s) remain ({", ".join(kinds)}). Use get_drc_findings, '
+                'change placement/board size/clearance and rerun. Stop after 5 attempts or 2 with no reduction, then report the remainder.')
+    warns = [f for f in report.get('findings', []) if f['severity'] == 'warning']
+    expected = [f for f in warns if f['type'] in EXPECTED_WARNING_TYPES]
+    other = len(warns) - len(expected)
+    msg = 'DONE: 0 errors, 0 unconnected.'
+    if expected:
+        msg += f' {len(expected)} expected warning(s) (embedded footprints / silkscreen over mask) need no fix.'
+    if other:
+        msg += f' {other} other warning(s): fix if within your control, otherwise list each with a reason.'
+    return msg
+
+
 def drc_findings(report):
     """Normalize all findings, retaining warnings and excluded checks with stable IDs."""
     findings, seen = [], {}
@@ -139,6 +163,7 @@ def verify_drc(workspace):
         report={'status':'degraded','backend':'python-geometric-precheck','verified':False,'drc_errors':None,'drc_warnings':None,'drc_exclusions':None,'unconnected_items':count,'violations':conflicts,'warnings':[str(error),'Precheck only; track clearance, zones and connectivity are not KiCad-verified']}
         report['findings'] = drc_findings(report)
         report['total_findings'] = len(report['findings'])
+    report['next_action'] = drc_next_action(report)
     report['board_sha256'] = digest
     if hashlib.sha256(board.read_bytes()).hexdigest() != digest:
         report.update(status='failed', verified=False, drc_errors=None, unconnected_items=None,

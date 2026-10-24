@@ -7,7 +7,7 @@ import TelegraphTerm from "./components/TelegraphTerm";
 import AetherScope from "./components/AetherScope";
 import CathodeRay from "./components/CathodeRay";
 import NixieStepper from "./components/NixieStepper";
-import PressureGauge from "./components/PressureGauge";
+import NixieCounter from "./components/NixieCounter";
 import LedgerBOM from "./components/LedgerBOM";
 import { BoardFocus, Commit, DesignAdvice, DesignReadiness, DrcReport, emptyTelemetry, Simulation, Telemetry } from "./types";
 import { demoSimulation, demoTelemetry } from "./demo";
@@ -537,7 +537,7 @@ export default function App() {
                   {inspectorTab === "checks" ? (
                     <section className="instrument verification">
                       <div className="gauges">
-                        <PressureGauge
+                        <NixieCounter
                           label="DRC errors"
                           value={gaugeDrc}
                           history={
@@ -547,7 +547,7 @@ export default function App() {
                           }
                           ready={viewing ? viewing.drc?.verified === true : drcReady}
                         />
-                        <PressureGauge
+                        <NixieCounter
                           label="Unconnected"
                           value={gaugeUnconnected}
                           history={
