@@ -1,0 +1,412 @@
+{
+ "_comment": "How scripts/refresh_sourcing.py finds each part: 'mpn' = SQL LIKE patterns on the manufacturer part number (tried in order), optional 'package' / 'manufacturer' substrings. Parts without an entry keep an empty code on purpose when the order code depends on a value or colour (R, C, fuses, inductors, crystals...) or when no database part matches the footprint.",
+ "NE555": {
+  "mpn": [
+   "NE555DR"
+  ],
+  "package": "SOIC-8",
+  "manufacturer": "Texas"
+ },
+ "LED": {
+  "mpn": [
+   "KT-0805R"
+  ],
+  "package": "0805"
+ },
+ "USB_C_Receptacle_PowerOnly": {
+  "mpn": [
+   "TYPE-C-31-M-12"
+  ]
+ },
+ "AMS1117_3V3": {
+  "mpn": [
+   "AMS1117-3.3"
+  ],
+  "package": "SOT-223",
+  "manufacturer": "Advanced Monolithic"
+ },
+ "PinHeader_1x04": {
+  "mpn": [
+   "B-2100S04P-A110"
+  ]
+ },
+ "2N7002": {
+  "mpn": [
+   "2N7002"
+  ],
+  "package": "SOT-23",
+  "manufacturer": "Jiangsu Changjing"
+ },
+ "1N4148": {
+  "mpn": [
+   "1N4148W"
+  ],
+  "package": "SOD-123"
+ },
+ "Crystal_16MHz": {
+  "mpn": [
+   "X322516MLB4SI"
+  ]
+ },
+ "Buzzer_Magnetic": {
+  "mpn": [
+   "SUN-12095-5VPA7.6"
+  ]
+ },
+ "WS2812B": {
+  "mpn": [
+   "WS2812B-V6"
+  ],
+  "package": "5050"
+ },
+ "ATtiny85_SOIC8": {
+  "mpn": [
+   "ATTINY85-20SU",
+   "ATTINY85-20SUR",
+   "ATTINY85-20SF"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "Capacitor_Electrolytic": {
+  "mpn": [
+   "VT1V101M0605"
+  ],
+  "manufacturer": "Honor"
+ },
+ "LM358": {
+  "mpn": [
+   "LM358DR2G"
+  ],
+  "manufacturer": "onsemi"
+ },
+ "MMBT3904": {
+  "mpn": [
+   "MMBT3904%"
+  ],
+  "package": "SOT-23",
+  "manufacturer": "Jiangsu Changjing"
+ },
+ "NTC_10k_0805": {
+  "mpn": [
+   "CMFB103F3950FANT"
+  ]
+ },
+ "LDR_GL5528": {
+  "mpn": [
+   "GL5528%"
+  ],
+  "manufacturer": "JCHL"
+ },
+ "Potentiometer_10k": {
+  "mpn": [
+   "TC33X-2-103E"
+  ]
+ },
+ "Switch_Slide_SPDT": {
+  "mpn": [
+   "MSK12C02"
+  ]
+ },
+ "LM317_SOT223": {
+  "mpn": [
+   "LM317G"
+  ],
+  "package": "SOT-223",
+  "manufacturer": "UMW"
+ },
+ "AP2112K_3V3": {
+  "mpn": [
+   "AP2112K-3.3TRG1"
+  ],
+  "manufacturer": "Diodes"
+ },
+ "MCP1700_3V3_SOT23": {
+  "mpn": [
+   "MCP1700T-3302E/TT"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "XC6206_3V3": {
+  "mpn": [
+   "XC6206P332MR-G",
+   "XC6206P332MR"
+  ],
+  "manufacturer": "Torex"
+ },
+ "L7805_TO220": {
+  "mpn": [
+   "L7805CV"
+  ],
+  "manufacturer": "STMicro",
+  "package": "TO-220"
+ },
+ "TL072_SOIC8": {
+  "mpn": [
+   "TL072CDR",
+   "TL072IDR"
+  ],
+  "manufacturer": "Texas"
+ },
+ "LM324_SOIC14": {
+  "mpn": [
+   "LM324DT",
+   "LM324DR"
+  ],
+  "package": "SOIC-14"
+ },
+ "MCP6002_SOIC8": {
+  "mpn": [
+   "MCP6002-I/SN",
+   "MCP6002T-I/SN"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "LM393_SOIC8": {
+  "mpn": [
+   "LM393DR2G",
+   "LM393DR"
+  ],
+  "package": "SOIC-8"
+ },
+ "BC817_SOT23": {
+  "mpn": [
+   "BC817-40,215"
+  ],
+  "manufacturer": "Nexperia"
+ },
+ "BC807_SOT23": {
+  "mpn": [
+   "BC807-40,215",
+   "BC807-25,215"
+  ],
+  "manufacturer": "Nexperia"
+ },
+ "MMBT3906": {
+  "mpn": [
+   "MMBT3906LT1G"
+  ],
+  "manufacturer": "onsemi"
+ },
+ "BSS138_SOT23": {
+  "mpn": [
+   "BSS138LT1G"
+  ],
+  "manufacturer": "onsemi"
+ },
+ "AO3400A": {
+  "mpn": [
+   "AO3400A"
+  ],
+  "manufacturer": "Alpha Omega",
+  "package": "SOT-23"
+ },
+ "AO3401A": {
+  "mpn": [
+   "AO3401A"
+  ],
+  "manufacturer": "Alpha Omega",
+  "package": "SOT-23"
+ },
+ "IRLML6402": {
+  "mpn": [
+   "IRLML6402TRPBF"
+  ],
+  "manufacturer": "Infineon"
+ },
+ "IRF540N_TO220": {
+  "mpn": [
+   "IRF540NPBF"
+  ],
+  "manufacturer": "Infineon",
+  "package": "TO-220"
+ },
+ "1N4007": {
+  "mpn": [
+   "1N4007"
+  ],
+  "package": "DO-41"
+ },
+ "SS14_SMA": {
+  "mpn": [
+   "SS14"
+  ],
+  "package": "SMA"
+ },
+ "BAT54_SOD323F": {
+  "mpn": [
+   "BAT54J,115"
+  ],
+  "manufacturer": "Nexperia"
+ },
+ "BZX84C5V1": {
+  "mpn": [
+   "BZX84C5V1LT1G"
+  ],
+  "manufacturer": "onsemi"
+ },
+ "SMAJ5_0A": {
+  "mpn": [
+   "SMAJ5.0A"
+  ],
+  "package": "SMA"
+ },
+ "CH340G": {
+  "mpn": [
+   "CH340G"
+  ],
+  "manufacturer": "WCH"
+ },
+ "CP2102N_QFN28": {
+  "mpn": [
+   "CP2102N-A02-GQFN28R",
+   "CP2102N-A02-GQFN28"
+  ]
+ },
+ "MCP2551_SOIC8": {
+  "mpn": [
+   "MCP2551-I/SN"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "SN65HVD230": {
+  "mpn": [
+   "SN65HVD230DR"
+  ],
+  "manufacturer": "Texas"
+ },
+ "PCF8574_SOIC16": {
+  "mpn": [
+   "PCF8574T/3,518"
+  ]
+ },
+ "L293D_DIP16": {
+  "mpn": [
+   "L293D"
+  ],
+  "manufacturer": "STMicro",
+  "package": "DIP-16"
+ },
+ "DRV8833PW": {
+  "mpn": [
+   "DRV8833PWR"
+  ],
+  "manufacturer": "Texas"
+ },
+ "TMP36_SOIC8": {
+  "mpn": [
+   "TMP36FSZ-REEL",
+   "TMP36FSZ"
+  ],
+  "manufacturer": "Analog"
+ },
+ "DS18B20_TO92": {
+  "mpn": [
+   "DS18B20+"
+  ],
+  "package": "TO-92"
+ },
+ "ATtiny13A_SOIC8": {
+  "mpn": [
+   "ATTINY13A-SSU",
+   "ATTINY13A-SSUR"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "ATmega328P_TQFP32": {
+  "mpn": [
+   "ATMEGA328P-AU"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "RP2040_QFN56": {
+  "mpn": [
+   "RP2040"
+  ],
+  "manufacturer": "Raspberry"
+ },
+ "STM32F103C8T6": {
+  "mpn": [
+   "STM32F103C8T6"
+  ],
+  "manufacturer": "STMicro"
+ },
+ "W25Q32JV_SOIC8": {
+  "mpn": [
+   "W25Q32JVSSIQ"
+  ],
+  "manufacturer": "Winbond"
+ },
+ "AT24C256_SOIC8": {
+  "mpn": [
+   "24LC256-I/SN"
+  ],
+  "manufacturer": "Microchip"
+ },
+ "SN74HC595_SOIC16": {
+  "mpn": [
+   "SN74HC595DR"
+  ],
+  "manufacturer": "Texas"
+ },
+ "SN74HC14_SOIC14": {
+  "mpn": [
+   "SN74HC14DR"
+  ],
+  "manufacturer": "Texas"
+ },
+ "SN74HC00_SOIC14": {
+  "mpn": [
+   "SN74HC00DR"
+  ],
+  "manufacturer": "Texas",
+  "package": "SOIC-14"
+ },
+ "CD4017_SOIC16": {
+  "mpn": [
+   "CD4017BM96"
+  ],
+  "manufacturer": "Texas"
+ },
+ "Conn_1x02_Header": {
+  "mpn": [
+   "B-2100S02P-A110"
+  ]
+ },
+ "Conn_1x03_Header": {
+  "mpn": [
+   "B-2100S03P-A110"
+  ]
+ },
+ "Conn_1x06_Header": {
+  "mpn": [
+   "B-2100S06P-A110"
+  ]
+ },
+ "JST_PH_2": {
+  "mpn": [
+   "B2B-PH-K-S(LF)(SN)"
+  ],
+  "manufacturer": "JST"
+ },
+ "USB_Micro_B": {
+  "mpn": [
+   "10118194-0001LF"
+  ]
+ },
+ "Polyfuse_1206": {
+  "mpn": [
+   "1206L050/33NR"
+  ]
+ },
+ "Relay_SPDT_5V": {
+  "mpn": [
+   "SRD-05VDC-SL-C"
+  ]
+ },
+ "Optocoupler_PC817": {
+  "mpn": [
+   "PC817C"
+  ],
+  "package": "DIP-4"
+ }
+}

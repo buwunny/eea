@@ -73,6 +73,8 @@ def bom_entry(component, part):
     return {
         'ref': component['ref'], 'value': component['value'], 'footprint': part['footprint'],
         'lcsc': code, 'price_usd': part.get('price_usd', 0),
+        **({'mpn': part['sourcing']['mpn'], 'library_type': part['sourcing'].get('library_type')}
+           if part.get('sourcing', {}).get('mpn') and code == part.get('lcsc') else {}),
         'sourcing': source, 'sourcing_status': 'declared_unverified' if source else 'missing',
         'sourcing_missing_fields': missing,
     }

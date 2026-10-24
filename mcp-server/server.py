@@ -17,24 +17,64 @@ def environment_doctor() -> dict:
 
 
 @mcp.tool()
-def list_curated_parts(category_filter: str | None = None) -> dict:
+def list_curated_parts(category_filter: str | None = None, tier: str = 'curated') -> dict:
     """Discover exact supported parts: pins as "number name: function" (connect by number or name),
-    footprints, support parts, ratings and whether the part simulates in SPICE."""
+    footprints, support parts, ratings and whether the part simulates in SPICE.
+    tier='curated' (default) lists the hand-reviewed parts; 'imported' lists the larger KiCad-library-derived set
+    (unreviewed, no SPICE model; prefer search_parts to find one); 'all' lists both."""
     def operation():
-        from utils.simulation import SPICE_PARTS
+        from utils.simulation import has_spice_model
+        if tier not in ('curated', 'imported', 'all'):
+            raise ValueError("tier must be 'curated', 'imported' or 'all'")
         parts = []
         for key, value in load_catalog().items():
+            if tier != 'all' and value.get('tier', 'curated') != tier:
+                continue
             if category_filter and category_filter.lower() not in (str(value.get('category', '')) + ' ' + key).lower():
                 continue
             parts.append({
-                'part_id': key, 'category': value.get('category'),
+                'part_id': key, 'tier': value.get('tier', 'curated'), 'category': value.get('category'),
                 'pins': [f"{pin['number']} {pin['name']}: {pin.get('function', '')}".rstrip(': ') for pin in value['pins']],
-                'footprint': value['footprint'], 'lcsc': value.get('lcsc'), 'price_usd': value.get('price_usd'),
+                'footprint': value['footprint'], 'lcsc': value.get('lcsc') or None, 'price_usd': value.get('price_usd') or None,
                 **{field: value[field] for field in ('typical_application', 'required_support_parts', 'max_ratings') if value.get(field)},
-                'simulates': key in SPICE_PARTS,
+                'simulates': has_spice_model(key, value),
             })
-        return {'status': 'success', 'parts': parts, 'summary': f'Listed {len(parts)} curated parts'}
+        imported = sum(1 for v in load_catalog().values() if v.get('tier') == 'imported')
+        note = f'{imported} more imported KiCad parts are searchable with search_parts' if tier == 'curated' and imported else None
+        return {'status': 'success', 'parts': parts, 'summary': f'Listed {len(parts)} {tier} parts',
+                **({'next_action': note} if note else {})}
     return execute('list_curated_parts', None, operation)
+
+
+@mcp.tool()
+def search_parts(query: str = '', category: str | None = None, package: str | None = None,
+                 tier: str = 'all', limit: int = 15) -> dict:
+    """Find parts in the full catalog (curated plus imported KiCad parts) by words such as "3.3V LDO", "op-amp",
+    "H-bridge" or a part number. Optional filters: category (power, ic, mcu, transistor, diode, connector,
+    interface, driver, sensor, memory, logic, ...), package (footprint substring such as "SOIC-8" or "SOT-23"),
+    tier ('all' | 'curated' | 'imported'). Returns compact summaries ranked by relevance, curated first on ties;
+    call get_part_details for pins, ratings and cautions before using a part. Imported parts are usable in
+    synthesize_pcb / build_and_verify but are unreviewed and do not simulate."""
+    from utils.part_search import search_parts as _search
+    try:
+        report = _search(query, category, package, tier, limit)
+    except ValueError as error:
+        return {'status': 'error', 'error': str(error)}
+    return {'status': 'success', **report,
+            'next_action': 'Call get_part_details(part_id) for pins and ratings.' if report['results']
+            else 'No match: try fewer or different words, or drop the package/category filter.'}
+
+
+@mcp.tool()
+def get_part_details(part_id: str) -> dict:
+    """Full datasheet-style view of one part from either tier: pins as "number name: function", footprint,
+    typical application, required support parts, max ratings, footprint review status and, for imported parts,
+    the cautions to apply. Connect nets by pin number or pin name exactly as listed."""
+    from utils.part_search import part_details
+    try:
+        return {'status': 'success', **part_details(part_id)}
+    except ValueError as error:
+        return {'status': 'error', 'error': str(error)}
 
 
 @mcp.tool()

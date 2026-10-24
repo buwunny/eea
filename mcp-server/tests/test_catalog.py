@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils.pcb_builder import load_catalog, normalize_design, build_board
+from utils.pcb_builder import load_catalog, load_curated_catalog, normalize_design, build_board
 
 NEW_PARTS = ['Crystal_16MHz', 'Button_Tactile_SMD', 'Buzzer_Magnetic', 'WS2812B', 'ATtiny85_SOIC8', 'Capacitor_Electrolytic',
              'LM358', 'MMBT3904', 'NTC_10k_0805', 'LDR_GL5528', 'Potentiometer_10k', 'Switch_Slide_SPDT', 'ESP32_C3_WROOM_02']
@@ -20,10 +20,10 @@ NEW_PARTS = ['Crystal_16MHz', 'Button_Tactile_SMD', 'Buzzer_Magnetic', 'WS2812B'
 
 class CatalogTests(unittest.TestCase):
     def test_new_parts_present(self):
-        self.assertTrue(set(NEW_PARTS) <= set(load_catalog()))
+        self.assertTrue(set(NEW_PARTS) <= set(load_curated_catalog()))
 
     def test_datasheet_fields(self):
-        for pid, part in load_catalog().items():
+        for pid, part in load_curated_catalog().items():
             with self.subTest(part=pid):
                 self.assertTrue(part['typical_application'].strip())
                 self.assertIsInstance(part['required_support_parts'], list)
@@ -35,7 +35,7 @@ class CatalogTests(unittest.TestCase):
                     self.assertIn('number', pin)
 
     def test_pads_match_footprint_sexpr(self):
-        for pid, part in load_catalog().items():
+        for pid, part in load_curated_catalog().items():
             with self.subTest(part=pid):
                 sexpr_pads = re.findall(r'\(pad "([^"]+)" (\w+) \w+ \(at ([-\d.]+) ([-\d.]+)\)', part['footprint_sexpr'])
                 self.assertEqual([(n, float(x), float(y)) for n, _, x, y in sexpr_pads],

@@ -1,0 +1,2853 @@
+{
+ "_meta": {
+  "source": "yaqwsx/jlcparts database (https://github.com/yaqwsx/jlcparts)",
+  "data_date": "2026-10-23",
+  "note": "JLCPCB list prices in USD at qty 1 and stock when the database was built; estimates, not quotes. Regenerate with scripts/refresh_sourcing.py."
+ },
+ "1N4007": {
+  "lcsc": "C106903",
+  "price_usd": 0.0261,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "1N4007",
+   "manufacturer": "ST Semtech",
+   "package": "DO-41",
+   "library_type": "expand",
+   "stock": 414112,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0261
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.0209
+    },
+    {
+     "qty": 600,
+     "price_usd": 0.0179
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0152
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0136
+    },
+    {
+     "qty": 20000,
+     "price_usd": 0.0128
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588892399501893632",
+   "alternates": [
+    {
+     "lcsc": "C402311",
+     "mpn": "1N4007",
+     "manufacturer": "LGE",
+     "price_usd": 0.0222
+    },
+    {
+     "lcsc": "C424499",
+     "mpn": "1N4007",
+     "manufacturer": "SUNMATE Elec",
+     "price_usd": 0.0218
+    },
+    {
+     "lcsc": "C19272205",
+     "mpn": "1N4007",
+     "manufacturer": "",
+     "price_usd": 0.0147
+    }
+   ]
+  }
+ },
+ "1N4148": {
+  "lcsc": "C81598",
+  "price_usd": 0.0124,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "1N4148W",
+   "manufacturer": "ST Semtech",
+   "package": "SOD-123",
+   "library_type": "base",
+   "stock": 4633707,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0124
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0098
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0075
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0066
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0063
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.006
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586176324172468224",
+   "alternates": [
+    {
+     "lcsc": "C7420318",
+     "mpn": "1N4148W",
+     "manufacturer": "hongjiacheng",
+     "price_usd": 0.007
+    },
+    {
+     "lcsc": "C917030",
+     "mpn": "1N4148W",
+     "manufacturer": "JSMSEMI",
+     "price_usd": 0.0084
+    },
+    {
+     "lcsc": "C909967",
+     "mpn": "1N4148W",
+     "manufacturer": "GOODWORK",
+     "price_usd": 0.0092
+    }
+   ]
+  }
+ },
+ "2N7002": {
+  "lcsc": "C8545",
+  "price_usd": 0.0176,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "2N7002",
+   "manufacturer": "Jiangsu Changjing Electronics Technology Co Ltd",
+   "package": "SOT-23",
+   "library_type": "base",
+   "stock": 1830508,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0176
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0141
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0125
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0113
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0108
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.0105
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550724090244980736",
+   "alternates": []
+  }
+ },
+ "AMS1117_3V3": {
+  "lcsc": "C6186",
+  "price_usd": 0.2094,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "AMS1117-3.3",
+   "manufacturer": "Advanced Monolithic Systems",
+   "package": "SOT-223",
+   "library_type": "base",
+   "stock": 1139974,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.2094
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1633
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1407
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.1205
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.1151
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.1117
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550724073479806976",
+   "alternates": []
+  }
+ },
+ "AO3400A": {
+  "lcsc": "C20917",
+  "price_usd": 0.0895,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "AO3400A",
+   "manufacturer": "Alpha Omega Semicon",
+   "package": "SOT-23",
+   "library_type": "base",
+   "stock": 757862,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0895
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0722
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0633
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0559
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0533
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0515
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550723985357750272",
+   "alternates": []
+  }
+ },
+ "AO3401A": {
+  "lcsc": "C15127",
+  "price_usd": 0.1025,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "AO3401A",
+   "manufacturer": "Alpha Omega Semicon",
+   "package": "SOT-23",
+   "library_type": "base",
+   "stock": 587250,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1025
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0828
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0727
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0643
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0614
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0594
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8776572966224044032",
+   "alternates": []
+  }
+ },
+ "AP2112K_3V3": {
+  "lcsc": "C51118",
+  "price_usd": 0.1724,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "AP2112K-3.3TRG1",
+   "manufacturer": "Diodes Incorporated",
+   "package": "SOT-25-5",
+   "library_type": "expand",
+   "stock": 12535,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1724
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1368
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1192
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.1036
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0948
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0923
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588881290191360000",
+   "alternates": []
+  }
+ },
+ "AT24C256_SOIC8": {
+  "lcsc": "C411625",
+  "price_usd": 0.7671,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "24LC256-I/SN",
+   "manufacturer": "Microchip Tech",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 650,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.7671
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.6262
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.5557
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.4737
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.4328
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.4098
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588883818153988096",
+   "alternates": []
+  }
+ },
+ "ATmega328P_TQFP32": {
+  "lcsc": "C14877",
+  "price_usd": 2.3095,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "ATMEGA328P-AU",
+   "manufacturer": "Microchip Tech",
+   "package": "TQFP-32(7x7)",
+   "library_type": "expand",
+   "stock": 47571,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 2.3095
+    },
+    {
+     "qty": 10,
+     "price_usd": 2.0014
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.7834
+    },
+    {
+     "qty": 250,
+     "price_usd": 1.6129
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.5211
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.4834
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586171945553838081",
+   "alternates": []
+  }
+ },
+ "ATtiny13A_SOIC8": {
+  "lcsc": "C14075",
+  "price_usd": 1.349,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "ATTINY13A-SSU",
+   "manufacturer": "Microchip Tech",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 467,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.349
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.1327
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.0147
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.8344
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.7737
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.7475
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588882441637400576",
+   "alternates": [
+    {
+     "lcsc": "C40382",
+     "mpn": "ATTINY13A-SSUR",
+     "manufacturer": "Microchip Tech",
+     "price_usd": 1.1802
+    }
+   ]
+  }
+ },
+ "ATtiny85_SOIC8": {
+  "lcsc": "C615549",
+  "price_usd": 3.2012,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "ATTINY85-20SF",
+   "manufacturer": "Microchip Tech",
+   "package": "SOIC-8-208mil",
+   "library_type": "expand",
+   "stock": 177,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 3.2012
+    },
+    {
+     "qty": 10,
+     "price_usd": 2.7242
+    },
+    {
+     "qty": 30,
+     "price_usd": 2.4259
+    },
+    {
+     "qty": 100,
+     "price_usd": 2.1194
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.9817
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.9211
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8589793498376806400",
+   "alternates": []
+  }
+ },
+ "BAT54_SOD323F": {
+  "lcsc": "C130415",
+  "price_usd": 0.2108,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "BAT54J,115",
+   "manufacturer": "Nexperia",
+   "package": "SOD-323F",
+   "library_type": "expand",
+   "stock": 6344,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.2108
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1613
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.14
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.1135
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.1017
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0946
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586186496634736640",
+   "alternates": []
+  }
+ },
+ "BC807_SOT23": {
+  "lcsc": "C57316",
+  "price_usd": 0.0273,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "BC807-40,215",
+   "manufacturer": "Nexperia",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 7796,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0273
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.021
+    },
+    {
+     "qty": 600,
+     "price_usd": 0.0182
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0162
+    },
+    {
+     "qty": 9000,
+     "price_usd": 0.0154
+    },
+    {
+     "qty": 21000,
+     "price_usd": 0.0148
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586177367404384256",
+   "alternates": [
+    {
+     "lcsc": "C88012",
+     "mpn": "BC807-25,215",
+     "manufacturer": "Nexperia",
+     "price_usd": 0.0391
+    }
+   ]
+  }
+ },
+ "BC817_SOT23": {
+  "lcsc": "C52801",
+  "price_usd": 0.015,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "BC817-40,215",
+   "manufacturer": "Nexperia",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 280326,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.015
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0112
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0096
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0083
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0078
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.0075
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586175289637916672",
+   "alternates": []
+  }
+ },
+ "BSS138_SOT23": {
+  "lcsc": "C82045",
+  "price_usd": 0.044,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "BSS138LT1G",
+   "manufacturer": "onsemi",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 483922,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.044
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0351
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0307
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0251
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0238
+    },
+    {
+     "qty": 9000,
+     "price_usd": 0.023
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586181376869060608",
+   "alternates": []
+  }
+ },
+ "BZX84C5V1": {
+  "lcsc": "C47075",
+  "price_usd": 0.0358,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "BZX84C5V1LT1G",
+   "manufacturer": "onsemi",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 27081,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0358
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0279
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.024
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.021
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0186
+    },
+    {
+     "qty": 9000,
+     "price_usd": 0.0174
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586176413364342784",
+   "alternates": []
+  }
+ },
+ "Buzzer_Magnetic": {
+  "lcsc": "C360615",
+  "price_usd": 0.2308,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SUN-12095-5VPA7.6",
+   "manufacturer": "S S",
+   "package": "插件,D=12mm",
+   "library_type": "expand",
+   "stock": 21741,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.2308
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1863
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.1538
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.13
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.1194
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.113
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8756306021319094272",
+   "alternates": []
+  }
+ },
+ "CD4017_SOIC16": {
+  "lcsc": "C11349",
+  "price_usd": 0.7311,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "CD4017BM96",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-16",
+   "library_type": "expand",
+   "stock": 25641,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.7311
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.6131
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.5524
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.4934
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.4393
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.4213
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/cd4017b",
+   "alternates": []
+  }
+ },
+ "CH340G": {
+  "lcsc": "C14267",
+  "price_usd": 0.5393,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "CH340G",
+   "manufacturer": "WCH Jiangsu Qin Heng",
+   "package": "SOP-16",
+   "library_type": "expand",
+   "stock": 48905,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.5393
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.4508
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.3885
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.3377
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.3213
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.3115
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8618866522769145856",
+   "alternates": []
+  }
+ },
+ "CP2102N_QFN28": {
+  "lcsc": "C964632",
+  "price_usd": 1.8621,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "CP2102N-A02-GQFN28R",
+   "manufacturer": "SKYWORKS SILICON LABS",
+   "package": "QFN-28-EP(5x5)",
+   "library_type": "expand",
+   "stock": 42839,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.8621
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.626
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.4605
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.308
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.2376
+    },
+    {
+     "qty": 1500,
+     "price_usd": 1.2097
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588893680539209728",
+   "alternates": []
+  }
+ },
+ "Capacitor_Electrolytic": {
+  "lcsc": "C696189",
+  "price_usd": 0.0605,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "VT1V101M0605",
+   "manufacturer": "Honor Elec",
+   "package": "SMD,D6.3xL5.4mm",
+   "library_type": "expand",
+   "stock": 794,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0605
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0496
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.044
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0356
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0322
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0305
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8757305179899613184",
+   "alternates": []
+  }
+ },
+ "Conn_1x02_Header": {
+  "lcsc": "C124375",
+  "price_usd": 0.03,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "B-2100S02P-A110",
+   "manufacturer": "Ckmtw Shenzhen Cankemeng",
+   "package": "插件,P=2.54mm",
+   "library_type": "expand",
+   "stock": 88986,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.03
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.0238
+    },
+    {
+     "qty": 600,
+     "price_usd": 0.0204
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0164
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0146
+    },
+    {
+     "qty": 20000,
+     "price_usd": 0.0136
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588886912416931841",
+   "alternates": []
+  }
+ },
+ "Conn_1x03_Header": {
+  "lcsc": "C124376",
+  "price_usd": 0.0343,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "B-2100S03P-A110",
+   "manufacturer": "Ckmtw Shenzhen Cankemeng",
+   "package": "插件,P=2.54mm",
+   "library_type": "expand",
+   "stock": 52164,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0343
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.0276
+    },
+    {
+     "qty": 600,
+     "price_usd": 0.0237
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0182
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0163
+    },
+    {
+     "qty": 20000,
+     "price_usd": 0.0153
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588892460298194944",
+   "alternates": []
+  }
+ },
+ "Conn_1x06_Header": {
+  "lcsc": "C124380",
+  "price_usd": 0.0569,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "B-2100S06P-A110",
+   "manufacturer": "Ckmtw Shenzhen Cankemeng",
+   "package": "插件,P=2.54mm",
+   "library_type": "expand",
+   "stock": 3732,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0569
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0455
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0397
+    },
+    {
+     "qty": 1500,
+     "price_usd": 0.035
+    },
+    {
+     "qty": 4500,
+     "price_usd": 0.0315
+    },
+    {
+     "qty": 10500,
+     "price_usd": 0.0299
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588892460429299713",
+   "alternates": []
+  }
+ },
+ "Crystal_16MHz": {
+  "lcsc": "C13738",
+  "price_usd": 0.0936,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "X322516MLB4SI",
+   "manufacturer": "YXC Crystal Oscillators",
+   "package": "SMD3225-4P",
+   "library_type": "base",
+   "stock": 178441,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0936
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0745
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0646
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0566
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.05
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0482
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8756945118584811520",
+   "alternates": []
+  }
+ },
+ "DRV8833PW": {
+  "lcsc": "C544801",
+  "price_usd": 1.9997,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "DRV8833PWR",
+   "manufacturer": "Texas Instruments",
+   "package": "TSSOP-16",
+   "library_type": "expand",
+   "stock": 2165,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.9997
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.6768
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.4752
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.2687
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.1753
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.1359
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/drv8833",
+   "alternates": []
+  }
+ },
+ "DS18B20_TO92": {
+  "lcsc": "C9753",
+  "price_usd": 1.231,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "DS18B20+",
+   "manufacturer": "Analog Devices Inc Maxim Integrated",
+   "package": "TO-92",
+   "library_type": "expand",
+   "stock": 43734,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.231
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.0786
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.936
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.8294
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.7868
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.7639
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8788892754149822464",
+   "alternates": []
+  }
+ },
+ "IRF540N_TO220": {
+  "lcsc": "C2566",
+  "price_usd": 0.3666,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "IRF540NPBF",
+   "manufacturer": "Infineon Technologies",
+   "package": "TO-220AB",
+   "library_type": "expand",
+   "stock": 97817,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.3666
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.2846
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.2461
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.2118
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.2025
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.1967
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588887159713771520",
+   "alternates": []
+  }
+ },
+ "IRLML6402": {
+  "lcsc": "C2593",
+  "price_usd": 0.4951,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "IRLML6402TRPBF",
+   "manufacturer": "Infineon Technologies",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 20543,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.4951
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.3967
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.3492
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.3066
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.2951
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.2869
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579710937017729024",
+   "alternates": []
+  }
+ },
+ "JST_PH_2": {
+  "lcsc": "C131337",
+  "price_usd": 0.0356,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "B2B-PH-K-S(LF)(SN)",
+   "manufacturer": "JST",
+   "package": "插件,P=2mm",
+   "library_type": "expand",
+   "stock": 340057,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0356
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.0282
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0248
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.0223
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0214
+    },
+    {
+     "qty": 20000,
+     "price_usd": 0.0207
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588889744620572672",
+   "alternates": []
+  }
+ },
+ "L293D_DIP16": {
+  "lcsc": "C12340",
+  "price_usd": 3.2569,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "L293D",
+   "manufacturer": "STMicroelectronics",
+   "package": "DIP-16",
+   "library_type": "expand",
+   "stock": 996,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 3.2569
+    },
+    {
+     "qty": 10,
+     "price_usd": 2.7849
+    },
+    {
+     "qty": 30,
+     "price_usd": 2.5046
+    },
+    {
+     "qty": 100,
+     "price_usd": 2.2194
+    },
+    {
+     "qty": 500,
+     "price_usd": 2.0883
+    },
+    {
+     "qty": 1000,
+     "price_usd": 2.0293
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588896467930501120",
+   "alternates": []
+  }
+ },
+ "L7805_TO220": {
+  "lcsc": "C111887",
+  "price_usd": 0.3656,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "L7805CV",
+   "manufacturer": "STMicroelectronics",
+   "package": "TO-220",
+   "library_type": "expand",
+   "stock": 22994,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.3656
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.282
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.2426
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.2066
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.1967
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.1902
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588887310159261696",
+   "alternates": []
+  }
+ },
+ "LDR_GL5528": {
+  "lcsc": "C10081",
+  "price_usd": 0.0461,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "GL5528(10-20)",
+   "manufacturer": "JCHL Shenzhen Jing Chuang He Li Tech",
+   "package": "插件,P=3.4mm",
+   "library_type": "expand",
+   "stock": 11761,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0461
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0369
+    },
+    {
+     "qty": 400,
+     "price_usd": 0.0325
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0291
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0264
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.025
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588896500562726912",
+   "alternates": [
+    {
+     "lcsc": "C11305",
+     "mpn": "GL5528A（15-20K）",
+     "manufacturer": "JCHL Shenzhen Jing Chuang He Li Tech",
+     "price_usd": 0.0564
+    },
+    {
+     "lcsc": "C11308",
+     "mpn": "GL5528A（10-15K）",
+     "manufacturer": "JCHL Shenzhen Jing Chuang He Li Tech",
+     "price_usd": 0.0564
+    }
+   ]
+  }
+ },
+ "LED": {
+  "lcsc": "C2295",
+  "price_usd": 0.0105,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "KT-0805R",
+   "manufacturer": "",
+   "package": "0805",
+   "library_type": "expand",
+   "stock": 114956,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0105
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0082
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.007
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0062
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0055
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.0052
+    }
+   ],
+   "datasheet": "",
+   "alternates": []
+  }
+ },
+ "LM317_SOT223": {
+  "lcsc": "C347367",
+  "price_usd": 0.1602,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "LM317G",
+   "manufacturer": "UMW Youtai Semiconductor Co Ltd",
+   "package": "SOT-223",
+   "library_type": "expand",
+   "stock": 99280,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1602
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1249
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1072
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.094
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0771
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0718
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8763509848745095168",
+   "alternates": []
+  }
+ },
+ "LM324_SOIC14": {
+  "lcsc": "C71035",
+  "price_usd": 0.1674,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "LM324DT",
+   "manufacturer": "STMicroelectronics",
+   "package": "SOIC-14",
+   "library_type": "base",
+   "stock": 129724,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1674
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1287
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1097
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0928
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0882
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0854
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8552936467518545920",
+   "alternates": [
+    {
+     "lcsc": "C7943",
+     "mpn": "LM324DR",
+     "manufacturer": "Texas Instruments",
+     "price_usd": 0.1848
+    }
+   ]
+  }
+ },
+ "LM358": {
+  "lcsc": "C7950",
+  "price_usd": 0.055,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "LM358DR2G",
+   "manufacturer": "onsemi",
+   "package": "SOIC-8",
+   "library_type": "base",
+   "stock": 716041,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.055
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0435
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0376
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0325
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0309
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0297
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579708932862107648",
+   "alternates": []
+  }
+ },
+ "LM393_SOIC8": {
+  "lcsc": "C7955",
+  "price_usd": 0.0666,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "LM393DR2G",
+   "manufacturer": "onsemi",
+   "package": "SOIC-8",
+   "library_type": "base",
+   "stock": 212935,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0666
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.054
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0474
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0355
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0337
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0323
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579709014340796416",
+   "alternates": [
+    {
+     "lcsc": "C67470",
+     "mpn": "LM393DR",
+     "manufacturer": "Texas Instruments",
+     "price_usd": 0.0638
+    }
+   ]
+  }
+ },
+ "MCP1700_3V3_SOT23": {
+  "lcsc": "C39051",
+  "price_usd": 0.3984,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MCP1700T-3302E/TT",
+   "manufacturer": "Microchip Tech",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 31667,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.3984
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.3148
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.2787
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.2328
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.2131
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.2017
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586175842267369472",
+   "alternates": []
+  }
+ },
+ "MCP2551_SOIC8": {
+  "lcsc": "C7376",
+  "price_usd": 1.8391,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MCP2551-I/SN",
+   "manufacturer": "Microchip Tech",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 9481,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.8391
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.5605
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.3851
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.2064
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.1261
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.0917
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586182167622275072",
+   "alternates": []
+  }
+ },
+ "MCP6002_SOIC8": {
+  "lcsc": "C7377",
+  "price_usd": 0.3041,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MCP6002T-I/SN",
+   "manufacturer": "Microchip Tech",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 36043,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.3041
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.238
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.2058
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.177
+    },
+    {
+     "qty": 3300,
+     "price_usd": 0.1604
+    },
+    {
+     "qty": 6600,
+     "price_usd": 0.1556
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8552528238330068992",
+   "alternates": [
+    {
+     "lcsc": "C116706",
+     "mpn": "MCP6002-I/SN",
+     "manufacturer": "Microchip Tech",
+     "price_usd": 0.4128
+    }
+   ]
+  }
+ },
+ "MMBT3904": {
+  "lcsc": "C20526",
+  "price_usd": 0.0117,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MMBT3904(RANGE:100-300)",
+   "manufacturer": "Jiangsu Changjing Electronics Technology Co Ltd",
+   "package": "SOT-23",
+   "library_type": "base",
+   "stock": 576019,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0117
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0093
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0082
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0074
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0071
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.0069
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8552894390268936192",
+   "alternates": []
+  }
+ },
+ "MMBT3906": {
+  "lcsc": "C53444",
+  "price_usd": 0.0191,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MMBT3906LT1G",
+   "manufacturer": "onsemi",
+   "package": "SOT-23",
+   "library_type": "expand",
+   "stock": 970249,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0191
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0148
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0109
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0095
+    },
+    {
+     "qty": 24000,
+     "price_usd": 0.0089
+    },
+    {
+     "qty": 51000,
+     "price_usd": 0.0085
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586176242927718400",
+   "alternates": []
+  }
+ },
+ "NE555": {
+  "lcsc": "C7593",
+  "price_usd": 0.1204,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "NE555DR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 203811,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1204
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0951
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0822
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0715
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0677
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0651
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/sa555",
+   "alternates": []
+  }
+ },
+ "NTC_10k_0805": {
+  "lcsc": "C51597",
+  "price_usd": 0.0748,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "CMFB103F3950FANT",
+   "manufacturer": "FH Guangdong Fenghua Advanced Tech",
+   "package": "0805",
+   "library_type": "expand",
+   "stock": 17911,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0748
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.061
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0543
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0492
+    },
+    {
+     "qty": 4000,
+     "price_usd": 0.0427
+    },
+    {
+     "qty": 8000,
+     "price_usd": 0.0407
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8586179128986357760",
+   "alternates": []
+  }
+ },
+ "Optocoupler_PC817": {
+  "lcsc": "C20612594",
+  "price_usd": 0.0228,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "PC817C",
+   "manufacturer": "AOTE",
+   "package": "DIP-4",
+   "library_type": "expand",
+   "stock": 187705,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0228
+    },
+    {
+     "qty": 200,
+     "price_usd": 0.0199
+    },
+    {
+     "qty": 600,
+     "price_usd": 0.0191
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.0181
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0171
+    },
+    {
+     "qty": 20000,
+     "price_usd": 0.0168
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8756417195843043328",
+   "alternates": [
+    {
+     "lcsc": "C20611637",
+     "mpn": "PC817C",
+     "manufacturer": "HXY MOSFET",
+     "price_usd": 0.04
+    },
+    {
+     "lcsc": "C42422059",
+     "mpn": "PC817C",
+     "manufacturer": "",
+     "price_usd": 0.0292
+    },
+    {
+     "lcsc": "C54447213",
+     "mpn": "PC817C",
+     "manufacturer": "",
+     "price_usd": 0.0278
+    }
+   ]
+  }
+ },
+ "PCF8574_SOIC16": {
+  "lcsc": "C7605",
+  "price_usd": 2.1391,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "PCF8574T/3,518",
+   "manufacturer": "",
+   "package": "SOIC-16-300mil",
+   "library_type": "expand",
+   "stock": 19200,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 2.1391
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.8342
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.6441
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.2982
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.2113
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.172
+    }
+   ],
+   "datasheet": "https://www.nxp.com/docs/en/data-sheet/PCF8574_PCF8574A.pdf",
+   "alternates": []
+  }
+ },
+ "PinHeader_1x04": {
+  "lcsc": "C124378",
+  "price_usd": 0.0564,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "B-2100S04P-A110",
+   "manufacturer": "Ckmtw Shenzhen Cankemeng",
+   "package": "插件,P=2.54mm",
+   "library_type": "expand",
+   "stock": 63731,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0564
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0453
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0397
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0318
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0284
+    },
+    {
+     "qty": 9000,
+     "price_usd": 0.0268
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588889829354037248",
+   "alternates": []
+  }
+ },
+ "Polyfuse_1206": {
+  "lcsc": "C19193043",
+  "price_usd": 0.0489,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "1206L050/33NR",
+   "manufacturer": "LUTE",
+   "package": "1206",
+   "library_type": "expand",
+   "stock": 123558,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0489
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0391
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0341
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0304
+    },
+    {
+     "qty": 3500,
+     "price_usd": 0.0274
+    },
+    {
+     "qty": 10500,
+     "price_usd": 0.0259
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8590908527583961088",
+   "alternates": []
+  }
+ },
+ "Potentiometer_10k": {
+  "lcsc": "C719176",
+  "price_usd": 0.1241,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "TC33X-2-103E",
+   "manufacturer": "BOURNS",
+   "package": "SMD-3P,3.8x3.6mm",
+   "library_type": "expand",
+   "stock": 10955,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1241
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0982
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0853
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0754
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0674
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0635
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588894448331993088",
+   "alternates": []
+  }
+ },
+ "RP2040_QFN56": {
+  "lcsc": "C2040",
+  "price_usd": 0.9966,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "RP2040",
+   "manufacturer": "Raspberry Pi",
+   "package": "LQFN-56(7x7)",
+   "library_type": "expand",
+   "stock": 53168,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.9966
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.9081
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.8245
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.7639
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.7376
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.7262
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550723933012836352",
+   "alternates": []
+  }
+ },
+ "Relay_SPDT_5V": {
+  "lcsc": "C35449",
+  "price_usd": 0.4442,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SRD-05VDC-SL-C",
+   "manufacturer": "Ningbo Songle Relay",
+   "package": "插件,19.2x15.6mm",
+   "library_type": "expand",
+   "stock": 99745,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.4442
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.3459
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.2967
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.2541
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.2426
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.2361
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588886957702832128",
+   "alternates": []
+  }
+ },
+ "SMAJ5_0A": {
+  "lcsc": "C19077523",
+  "price_usd": 0.0407,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SMAJ5.0A",
+   "manufacturer": "hongjiacheng",
+   "package": "DO-214AC(SMA)",
+   "library_type": "expand",
+   "stock": 321858,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0407
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.0328
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0287
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0258
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.021
+    },
+    {
+     "qty": 10000,
+     "price_usd": 0.0199
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8786203782187163648",
+   "alternates": [
+    {
+     "lcsc": "C113952",
+     "mpn": "SMAJ5.0A",
+     "manufacturer": "MDD Microdiode Semiconductor",
+     "price_usd": 0.0414
+    },
+    {
+     "lcsc": "C908757",
+     "mpn": "SMAJ5.0A",
+     "manufacturer": "GOODWORK",
+     "price_usd": 0.0315
+    },
+    {
+     "lcsc": "C353442",
+     "mpn": "SMAJ5.0A",
+     "manufacturer": "Shandong Jingdao Microelectronics",
+     "price_usd": 0.0335
+    }
+   ]
+  }
+ },
+ "SN65HVD230": {
+  "lcsc": "C12084",
+  "price_usd": 0.5737,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SN65HVD230DR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 200046,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.5737
+    },
+    {
+     "qty": 10,
+     "price_usd": 0.4754
+    },
+    {
+     "qty": 30,
+     "price_usd": 0.4065
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.3492
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.3311
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.3197
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/ds/symlink/sn65hvd230.pdf",
+   "alternates": []
+  }
+ },
+ "SN74HC00_SOIC14": {
+  "lcsc": "C10090",
+  "price_usd": 0.1254,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SN74HC00DR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-14",
+   "library_type": "expand",
+   "stock": 85537,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1254
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0997
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0869
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0774
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.062
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0581
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/sn74hc00",
+   "alternates": []
+  }
+ },
+ "SN74HC14_SOIC14": {
+  "lcsc": "C6820",
+  "price_usd": 0.1497,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SN74HC14DR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-14",
+   "library_type": "expand",
+   "stock": 180136,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1497
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.115
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0979
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0828
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0787
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0763
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/sn74hc14",
+   "alternates": []
+  }
+ },
+ "SN74HC595_SOIC16": {
+  "lcsc": "C10092",
+  "price_usd": 0.1797,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SN74HC595DR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-16",
+   "library_type": "expand",
+   "stock": 286855,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1797
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1374
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1166
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0982
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0932
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.09
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/sn74hc595",
+   "alternates": []
+  }
+ },
+ "SS14_SMA": {
+  "lcsc": "C2480",
+  "price_usd": 0.0192,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "SS14",
+   "manufacturer": "MDD Microdiode Semiconductor",
+   "package": "SMA(DO-214AC)",
+   "library_type": "base",
+   "stock": 1318854,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0192
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0152
+    },
+    {
+     "qty": 1500,
+     "price_usd": 0.0135
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0096
+    },
+    {
+     "qty": 25000,
+     "price_usd": 0.0091
+    },
+    {
+     "qty": 50000,
+     "price_usd": 0.0088
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8757911605315149824",
+   "alternates": [
+    {
+     "lcsc": "C7420316",
+     "mpn": "SS14",
+     "manufacturer": "hongjiacheng",
+     "price_usd": 0.0204
+    },
+    {
+     "lcsc": "C727050",
+     "mpn": "SS14",
+     "manufacturer": "TWGMC",
+     "price_usd": 0.0171
+    },
+    {
+     "lcsc": "C266551",
+     "mpn": "SS14",
+     "manufacturer": "BORN",
+     "price_usd": 0.0248
+    }
+   ]
+  }
+ },
+ "STM32F103C8T6": {
+  "lcsc": "C8734",
+  "price_usd": 1.526,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "STM32F103C8T6",
+   "manufacturer": "STMicroelectronics",
+   "package": "LQFP-48(7x7)",
+   "library_type": "expand",
+   "stock": 238965,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.526
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.3261
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.1835
+    },
+    {
+     "qty": 250,
+     "price_usd": 1.054
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.995
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.9704
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579708215774674944",
+   "alternates": []
+  }
+ },
+ "Switch_Slide_SPDT": {
+  "lcsc": "C431540",
+  "price_usd": 0.0618,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "MSK12C02",
+   "manufacturer": "SHOU HAN",
+   "package": "SMD,8x2.8mm",
+   "library_type": "expand",
+   "stock": 206716,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0618
+    },
+    {
+     "qty": 100,
+     "price_usd": 0.05
+    },
+    {
+     "qty": 300,
+     "price_usd": 0.0441
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0381
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0346
+    },
+    {
+     "qty": 9000,
+     "price_usd": 0.0328
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8764983958910185472",
+   "alternates": []
+  }
+ },
+ "TL072_SOIC8": {
+  "lcsc": "C67473",
+  "price_usd": 0.1617,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "TL072CDR",
+   "manufacturer": "Texas Instruments",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 36124,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1617
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1256
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1079
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0922
+    },
+    {
+     "qty": 2500,
+     "price_usd": 0.0879
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0853
+    }
+   ],
+   "datasheet": "https://www.ti.com/cn/lit/gpn/tl072",
+   "alternates": [
+    {
+     "lcsc": "C6962",
+     "mpn": "TL072IDR",
+     "manufacturer": "Texas Instruments",
+     "price_usd": 0.1231
+    }
+   ]
+  }
+ },
+ "TMP36_SOIC8": {
+  "lcsc": "C691115",
+  "price_usd": 2.0899,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "TMP36FSZ-REEL",
+   "manufacturer": "Analog Devices",
+   "package": "SOIC-8",
+   "library_type": "expand",
+   "stock": 548,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 2.0899
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.8113
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.6375
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.4588
+    },
+    {
+     "qty": 500,
+     "price_usd": 1.2835
+    },
+    {
+     "qty": 1000,
+     "price_usd": 1.2474
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588917848047960064",
+   "alternates": []
+  }
+ },
+ "USB_C_Receptacle_PowerOnly": {
+  "lcsc": "C165948",
+  "price_usd": 0.1872,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "TYPE-C-31-M-12",
+   "manufacturer": "Korean Hroparts Elec",
+   "package": "SMD",
+   "library_type": "expand",
+   "stock": 367975,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1872
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1479
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1286
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.1043
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.0995
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0968
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550723676069908480",
+   "alternates": []
+  }
+ },
+ "USB_Micro_B": {
+  "lcsc": "C132563",
+  "price_usd": 0.2589,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "10118194-0001LF",
+   "manufacturer": "Amphenol ICC",
+   "package": "SMD",
+   "library_type": "expand",
+   "stock": 42938,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.2589
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.2097
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1885
+    },
+    {
+     "qty": 1200,
+     "price_usd": 0.1605
+    },
+    {
+     "qty": 2400,
+     "price_usd": 0.1487
+    },
+    {
+     "qty": 4800,
+     "price_usd": 0.1417
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588905128988446720",
+   "alternates": []
+  }
+ },
+ "W25Q32JV_SOIC8": {
+  "lcsc": "C179173",
+  "price_usd": 1.7031,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "W25Q32JVSSIQ",
+   "manufacturer": "Winbond Elec",
+   "package": "SOIC-8-208mil",
+   "library_type": "expand",
+   "stock": 12933,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 1.7031
+    },
+    {
+     "qty": 10,
+     "price_usd": 1.4261
+    },
+    {
+     "qty": 30,
+     "price_usd": 1.254
+    },
+    {
+     "qty": 100,
+     "price_usd": 1.0753
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.9966
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.9606
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8588884728716414976",
+   "alternates": []
+  }
+ },
+ "WS2812B": {
+  "lcsc": "C52917433",
+  "price_usd": 0.1017,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "WS2812B-V6",
+   "manufacturer": "",
+   "package": "SMD5050-4P",
+   "library_type": "expand",
+   "stock": 51216,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1017
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0812
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.071
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.0633
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.0573
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0541
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8779106697221443584",
+   "alternates": []
+  }
+ },
+ "XC6206_3V3": {
+  "lcsc": "C5446",
+  "price_usd": 0.1438,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "XC6206P332MR-G",
+   "manufacturer": "Torex Semicon",
+   "package": "SOT-23-3L",
+   "library_type": "base",
+   "stock": 405951,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1438
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1181
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1048
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.094
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.09
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0876
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579707861620228096",
+   "alternates": []
+  }
+ },
+ "Button_Tactile_SMD": {
+  "lcsc": "",
+  "sourcing": {
+   "source": "jlcparts",
+   "status": "unverified",
+   "reason": "C2886898 is not in the JLCPCB parts database; choose an orderable part"
+  }
+ },
+ "ESP32_C3_WROOM_02": {
+  "lcsc": "",
+  "sourcing": {
+   "source": "jlcparts",
+   "status": "unverified",
+   "reason": "C2934560 is not in the JLCPCB parts database; choose an orderable part"
+  }
+ }
+}

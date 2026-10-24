@@ -41,7 +41,7 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
             async with Client(server.mcp, timeout=10, init_timeout=10) as client:
                 tools = await client.list_tools()
                 self.assertEqual({tool.name for tool in tools}, {
-                    'list_curated_parts', 'synthesize_pcb', 'run_spice_simulation',
+                    'list_curated_parts', 'search_parts', 'get_part_details', 'synthesize_pcb', 'run_spice_simulation',
                     'autoroute_pcb', 'run_drc_verification', 'export_manufacturing_files',
                     'build_and_verify', 'calc_555_astable', 'calc_led_resistor', 'calc_voltage_divider',
                     'list_design_blocks', 'list_example_compositions', 'compose_design', 'environment_doctor', 'get_drc_findings', 'get_design_readiness',

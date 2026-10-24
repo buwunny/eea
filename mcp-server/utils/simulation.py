@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from .telemetry import progress, atomic_json
 from .pcb_builder import normalize_design, load_catalog, finite, render_template
+from . import spice_models
 from .requirements import normalize_requirements, apply_requirements, design_signature, evaluate_requirements, tolerance_555, primary_source
 
 
@@ -33,18 +34,30 @@ def resistance(component, part):
     return part['spice_model']['default_ohms']
 
 
+def has_spice_model(part_id, part=None):
+    """True for the built-in models above and for catalog parts carrying a generic parameterized model."""
+    if part_id in SPICE_PARTS:
+        return True
+    part = part if part is not None else load_catalog().get(part_id, {})
+    return spice_models.is_generic(part.get('spice_model'))
+
+
 def skipped_refs(design):
-    return [c['ref'] for c in design['components'] if c['part_id'] not in SPICE_PARTS]
+    catalog = load_catalog()
+    return [c['ref'] for c in design['components'] if not has_spice_model(c['part_id'], catalog.get(c['part_id']))]
 
 
 def simulation_coverage(design):
-    """Connector boundaries need no model; omitted functional parts limit coverage."""
+    """Connector boundaries need no model; omitted functional parts limit coverage. Parts simulated with generic
+    (non-vendor) templates are listed separately so results are not mistaken for vendor-model accuracy."""
     catalog = load_catalog()
     excluded = skipped_refs(design)
     unmodeled = [c['ref'] for c in design['components'] if c['ref'] in excluded
                  and catalog[c['part_id']].get('category') != 'connector']
+    generic = [{'ref': c['ref'], 'part_id': c['part_id'], 'template': catalog[c['part_id']]['spice_model']['template']}
+               for c in design['components'] if c['part_id'] not in SPICE_PARTS and spice_models.is_generic(catalog[c['part_id']].get('spice_model'))]
     return {'coverage_complete': not unmodeled, 'excluded_components': excluded,
-            'unmodeled_components': unmodeled}
+            'unmodeled_components': unmodeled, 'generic_model_components': generic}
 
 
 SUPPLY_NAMES = ('VBUS', 'VIN', 'VCC', 'VDD', '5V', '+5V')
@@ -168,6 +181,10 @@ def spice_text(design, config):
             lines.append(f"R{ref}B {pin(c,'2')} {pin(c,'3')} {half:g}")
         elif pid == 'Switch_Slide_SPDT':
             lines.append(f"R{ref} {pin(c,'2')} {pin(c,'1')} 0.05")  # COM closed to A
+        elif spice_models.is_generic(p.get('spice_model')):
+            element_lines, element_defs = spice_models.netlist(c, p, lambda number, c=c: pin(c, number), engineering)
+            lines.extend(element_lines)
+            definitions.update(element_defs)
         else:
             continue  # no executable model (connectors, MCUs, LEDs strips...): skipped and reported
     lines.extend(sorted(definitions))
@@ -359,6 +376,9 @@ def simulate(components, nets, sim_config, workspace):
     coverage = simulation_coverage(design)
     skipped = coverage['excluded_components']
     if skipped: warnings.append('No SPICE model, excluded from simulation: '+', '.join(skipped))
+    if coverage['generic_model_components']:
+        warnings.append('Generic approximate models (not vendor models) used for: ' + ', '.join(
+            f"{g['ref']} ({g['part_id']}, {g['template']})" for g in coverage['generic_model_components']) + '; treat results as indicative')
     if coverage['unmodeled_components']:
         warnings.append('Functional verification is incomplete because functional components lack models: ' + ', '.join(coverage['unmodeled_components']))
     backend='analytical-555'; verified=False

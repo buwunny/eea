@@ -1,0 +1,1320 @@
+{
+ "_comment": "Whitelist for scripts/import_kicad.py. 'entries' pair one KiCad symbol with one footprint; 'auto' globs a symbol library and uses each symbol's own default footprint. Curated part_ids always win. Edit this, then rerun the script; never edit imported_parts.json.",
+ "entries": [
+  {
+   "part_id": "LM317_SOT223",
+   "symbol": "Regulator_Linear:LM317_SOT-223",
+   "category": "power",
+   "typical_application": "Adjustable linear regulator: Vout = 1.25 * (1 + R2/R1) with R1 about 240R from OUT to ADJ and R2 from ADJ to GND. Dropout about 2 V; dissipates (Vin-Vout)*I.",
+   "required_support_parts": [
+    "240R R1 from VO to ADJ",
+    "R2 from ADJ to GND sets Vout",
+    "10uF C on VI",
+    "1uF C on VO"
+   ],
+   "max_ratings": {
+    "vin_max_v": 40,
+    "vout_min_v": 1.25,
+    "i_out_max_ma": 1500
+   },
+   "spice": {
+    "template": "adjustable_reg",
+    "roles": {
+     "vin": "3",
+     "vout": "2",
+     "adj": "1"
+    },
+    "params": {
+     "vref": 1.25,
+     "dropout": 2.0,
+     "rout": 0.05
+    },
+    "basis": "Ideal Vref follower clamped to Vin minus dropout; no current limit or min-load"
+   }
+  },
+  {
+   "part_id": "AP2112K_3V3",
+   "symbol": "Regulator_Linear:AP2112K-3.3",
+   "category": "power",
+   "typical_application": "600 mA low-dropout 3.3 V regulator for MCU boards; tie EN to VIN to keep it always on.",
+   "required_support_parts": [
+    "1uF C on VIN to GND",
+    "1uF C on VOUT to GND"
+   ],
+   "max_ratings": {
+    "vin_max_v": 6,
+    "vin_min_v": 2.5,
+    "i_out_max_ma": 600,
+    "vout_v": 3.3,
+    "dropout_v": 0.25
+   },
+   "spice": {
+    "template": "ldo",
+    "roles": {
+     "vin": "1",
+     "vout": "5",
+     "gnd": "2",
+     "enable": "3"
+    },
+    "params": {
+     "vout": 3.3,
+     "dropout": 0.25,
+     "rout": 0.1,
+     "en_threshold": 0.7
+    },
+    "basis": "Ideal output clamped to Vin minus dropout; no current limit, PSRR or quiescent current"
+   }
+  },
+  {
+   "part_id": "MCP1700_3V3_SOT23",
+   "symbol": "Regulator_Linear:MCP1700x-330xxTT",
+   "category": "power",
+   "typical_application": "250 mA ultra-low-quiescent (1.6 uA) 3.3 V regulator for battery-powered designs.",
+   "required_support_parts": [
+    "1uF C on VIN to GND",
+    "1uF C on VOUT to GND"
+   ],
+   "max_ratings": {
+    "vin_max_v": 6,
+    "i_out_max_ma": 250,
+    "vout_v": 3.3,
+    "dropout_v": 0.178
+   },
+   "spice": {
+    "template": "ldo",
+    "roles": {
+     "vin": "3",
+     "vout": "2",
+     "gnd": "1"
+    },
+    "params": {
+     "vout": 3.3,
+     "dropout": 0.18,
+     "rout": 0.2
+    },
+    "basis": "Ideal output clamped to Vin minus dropout; no current limit, PSRR or quiescent current"
+   }
+  },
+  {
+   "part_id": "XC6206_3V3",
+   "symbol": "Regulator_Linear:XC6206PxxxMR",
+   "category": "power",
+   "typical_application": "200 mA low-quiescent LDO in SOT-23; fix the output voltage variant when ordering. Check pin order against the datasheet.",
+   "required_support_parts": [
+    "1uF C on VIN to GND",
+    "1uF C on VOUT to GND"
+   ],
+   "max_ratings": {
+    "vin_max_v": 6,
+    "i_out_max_ma": 200
+   },
+   "spice": {
+    "template": "ldo",
+    "roles": {
+     "vin": "3",
+     "vout": "2",
+     "gnd": "1"
+    },
+    "params": {
+     "vout": 3.3,
+     "dropout": 0.25,
+     "rout": 0.5
+    },
+    "basis": "Ideal output clamped to Vin minus dropout; no current limit, PSRR or quiescent current"
+   }
+  },
+  {
+   "part_id": "L7805_TO220",
+   "symbol": "Regulator_Linear:L7805",
+   "footprint": "Package_TO_SOT_THT:TO-220-3_Vertical",
+   "category": "power",
+   "typical_application": "5 V, 1.5 A linear regulator, input 7-35 V. Heat dissipation (Vin-5)*I limits current without a heatsink.",
+   "required_support_parts": [
+    "330nF C on VI to GND",
+    "100nF C on VO to GND"
+   ],
+   "max_ratings": {
+    "vin_max_v": 35,
+    "i_out_max_ma": 1500,
+    "vout_v": 5,
+    "dropout_v": 2
+   },
+   "spice": {
+    "template": "ldo",
+    "roles": {
+     "vin": "1",
+     "vout": "3",
+     "gnd": "2"
+    },
+    "params": {
+     "vout": 5.0,
+     "dropout": 2.0,
+     "rout": 0.05
+    },
+    "basis": "Ideal output clamped to Vin minus dropout; no current limit, PSRR or quiescent current"
+   }
+  },
+  {
+   "part_id": "TL072_SOIC8",
+   "symbol": "Amplifier_Operational:TL072",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "category": "ic",
+   "typical_application": "Dual JFET-input op-amp for audio and filters; needs at least 7 V total supply (+-3.5 V), not rail-to-rail.",
+   "required_support_parts": [
+    "100nF C on V+ to GND"
+   ],
+   "max_ratings": {
+    "supply_max_v": 36,
+    "gbw_mhz": 3
+   },
+   "spice": {
+    "template": "opamp",
+    "channels": [
+     {
+      "out": "1",
+      "inn": "2",
+      "inp": "3"
+     },
+     {
+      "out": "7",
+      "inn": "6",
+      "inp": "5"
+     }
+    ],
+    "roles": {
+     "vp": "8",
+     "vn": "4"
+    },
+    "params": {
+     "gain_db": 106,
+     "gbw_hz": 3000000.0,
+     "slew_v_per_us": 13,
+     "head_hi_v": 1.5,
+     "head_lo_v": 1.5,
+     "rout": 100,
+     "iq_ma": 2.8
+    },
+    "basis": "Single-pole behavioral amplifier with slew limit and output headroom"
+   },
+   "pin_names": {
+    "1": "OUT1",
+    "2": "IN1-",
+    "3": "IN1+",
+    "4": "V-",
+    "5": "IN2+",
+    "6": "IN2-",
+    "7": "OUT2",
+    "8": "V+"
+   }
+  },
+  {
+   "part_id": "LM324_SOIC14",
+   "symbol": "Amplifier_Operational:LM324",
+   "footprint": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+   "category": "ic",
+   "typical_application": "Quad single-supply op-amp (3-32 V); output swings to about VCC-1.5 V. Tie unused amps as followers.",
+   "required_support_parts": [
+    "100nF C on V+ to GND"
+   ],
+   "max_ratings": {
+    "supply_max_v": 32,
+    "gbw_mhz": 1
+   },
+   "spice": {
+    "template": "opamp",
+    "channels": [
+     {
+      "out": "1",
+      "inn": "2",
+      "inp": "3"
+     },
+     {
+      "out": "7",
+      "inn": "6",
+      "inp": "5"
+     },
+     {
+      "out": "8",
+      "inn": "9",
+      "inp": "10"
+     },
+     {
+      "out": "14",
+      "inn": "13",
+      "inp": "12"
+     }
+    ],
+    "roles": {
+     "vp": "4",
+     "vn": "11"
+    },
+    "params": {
+     "gain_db": 100,
+     "gbw_hz": 1200000.0,
+     "slew_v_per_us": 0.4,
+     "head_hi_v": 1.5,
+     "head_lo_v": 0.005,
+     "rout": 50,
+     "iq_ma": 0.7
+    },
+    "basis": "Single-pole behavioral amplifier with slew limit and output headroom"
+   },
+   "pin_names": {
+    "1": "OUT1",
+    "2": "IN1-",
+    "3": "IN1+",
+    "4": "V+",
+    "5": "IN2+",
+    "6": "IN2-",
+    "7": "OUT2",
+    "8": "OUT3",
+    "9": "IN3-",
+    "10": "IN3+",
+    "11": "V-",
+    "12": "IN4+",
+    "13": "IN4-",
+    "14": "OUT4"
+   }
+  },
+  {
+   "part_id": "MCP6002_SOIC8",
+   "symbol": "Amplifier_Operational:MCP6002-xSN",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "category": "ic",
+   "typical_application": "Dual rail-to-rail op-amp for 1.8-6 V sensor front ends.",
+   "required_support_parts": [
+    "100nF C on VDD to GND"
+   ],
+   "max_ratings": {
+    "supply_max_v": 6.5,
+    "gbw_mhz": 1
+   },
+   "spice": {
+    "template": "opamp",
+    "channels": [
+     {
+      "out": "1",
+      "inn": "2",
+      "inp": "3"
+     },
+     {
+      "out": "7",
+      "inn": "6",
+      "inp": "5"
+     }
+    ],
+    "roles": {
+     "vp": "8",
+     "vn": "4"
+    },
+    "params": {
+     "gain_db": 112,
+     "gbw_hz": 1000000.0,
+     "slew_v_per_us": 0.6,
+     "head_hi_v": 0.025,
+     "head_lo_v": 0.025,
+     "rout": 100,
+     "iq_ma": 0.2
+    },
+    "basis": "Single-pole behavioral amplifier with slew limit and output headroom"
+   },
+   "pin_names": {
+    "1": "OUT1",
+    "2": "IN1-",
+    "3": "IN1+",
+    "4": "V-",
+    "5": "IN2+",
+    "6": "IN2-",
+    "7": "OUT2",
+    "8": "V+"
+   }
+  },
+  {
+   "part_id": "LM393_SOIC8",
+   "symbol": "Comparator:LM393",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "category": "ic",
+   "typical_application": "Dual open-collector comparator: add a pull-up from each output to the logic supply. Add hysteresis with a feedback resistor.",
+   "required_support_parts": [
+    "Pull-up R (1k-10k) on each used output",
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "supply_max_v": 36
+   },
+   "spice": {
+    "template": "comparator_oc",
+    "channels": [
+     {
+      "out": "1",
+      "inn": "2",
+      "inp": "3"
+     },
+     {
+      "out": "7",
+      "inn": "6",
+      "inp": "5"
+     }
+    ],
+    "roles": {
+     "vn": "4"
+    },
+    "params": {
+     "ron": 62,
+     "hysteresis_v": 0.002
+    },
+    "basis": "Open-collector switch with small hysteresis; no input offset or response time"
+   },
+   "pin_names": {
+    "1": "OUT1",
+    "2": "IN1-",
+    "3": "IN1+",
+    "4": "GND",
+    "5": "IN2+",
+    "6": "IN2-",
+    "7": "OUT2",
+    "8": "VCC"
+   }
+  },
+  {
+   "part_id": "BC817_SOT23",
+   "symbol": "Transistor_BJT:BC817",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "NPN switch/amplifier up to 500 mA; base resistor sets Ib = Ic/hFE*2. Check pin order against the datasheet (KiCad SOT-23 pin 1 = base).",
+   "required_support_parts": [
+    "Base resistor 1k-10k"
+   ],
+   "max_ratings": {
+    "vce_max_v": 45,
+    "ic_max_ma": 500
+   },
+   "spice": {
+    "template": "npn",
+    "roles": {
+     "collector": "3",
+     "base": "1",
+     "emitter": "2"
+    },
+    "params": {
+     "Is": 1e-14,
+     "Bf": 300,
+     "Vaf": 100,
+     "Cje": 2e-11,
+     "Cjc": 8e-12,
+     "Tf": 5e-10
+    },
+    "basis": "Gummel-Poon from typical datasheet hFE/Vaf/capacitances"
+   }
+  },
+  {
+   "part_id": "BC807_SOT23",
+   "symbol": "Transistor_BJT:BC807",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "PNP high-side switch up to 500 mA; base resistor to the driving logic.",
+   "required_support_parts": [
+    "Base resistor 1k-10k"
+   ],
+   "max_ratings": {
+    "vce_max_v": 45,
+    "ic_max_ma": 500
+   },
+   "spice": {
+    "template": "pnp",
+    "roles": {
+     "collector": "3",
+     "base": "1",
+     "emitter": "2"
+    },
+    "params": {
+     "Is": 1e-14,
+     "Bf": 300,
+     "Vaf": 100,
+     "Cje": 2e-11,
+     "Cjc": 1e-11,
+     "Tf": 5e-10
+    },
+    "basis": "Gummel-Poon from typical datasheet hFE/Vaf/capacitances"
+   }
+  },
+  {
+   "part_id": "MMBT3906",
+   "symbol": "Transistor_BJT:MMBT3906",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "General-purpose PNP, 200 mA.",
+   "required_support_parts": [
+    "Base resistor 1k-10k"
+   ],
+   "max_ratings": {
+    "vce_max_v": 40,
+    "ic_max_ma": 200
+   },
+   "spice": {
+    "template": "pnp",
+    "roles": {
+     "collector": "3",
+     "base": "1",
+     "emitter": "2"
+    },
+    "params": {
+     "Is": 1.41e-15,
+     "Bf": 180,
+     "Nf": 1,
+     "Vaf": 18.7,
+     "Cje": 8.28e-12,
+     "Cjc": 9.7e-12,
+     "Tf": 5e-10
+    },
+    "basis": "Gummel-Poon from typical datasheet hFE/Vaf/capacitances"
+   }
+  },
+  {
+   "part_id": "BSS138_SOT23",
+   "symbol": "Transistor_FET:BSS138",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "N-channel logic MOSFET; with two pull-ups it forms a bidirectional I2C/3.3V-5V level shifter.",
+   "required_support_parts": [
+    "10k pull-up on each side for level shifting"
+   ],
+   "max_ratings": {
+    "vds_max_v": 50,
+    "id_max_ma": 220,
+    "vgs_max_v": 20
+   },
+   "spice": {
+    "template": "nmos",
+    "roles": {
+     "drain": "3",
+     "gate": "1",
+     "source": "2"
+    },
+    "params": {
+     "Vto": 1.3,
+     "Kp": 0.15,
+     "Lambda": 0.01,
+     "Rd": 1.0,
+     "Rs": 0.5,
+     "body_diode": {
+      "Is": 1e-12,
+      "N": 1.1,
+      "Rs": 0.02,
+      "Bv": 50
+     }
+    },
+    "basis": "Level-1 MOSFET tuned to datasheet Vgs(th) and Rds(on); no gate/junction capacitances"
+   }
+  },
+  {
+   "part_id": "AO3400A",
+   "symbol": "Transistor_FET:AO3400A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "N-channel logic-level MOSFET, 30 V / 5.7 A, for low-side load switching and motor drive.",
+   "required_support_parts": [
+    "10k R gate to source",
+    "Optional 100R series gate R"
+   ],
+   "max_ratings": {
+    "vds_max_v": 30,
+    "id_max_ma": 5700,
+    "vgs_max_v": 12
+   },
+   "spice": {
+    "template": "nmos",
+    "roles": {
+     "drain": "3",
+     "gate": "1",
+     "source": "2"
+    },
+    "params": {
+     "Vto": 1.05,
+     "Kp": 22,
+     "Lambda": 0.01,
+     "Rd": 0.012,
+     "Rs": 0.008,
+     "body_diode": {
+      "Is": 1e-12,
+      "N": 1.1,
+      "Rs": 0.02,
+      "Bv": 30
+     }
+    },
+    "basis": "Level-1 MOSFET tuned to datasheet Vgs(th) and Rds(on); no gate/junction capacitances"
+   }
+  },
+  {
+   "part_id": "AO3401A",
+   "symbol": "Transistor_FET:AO3401A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "P-channel MOSFET, 30 V / 4 A, for high-side switching and reverse-polarity protection.",
+   "required_support_parts": [
+    "10k R gate to source"
+   ],
+   "max_ratings": {
+    "vds_max_v": 30,
+    "id_max_ma": 4000,
+    "vgs_max_v": 12
+   },
+   "spice": {
+    "template": "pmos",
+    "roles": {
+     "drain": "3",
+     "gate": "1",
+     "source": "2"
+    },
+    "params": {
+     "Vto": -1.0,
+     "Kp": 13,
+     "Lambda": 0.01,
+     "Rd": 0.02,
+     "Rs": 0.01,
+     "body_diode": {
+      "Is": 1e-12,
+      "N": 1.1,
+      "Rs": 0.02,
+      "Bv": 30
+     }
+    },
+    "basis": "Level-1 MOSFET tuned to datasheet Vgs(th) and Rds(on); no gate/junction capacitances"
+   }
+  },
+  {
+   "part_id": "IRLML6402",
+   "symbol": "Transistor_FET:IRLML6402",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "transistor",
+   "typical_application": "P-channel logic-level MOSFET, 20 V / 3.7 A.",
+   "required_support_parts": [
+    "10k R gate to source"
+   ],
+   "max_ratings": {
+    "vds_max_v": 20,
+    "id_max_ma": 3700,
+    "vgs_max_v": 12
+   },
+   "spice": {
+    "template": "pmos",
+    "roles": {
+     "drain": "3",
+     "gate": "1",
+     "source": "2"
+    },
+    "params": {
+     "Vto": -0.65,
+     "Kp": 10,
+     "Lambda": 0.01,
+     "Rd": 0.03,
+     "Rs": 0.015,
+     "body_diode": {
+      "Is": 1e-12,
+      "N": 1.1,
+      "Rs": 0.02,
+      "Bv": 20
+     }
+    },
+    "basis": "Level-1 MOSFET tuned to datasheet Vgs(th) and Rds(on); no gate/junction capacitances"
+   }
+  },
+  {
+   "part_id": "IRF540N_TO220",
+   "symbol": "Transistor_FET:IRF540N",
+   "footprint": "Package_TO_SOT_THT:TO-220-3_Vertical",
+   "category": "transistor",
+   "typical_application": "100 V / 33 A N-channel power MOSFET; needs about 10 V gate drive, not logic-level.",
+   "required_support_parts": [
+    "Gate driver or 10 V gate drive",
+    "10k R gate to source"
+   ],
+   "max_ratings": {
+    "vds_max_v": 100,
+    "id_max_ma": 33000,
+    "vgs_max_v": 20
+   },
+   "spice": {
+    "template": "nmos",
+    "roles": {
+     "drain": "2",
+     "gate": "1",
+     "source": "3"
+    },
+    "params": {
+     "Vto": 3.0,
+     "Kp": 20,
+     "Lambda": 0.001,
+     "Rd": 0.025,
+     "Rs": 0.011,
+     "body_diode": {
+      "Is": 1e-12,
+      "N": 1.1,
+      "Rs": 0.02,
+      "Bv": 100
+     }
+    },
+    "basis": "Level-1 MOSFET tuned to datasheet Vgs(th) and Rds(on); no gate/junction capacitances"
+   }
+  },
+  {
+   "part_id": "1N4007",
+   "symbol": "Diode:1N4007",
+   "footprint": "Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal",
+   "category": "diode",
+   "typical_application": "1 A, 1000 V rectifier: reverse-polarity protection, flyback across relay coils (cathode to supply).",
+   "max_ratings": {
+    "vr_max_v": 1000,
+    "if_max_ma": 1000
+   },
+   "spice": {
+    "template": "diode",
+    "roles": {
+     "anode": "2",
+     "cathode": "1"
+    },
+    "params": {
+     "Is": 7.02767e-09,
+     "N": 1.80803,
+     "Rs": 0.0341512,
+     "Bv": 1000,
+     "Ibv": 5e-06,
+     "Cjo": 1e-11
+    },
+    "basis": "Shockley diode tuned to datasheet Vf / breakdown"
+   }
+  },
+  {
+   "part_id": "SS14_SMA",
+   "symbol": "Diode:SS14",
+   "footprint": "Diode_SMD:D_SMA",
+   "category": "diode",
+   "typical_application": "1 A, 40 V Schottky; low forward drop for power OR-ing and reverse protection.",
+   "max_ratings": {
+    "vr_max_v": 40,
+    "if_max_ma": 1000
+   },
+   "spice": {
+    "template": "diode",
+    "roles": {
+     "anode": "2",
+     "cathode": "1"
+    },
+    "params": {
+     "Is": 1.4e-07,
+     "N": 1.1,
+     "Rs": 0.02,
+     "Bv": 40,
+     "Ibv": 0.001,
+     "Cjo": 1.1e-10
+    },
+    "basis": "Shockley diode tuned to datasheet Vf / breakdown"
+   }
+  },
+  {
+   "part_id": "BAT54_SOD323F",
+   "symbol": "Diode:BAT54J",
+   "category": "diode",
+   "typical_application": "Small-signal Schottky, 30 V / 200 mA, for clamps and low-drop signal diodes.",
+   "max_ratings": {
+    "vr_max_v": 30,
+    "if_max_ma": 200
+   },
+   "footprint": "Diode_SMD:D_SOD-323F",
+   "spice": {
+    "template": "diode",
+    "roles": {
+     "anode": "2",
+     "cathode": "1"
+    },
+    "params": {
+     "Is": 7.5e-09,
+     "N": 1.05,
+     "Rs": 1.7,
+     "Bv": 30,
+     "Ibv": 2e-06,
+     "Cjo": 7.6e-12
+    },
+    "basis": "Shockley diode tuned to datasheet Vf / breakdown"
+   }
+  },
+  {
+   "part_id": "BZX84C5V1",
+   "symbol": "Diode:BZX84Cxx",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "category": "diode",
+   "typical_application": "Zener clamp or shunt reference in SOT-23; choose the BZX84Cxx voltage variant for the BOM value.",
+   "required_support_parts": [
+    "Series resistor to limit zener current"
+   ],
+   "max_ratings": {
+    "power_w": 0.25
+   },
+   "spice": {
+    "template": "diode",
+    "roles": {
+     "anode": "1",
+     "cathode": "3"
+    },
+    "params": {
+     "Is": 1e-14,
+     "N": 1,
+     "Rs": 40,
+     "Bv": 5.1,
+     "Ibv": 0.005,
+     "Cjo": 4.5e-11
+    },
+    "basis": "Shockley diode tuned to datasheet Vf / breakdown"
+   }
+  },
+  {
+   "part_id": "SMAJ5_0A",
+   "symbol": "Diode:SMAJ5.0A",
+   "footprint": "Diode_SMD:D_SMA",
+   "category": "protection",
+   "typical_application": "5 V TVS diode across a supply or USB VBUS; cathode to the protected rail.",
+   "max_ratings": {
+    "standoff_v": 5,
+    "peak_pulse_w": 400
+   },
+   "spice": {
+    "template": "diode",
+    "roles": {
+     "anode": "2",
+     "cathode": "1"
+    },
+    "params": {
+     "Is": 1e-11,
+     "N": 1,
+     "Rs": 0.04,
+     "Bv": 6.4,
+     "Ibv": 0.001,
+     "Cjo": 7e-10
+    },
+    "basis": "Shockley diode tuned to datasheet Vf / breakdown"
+   },
+   "pin_names": {
+    "1": "K",
+    "2": "A"
+   }
+  },
+  {
+   "part_id": "CH340G",
+   "symbol": "Interface_USB:CH340G",
+   "footprint": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "category": "interface",
+   "typical_application": "USB to UART bridge; needs a 12 MHz crystal with two 22 pF caps and 100 nF on VCC; USB D+/D- direct, 3.3 V or 5 V operation via V3 pin.",
+   "required_support_parts": [
+    "12 MHz crystal",
+    "2 x 22pF C to GND",
+    "100nF C on VCC",
+    "100nF C on V3 to GND"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 5.3
+   }
+  },
+  {
+   "part_id": "CP2102N_QFN28",
+   "symbol": "Interface_USB:CP2102N-Axx-xQFN28",
+   "category": "interface",
+   "typical_application": "USB to UART bridge with internal oscillator (no crystal); 3.3 V logic.",
+   "required_support_parts": [
+    "4.7uF and 100nF C on VDD",
+    "1uF C on REGIN"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 3.6
+   }
+  },
+  {
+   "part_id": "MCP2551_SOIC8",
+   "symbol": "Interface_CAN_LIN:MCP2551-I-SN",
+   "category": "interface",
+   "typical_application": "5 V CAN transceiver; 120R termination across CANH/CANL at each bus end; Rs to GND through 10k for slope control.",
+   "required_support_parts": [
+    "120R termination across CANH-CANL",
+    "100nF C on VDD"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 5.5
+   }
+  },
+  {
+   "part_id": "SN65HVD230",
+   "symbol": "Interface_CAN_LIN:SN65HVD230",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "category": "interface",
+   "typical_application": "3.3 V CAN transceiver; connect to an MCU CAN TX/RX; 120R termination across CANH/CANL at bus ends.",
+   "required_support_parts": [
+    "120R termination across CANH-CANL",
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 3.6
+   }
+  },
+  {
+   "part_id": "PCF8574_SOIC16",
+   "symbol": "Interface_Expansion:PCF8574T",
+   "category": "interface",
+   "typical_application": "I2C 8-bit I/O expander; set address with A0-A2; needs I2C pull-ups of 4.7k.",
+   "required_support_parts": [
+    "4.7k pull-ups on SDA and SCL",
+    "100nF C on VDD"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 6
+   }
+  },
+  {
+   "part_id": "L293D_DIP16",
+   "symbol": "Driver_Motor:L293D",
+   "footprint": "Package_DIP:DIP-16_W7.62mm",
+   "category": "driver",
+   "typical_application": "Dual H-bridge, 600 mA per channel with internal flyback diodes; VCC1 is logic supply (5 V), VCC2 the motor supply up to 36 V.",
+   "required_support_parts": [
+    "100nF C on VCC1",
+    "10uF C on VCC2"
+   ],
+   "max_ratings": {
+    "vcc2_max_v": 36,
+    "i_out_max_ma": 600
+   }
+  },
+  {
+   "part_id": "DRV8833PW",
+   "symbol": "Driver_Motor:DRV8833PW",
+   "category": "driver",
+   "typical_application": "Dual H-bridge motor driver, 2.7-10.8 V, 1.5 A per bridge; 0.1 uF + bulk cap on VM.",
+   "required_support_parts": [
+    "10uF and 100nF C on VM",
+    "2.2nF C between VCP and VM",
+    "0.01uF"
+   ],
+   "max_ratings": {
+    "vm_max_v": 10.8,
+    "i_out_max_ma": 1500
+   }
+  },
+  {
+   "part_id": "TMP36_SOIC8",
+   "symbol": "Sensor_Temperature:TMP36xS",
+   "category": "sensor",
+   "typical_application": "Analog temperature sensor, 10 mV/degC with 500 mV at 0 degC; read with an ADC; 100nF decoupling.",
+   "required_support_parts": [
+    "100nF C on VS"
+   ],
+   "max_ratings": {
+    "vs_max_v": 5.5,
+    "vs_min_v": 2.7
+   }
+  },
+  {
+   "part_id": "DS18B20_TO92",
+   "symbol": "Sensor_Temperature:DS18B20",
+   "footprint": "Package_TO_SOT_THT:TO-92_Inline",
+   "category": "sensor",
+   "typical_application": "1-Wire digital thermometer: 4.7k pull-up from DQ to VDD, single data pin.",
+   "required_support_parts": [
+    "4.7k pull-up DQ to VDD"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 5.5
+   }
+  },
+  {
+   "part_id": "ATtiny13A_SOIC8",
+   "symbol": "MCU_Microchip_ATtiny:ATtiny13A-SS",
+   "category": "mcu",
+   "typical_application": "8-bit AVR with 1 KiB flash; ISP via RESET, MOSI, MISO, SCK; 100nF on VCC.",
+   "required_support_parts": [
+    "100nF C on VCC",
+    "10k pull-up on RESET"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 5.5
+   }
+  },
+  {
+   "part_id": "ATmega328P_TQFP32",
+   "symbol": "MCU_Microchip_ATmega:ATmega328P-A",
+   "category": "mcu",
+   "typical_application": "Arduino Uno MCU. 16 MHz crystal with two 22 pF caps, 100nF on each VCC/AVCC, 10k RESET pull-up, 6-pin ISP header.",
+   "required_support_parts": [
+    "16MHz crystal + 2x22pF",
+    "100nF on every VCC/AVCC",
+    "10k RESET pull-up"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 5.5
+   }
+  },
+  {
+   "part_id": "RP2040_QFN56",
+   "symbol": "MCU_RaspberryPi:RP2040",
+   "category": "mcu",
+   "typical_application": "Dual Cortex-M0+ MCU; needs external QSPI flash, 12 MHz crystal, 1.1 V core from internal regulator with its own decoupling.",
+   "required_support_parts": [
+    "W25Q QSPI flash",
+    "12 MHz crystal and 1k series R",
+    "100nF on every IOVDD/DVDD",
+    "1uF on VREG_VOUT"
+   ],
+   "max_ratings": {
+    "iovdd_max_v": 3.63
+   }
+  },
+  {
+   "part_id": "STM32F103C8T6",
+   "symbol": "MCU_ST_STM32F1:STM32F103C8Tx",
+   "category": "mcu",
+   "typical_application": "ARM Cortex-M3 'blue pill' MCU; 8 MHz crystal, 100nF on each VDD, 10uF + 4.7uF on VDDA, BOOT0 pull-down.",
+   "required_support_parts": [
+    "100nF on each VDD/VSS pair",
+    "8 MHz crystal and 2x20pF",
+    "10k BOOT0 pull-down"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 3.6
+   }
+  },
+  {
+   "part_id": "W25Q32JV_SOIC8",
+   "symbol": "Memory_Flash:W25Q32JVSS",
+   "category": "memory",
+   "typical_application": "32 Mbit SPI/QSPI flash, 2.7-3.6 V.",
+   "required_support_parts": [
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 3.6
+   }
+  },
+  {
+   "part_id": "AT24C256_SOIC8",
+   "symbol": "Memory_EEPROM:24LC256",
+   "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+   "category": "memory",
+   "typical_application": "256 kbit I2C EEPROM; address with A0-A2; WP to GND for write enable; needs I2C pull-ups.",
+   "required_support_parts": [
+    "4.7k pull-ups on SDA and SCL",
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 5.5
+   }
+  },
+  {
+   "part_id": "SN74HC595_SOIC16",
+   "symbol": "74xx:74HC595",
+   "footprint": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "category": "logic",
+   "typical_application": "8-bit shift register with latch: expand outputs from 3 MCU pins (SER, SRCLK, RCLK); chain via QH'.",
+   "required_support_parts": [
+    "100nF C on VCC",
+    "OE_N to GND, SRCLR_N to VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 6
+   }
+  },
+  {
+   "part_id": "SN74HC14_SOIC14",
+   "symbol": "74xx:74HC14",
+   "footprint": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+   "category": "logic",
+   "typical_application": "Hex Schmitt-trigger inverter: debounce inputs and RC oscillators. Tie unused inputs to GND.",
+   "required_support_parts": [
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 6
+   }
+  },
+  {
+   "part_id": "SN74HC00_SOIC14",
+   "symbol": "74xx:74HC00",
+   "footprint": "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm",
+   "category": "logic",
+   "typical_application": "Quad 2-input NAND gate. Tie unused inputs to a rail.",
+   "required_support_parts": [
+    "100nF C on VCC"
+   ],
+   "max_ratings": {
+    "vcc_max_v": 6
+   }
+  },
+  {
+   "part_id": "CD4017_SOIC16",
+   "symbol": "4xxx:4017",
+   "footprint": "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm",
+   "category": "logic",
+   "typical_application": "Decade counter with 10 decoded outputs, classic LED chaser from a 555 clock.",
+   "required_support_parts": [
+    "100nF C on VDD"
+   ],
+   "max_ratings": {
+    "vdd_max_v": 18
+   }
+  },
+  {
+   "part_id": "Conn_1x02_Header",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "category": "connector",
+   "typical_application": "2-pin 2.54 mm header for power or a switch/sensor.",
+   "max_ratings": {
+    "current_per_pin_a": 3,
+    "voltage_v": 250
+   }
+  },
+  {
+   "part_id": "Conn_1x03_Header",
+   "symbol": "Connector_Generic:Conn_01x03",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical",
+   "category": "connector",
+   "typical_application": "3-pin 2.54 mm header (servo, UART RX/TX/GND, analog sensor).",
+   "max_ratings": {
+    "current_per_pin_a": 3,
+    "voltage_v": 250
+   }
+  },
+  {
+   "part_id": "Conn_1x06_Header",
+   "symbol": "Connector_Generic:Conn_01x06",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x06_P2.54mm_Vertical",
+   "category": "connector",
+   "typical_application": "6-pin 2.54 mm header (FTDI serial, ISP on 2x3 is Conn_02x03).",
+   "max_ratings": {
+    "current_per_pin_a": 3,
+    "voltage_v": 250
+   }
+  },
+  {
+   "part_id": "Conn_2x03_ISP",
+   "symbol": "Connector_Generic:Conn_02x03_Odd_Even",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_2x03_P2.54mm_Vertical",
+   "category": "connector",
+   "typical_application": "AVR ISP header: 1 MISO, 2 VCC, 3 SCK, 4 MOSI, 5 RESET, 6 GND (odd/even numbering).",
+   "max_ratings": {
+    "current_per_pin_a": 3,
+    "voltage_v": 250
+   }
+  },
+  {
+   "part_id": "Conn_2x05_SWD",
+   "symbol": "Connector_Generic:Conn_02x05_Odd_Even",
+   "footprint": "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical",
+   "category": "connector",
+   "typical_application": "ARM Cortex 10-pin 1.27 mm debug header: 1 VCC, 2 SWDIO, 4 SWCLK, 3/5/9 GND, 10 RESET.",
+   "max_ratings": {
+    "current_per_pin_a": 1,
+    "voltage_v": 100
+   }
+  },
+  {
+   "part_id": "JST_PH_2",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_JST:JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical",
+   "category": "connector",
+   "typical_application": "JST-PH 2-pin battery or power connector (check polarity convention of the mating cable).",
+   "max_ratings": {
+    "current_per_pin_a": 2,
+    "voltage_v": 100
+   }
+  },
+  {
+   "part_id": "Barrel_Jack_5mm",
+   "symbol": "Connector:Barrel_Jack",
+   "footprint": "Connector_BarrelJack:BarrelJack_Horizontal",
+   "category": "connector",
+   "typical_application": "2.1 mm DC barrel jack: pin 1 is the center positive; add a reverse-protection diode or P-FET.",
+   "max_ratings": {
+    "current_per_pin_a": 5,
+    "voltage_v": 24
+   }
+  },
+  {
+   "part_id": "USB_Micro_B",
+   "symbol": "Connector:USB_B_Micro",
+   "footprint": "Connector_USB:USB_Micro-B_Amphenol_10118194_Horizontal",
+   "category": "connector",
+   "typical_application": "Micro-B USB receptacle: VBUS, D-, D+, ID, GND, shield pins; 5V power or data.",
+   "required_support_parts": [
+    "Optional ESD protection on D+/D-"
+   ],
+   "max_ratings": {
+    "vbus_max_v": 5.5,
+    "current_default_a": 0.5
+   }
+  },
+  {
+   "part_id": "Fuse_1206",
+   "symbol": "Device:Fuse",
+   "footprint": "Fuse:Fuse_1206_3216Metric",
+   "category": "protection",
+   "typical_application": "Series overcurrent protection in a supply path; choose the rating from the load current.",
+   "max_ratings": {
+    "current_a": 1
+   },
+   "spice": {
+    "template": "resistor",
+    "roles": {
+     "a": "1",
+     "b": "2"
+    },
+    "params": {
+     "ohms": 0.1
+    },
+    "basis": "Fixed resistance"
+   }
+  },
+  {
+   "part_id": "Polyfuse_1206",
+   "symbol": "Device:Polyfuse",
+   "footprint": "Fuse:Fuse_1206_3216Metric",
+   "category": "protection",
+   "typical_application": "Resettable PTC fuse in series with a USB or battery supply.",
+   "max_ratings": {
+    "hold_current_a": 0.5
+   },
+   "spice": {
+    "template": "resistor",
+    "roles": {
+     "a": "1",
+     "b": "2"
+    },
+    "params": {
+     "ohms": 0.5
+    },
+    "basis": "Fixed resistance"
+   }
+  },
+  {
+   "part_id": "Inductor_1210",
+   "symbol": "Device:L",
+   "footprint": "Inductor_SMD:L_1210_3225Metric",
+   "category": "passive",
+   "typical_application": "Generic SMD inductor for switching converters and LC filters; choose value, saturation current and DCR from the converter datasheet.",
+   "max_ratings": {
+    "current_a": 1
+   },
+   "spice": {
+    "template": "inductor",
+    "roles": {
+     "a": "1",
+     "b": "2"
+    },
+    "params": {
+     "dcr_ohms": 0.1,
+     "default_henry": 1e-05
+    },
+    "basis": "Ideal inductor (value from the component value) plus series DCR; no saturation"
+   }
+  },
+  {
+   "part_id": "Ferrite_Bead_0805",
+   "symbol": "Device:FerriteBead",
+   "footprint": "Inductor_SMD:L_0805_2012Metric",
+   "category": "passive",
+   "typical_application": "Supply filter between a noisy rail and an analog section, rated above the load current.",
+   "max_ratings": {
+    "current_a": 0.5
+   },
+   "spice": {
+    "template": "resistor",
+    "roles": {
+     "a": "1",
+     "b": "2"
+    },
+    "params": {
+     "ohms": 0.05
+    },
+    "basis": "Fixed resistance"
+   }
+  },
+  {
+   "part_id": "Crystal_HC49",
+   "symbol": "Device:Crystal",
+   "footprint": "Crystal:Crystal_HC49-4H_Vertical",
+   "category": "clock",
+   "typical_application": "Through-hole HC49 crystal; add two load capacitors C = 2*(CL - Cstray).",
+   "required_support_parts": [
+    "2 x load capacitors to GND"
+   ],
+   "max_ratings": {
+    "drive_level_uw_max": 100
+   }
+  },
+  {
+   "part_id": "Buzzer_Passive_12mm",
+   "symbol": "Device:Buzzer",
+   "footprint": "Buzzer_Beeper:Buzzer_12x9.5RM7.6",
+   "category": "audio",
+   "typical_application": "Passive buzzer: drive with a square wave through a transistor; use a diode across inductive coils. Check polarity.",
+   "max_ratings": {
+    "voltage_v": 12
+   }
+  },
+  {
+   "part_id": "Speaker_8R",
+   "symbol": "Device:Speaker",
+   "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical",
+   "category": "audio",
+   "typical_application": "8 ohm speaker connection on a 2-pin header; drive with an amplifier, not directly from a GPIO.",
+   "max_ratings": {
+    "power_w": 0.5
+   }
+  },
+  {
+   "part_id": "Relay_SPDT_5V",
+   "symbol": "Relay:SANYOU_SRD_Form_C",
+   "category": "relay",
+   "typical_application": "5 V SPDT relay: drive the coil with a low-side N-MOSFET or NPN with a flyback diode (1N4007) across the coil.",
+   "required_support_parts": [
+    "1N4007 flyback diode across coil",
+    "NPN/N-MOSFET coil driver"
+   ],
+   "max_ratings": {
+    "coil_v": 5,
+    "contact_a": 10
+   }
+  },
+  {
+   "part_id": "Optocoupler_PC817",
+   "symbol": "Isolator:PC817",
+   "footprint": "Package_DIP:DIP-4_W7.62mm",
+   "category": "ic",
+   "typical_application": "Optocoupler for isolated switching: LED current about 5-10 mA through a series resistor; transistor side pulled up.",
+   "required_support_parts": [
+    "Series R for the input LED",
+    "Pull-up R on the output"
+   ],
+   "max_ratings": {
+    "if_max_ma": 50,
+    "vceo_max_v": 80
+   },
+   "spice": {
+    "template": "optocoupler",
+    "roles": {
+     "led_anode": "1",
+     "led_cathode": "2",
+     "emitter": "3",
+     "collector": "4"
+    },
+    "params": {
+     "ctr": 1.0
+    },
+    "basis": "LED diode with current-controlled collector current (CTR); no speed limit"
+   },
+   "pin_names": {
+    "1": "A",
+    "2": "K",
+    "3": "E",
+    "4": "C"
+   }
+  }
+ ],
+ "auto": []
+}
