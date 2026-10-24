@@ -27,7 +27,16 @@ def finite(value, name, minimum=None, maximum=None):
         raise ValueError(f'{name} is outside supported limits')
     return n
 
-def normalize_design(components, nets, board_width_mm=50, board_height_mm=40):
+def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None):
+    """Validate and normalize a design.
+
+    auto_place: None (default) auto-places only components missing x_mm or y_mm (or with
+    null coordinates); components with explicit coordinates stay fixed and act as
+    obstacles. True ignores all supplied coordinates/rotations and places everything.
+    False disables auto-placement (legacy 8 mm grid for missing coordinates).
+    Refs that were placed by the server are listed in design['auto_placed'].
+    """
+    from .placement import auto_place as _auto_place
     width = finite(board_width_mm, 'board_width_mm', 5, 300)
     height = finite(board_height_mm, 'board_height_mm', 5, 300)
     if not isinstance(components, list) or not 1 <= len(components) <= 200:
@@ -35,6 +44,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40):
     if not isinstance(nets, list) or len(nets) > 500:
         raise ValueError('nets must be a list of at most 500 entries')
     cat, refs, cs, warnings = load_catalog(), {}, [], []
+    movable = set()
     for i, c in enumerate(components):
         if not isinstance(c, dict):
             raise ValueError('each component must be an object')
@@ -49,9 +59,12 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40):
         value = c.get('value', pid)
         if not isinstance(value, str) or len(value) > 120 or any(ord(ch)<32 for ch in value):
             raise ValueError(f'invalid value for {ref}')
-        x = finite(c.get('x_mm', 8 + (i % 5)*8), f'{ref}.x_mm', 0, width)
-        y = finite(c.get('y_mm', 8 + (i // 5)*8), f'{ref}.y_mm', 0, height)
-        rot = finite(c.get('rotation_deg', 0), f'{ref}.rotation_deg') % 360
+        missing = c.get('x_mm') is None or c.get('y_mm') is None
+        if auto_place is not False and (missing or auto_place is True):
+            movable.add(ref)
+        x = finite((width/2 if ref in movable else 8 + (i % 5)*8) if c.get('x_mm') is None else c['x_mm'], f'{ref}.x_mm', 0, width)
+        y = finite((height/2 if ref in movable else 8 + (i // 5)*8) if c.get('y_mm') is None else c['y_mm'], f'{ref}.y_mm', 0, height)
+        rot = finite(c.get('rotation_deg') or 0, f'{ref}.rotation_deg') % 360
         normalized = {'ref':ref, 'part_id':pid, 'value':value, 'x_mm':x, 'y_mm':y, 'rotation_deg':rot}
         cs.append(normalized); refs[ref] = normalized
     used, ns, names = {}, [], set()
@@ -92,7 +105,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40):
         for pin in cat[c['part_id']]['pins']:
             if f"{c['ref']}.{pin['number']}" not in used:
                 warnings.append(f"Unassigned pin {c['ref']}.{pin['number']} ({pin['name']})")
-    design = {'components':cs,'nets':ns,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
+    auto_placed = _auto_place(cs, ns, cat, width, height, movable) if movable else []
+    design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
               'bom':[{'ref':c['ref'],'value':c['value'],'footprint':cat[c['part_id']]['footprint'],'lcsc':('' if c['part_id'] in ('R','C') else cat[c['part_id']]['lcsc']),'price_usd':cat[c['part_id']]['price_usd']} for c in cs]}
     if any(c['part_id'] in ('R','C') for c in cs):
         warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')
@@ -129,6 +143,10 @@ def write_board(design, destination, segments=None, zones=''):
         part = catalog[c['part_id']]
         fp = part['footprint_sexpr']
         fp = fp.replace('(layer "F.Cu")', f'(layer "F.Cu") (at {c["x_mm"]:g} {c["y_mm"]:g} {c["rotation_deg"]:g})', 1)
+        # KiCad stores pad angles as absolute, so pads must carry the footprint rotation too.
+        if c['rotation_deg'] % 360:
+            fp = re.sub(r'(\(pad "[^"\n]+" (?:smd|thru_hole|np_thru_hole) (?:rect|roundrect|circle|oval) \(at -?[\d.]+ -?[\d.]+)\)',
+                        lambda m: f'{m.group(1)} {c["rotation_deg"]:g})', fp)
         # Append net records by locating the complete balanced pad expression.
         def inject(match):
             number = match.group(1)
@@ -177,7 +195,9 @@ def build_board(design, build_dir):
     build = Path(build_dir); build.mkdir(parents=True,exist_ok=True)
     src = build.parent/'src'; src.mkdir(exist_ok=True)
     # Revalidate even callers passing a handcrafted normalized design.
+    auto_placed = list(design.get('auto_placed') or [])
     design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'])
+    design['auto_placed'] = auto_placed or design['auto_placed']
     (build/'design.json').write_text(json.dumps(design,indent=2)+'\n')
     write_board(design,build/'board.kicad_pcb')
     write_netlist(design,build/'board.net')
@@ -200,4 +220,4 @@ def build_board(design, build_dir):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
     if backend!='skidl':
         write_netlist(design,build/'board.net')
-    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'warnings':warnings,'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}
+    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}

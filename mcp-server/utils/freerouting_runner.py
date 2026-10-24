@@ -3,6 +3,7 @@ from __future__ import annotations
 import heapq
 import json
 import math
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -57,12 +58,47 @@ def _astar(start, goal, blocked, width, height, deadline=None):
     return None
 
 
-def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
+DEMO_PAD_LIMIT = 30
+DEMO_MAX_PASSES = 6
+DEFAULT_MAX_PASSES = 20
+DEFAULT_TIME_BUDGET_S = 180
+
+
+def _env_number(name, cast):
+    raw = os.environ.get(name)
+    if raw in (None, ''):
+        return None
+    try:
+        return cast(raw)
+    except ValueError:
+        return None
+
+
+def resolve_router_limits(max_passes, time_budget_s, pad_count):
+    """Explicit argument > environment > small-board demo default > full default."""
+    source = 'argument'
+    if max_passes is None:
+        max_passes = _env_number('EEA_ROUTER_MAX_PASSES', int)
+        source = 'environment'
+    if max_passes is None:
+        max_passes, source = (DEMO_MAX_PASSES, 'demo-default') if pad_count <= DEMO_PAD_LIMIT else (DEFAULT_MAX_PASSES, 'default')
+    if time_budget_s is None:
+        time_budget_s = _env_number('EEA_ROUTER_TIME_BUDGET_S', float)
+    if time_budget_s is None:
+        time_budget_s = DEFAULT_TIME_BUDGET_S
+    max_passes = int(finite(max_passes, 'max_passes', 1, 100))
+    time_budget_s = finite(time_budget_s, 'time_budget_s', 5, 1800)
+    return max_passes, time_budget_s, source
+
+
+def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None):
     trace_width_mm=finite(trace_width_mm,'trace_width_mm',0.1,2)
     clearance_mm=finite(clearance_mm,'clearance_mm',0.1,2)
     workspace=Path(workspace); build=workspace/'build'; design=json.loads((build/'design.json').read_text())
     (build/'drc_report.json').unlink(missing_ok=True)
     (workspace/'manufacturing/gerbers.zip').unlink(missing_ok=True)
+    max_passes, time_budget_s, limits_source = resolve_router_limits(max_passes, time_budget_s, len(pad_positions(design)))
+    router_limits={'max_passes':max_passes,'time_budget_s':time_budget_s,'limits_source':limits_source}
     warnings=[]
     jar=ROOT/'vendor/freerouting.jar'
     if not jar.exists() or not shutil.which('java'):
@@ -74,9 +110,9 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
             effective_width, effective_clearance = configure_native_rules(board, pcbnew, trace_width_mm, clearance_mm)
             corrected = enforce_minimum_track_width(board, pcbnew)
             if not pcbnew.ExportSpecctraDSN(board,str(build/'board.dsn')): raise RuntimeError('DSN export failed')
-            progress(workspace, 'Routing with Freerouting (up to 180 seconds)')
+            progress(workspace, f'Routing with Freerouting ({max_passes} passes, up to {time_budget_s:g} seconds)')
             (build/'board.ses').unlink(missing_ok=True)
-            result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp','20','--gui.enabled=false','--router.automatic_neckdown=false'],capture_output=True,text=True,timeout=180)
+            result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp',str(max_passes),'--gui.enabled=false','--router.automatic_neckdown=false'],capture_output=True,text=True,timeout=time_budget_s)
             if result.returncode or not (build/'board.ses').exists(): raise RuntimeError('Freerouting did not produce a session')
             if not pcbnew.ImportSpecctraSES(board,str(build/'board.ses')): raise RuntimeError('SES import failed')
             # Freerouting's fanout may still create micro-neckdowns even with the option disabled.
@@ -97,7 +133,7 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
             except (AttributeError,TypeError,RuntimeError) as error:
                 zone_warning.append(f'GND zone could not be filled: {error}')
             pcbnew.SaveBoard(str(build/'board.kicad_pcb'),board)
-            report = {'status':'success','backend':'freerouting','verified':False,
+            report = {'status':'success','backend':'freerouting','verified':False,**router_limits,
                       'trace_width_mm':effective_width,'clearance_mm':effective_clearance,
                       'minimum_track_width_mm':pcbnew.ToMM(board.GetDesignSettings().m_TrackMinWidth),
                       'corrected_narrow_segments':corrected,
@@ -136,6 +172,6 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
     write_board(design,build/'board.kicad_pcb',segments)
     if time.monotonic() >= deadline:
         warnings.append(f'Python routing stopped at its {ROUTE_TIME_BUDGET_SECONDS}s time limit; remaining connections are reported as unrouted')
-    report={'status':'degraded','backend':'python-grid-astar','verified':False,'unconnected_items':len(unrouted),'retryable_unchanged':False,'next_action':'Run DRC once, then report remaining connections. Repeating routing with the same placement and rules will produce the same result; revise placement or install Freerouting before another attempt.','unrouted':unrouted,'segments':segments,'warnings':warnings+['Single-layer fallback routes are provisional; pad escape clearance and all geometry require KiCad DRC. No GND pour is claimed.']}
+    report={'status':'degraded','backend':'python-grid-astar','verified':False,**router_limits,'unconnected_items':len(unrouted),'retryable_unchanged':False,'next_action':'Run DRC once, then report remaining connections. Repeating routing with the same placement and rules will produce the same result; revise placement or install Freerouting before another attempt.','unrouted':unrouted,'segments':segments,'warnings':warnings+['Single-layer fallback routes are provisional; pad escape clearance and all geometry require KiCad DRC. No GND pour is claimed.']}
     (build/'routes.json').write_text(json.dumps(report,indent=2)+'\n')
     return {k:v for k,v in report.items() if k!='segments'}

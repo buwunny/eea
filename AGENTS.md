@@ -33,7 +33,7 @@ eea/
 ├── .gemini/settings.json        # Gemini CLI MCP config
 ├── mcp-server/                  # Python FastMCP server + EDA engine
 │   ├── pyproject.toml           # fastmcp, skidl, pyspice, jinja2, numpy
-│   ├── server.py                # 6 FastMCP tools
+│   ├── server.py                # FastMCP tools (pipeline, blocks, calculators)
 │   ├── catalog/curated_parts.json
 │   ├── templates/
 │   │   ├── skidl_pcb.py.j2      # SKiDL netlist -> board.net
@@ -162,6 +162,11 @@ Plus a few extras (e.g. `2N7002`, `1N4148`).
 | `autoroute_pcb(trace_width_mm=0.25, clearance_mm=0.2)` | `pcbnew.ExportSpecctraDSN` → `java -jar freerouting.jar -de board.dsn -do board.ses -mp 20` → `ImportSpecctraSession`; GND pour on `B.Cu`; re-export 3D. Fallback: Python grid A* router. |
 | `run_drc_verification()` | `kicad-cli pcb drc --format json --output build/drc_report.json build/board.kicad_pcb`; parses `violations` and `unconnected_items`; returns errors with coordinates and nets. |
 | `export_manufacturing_files()` | `kicad-cli pcb export gerbers`, `drill`, `pos` into `workspace/manufacturing/`; JLCPCB-format `bom.csv`; zips Gerbers into `gerbers.zip`. |
+| `build_and_verify(components, nets, ..., sim_config=None, export=False)` | Runs synthesize → simulate → route → DRC (→ export) in one call, one telemetry stage and git commit per step; stops at the first hard failure and returns compact per-stage reports. |
+| `list_design_blocks()` / `list_example_compositions()` / `compose_design(blocks, connections)` | Pre-validated circuit blocks with typed ports (`utils/design_blocks.py`). `compose_design` renumbers refs, merges nets, checks power/rating mistakes and estimates board size. Writes no files. |
+| `calc_555_astable` / `calc_led_resistor` / `calc_voltage_divider` | Pure E24 calculators (`utils/calculators.py`); no telemetry or commits. |
+
+Components may omit `x_mm`/`y_mm`; `utils/placement.py` auto-places them (connectors on an edge, ICs central, passives near connected pins). `run_spice_simulation` reuses `build/design.json` when `components`/`nets` are omitted and skips parts without a SPICE model. Freerouting uses 6 passes for boards with ≤30 pads (override with `max_passes`, `time_budget_s` or `EEA_ROUTER_MAX_PASSES` / `EEA_ROUTER_TIME_BUDGET_S`).
 
 ---
 

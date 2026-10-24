@@ -62,7 +62,7 @@ class EngineTests(unittest.TestCase):
         with self.assertRaises(ValueError): normalize_design(cs,ns)
 
     def test_catalog_and_board_embed_every_pad_with_valid_pad_grammar(self):
-        self.assertEqual(len(load_catalog()),9)
+        self.assertGreaterEqual(len(load_catalog()),9)
         with tempfile.TemporaryDirectory() as directory:
             cs,ns=astable(); build=Path(directory)/'build'
             report=build_board(normalize_design(cs,ns),build)

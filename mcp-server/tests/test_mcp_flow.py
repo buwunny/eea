@@ -43,12 +43,14 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual({tool.name for tool in tools}, {
                     'list_curated_parts', 'synthesize_pcb', 'run_spice_simulation',
                     'autoroute_pcb', 'run_drc_verification', 'export_manufacturing_files',
+                    'build_and_verify', 'calc_555_astable', 'calc_led_resistor', 'calc_voltage_divider',
+                    'list_design_blocks', 'list_example_compositions', 'compose_design',
                 })
                 result = await client.call_tool('list_curated_parts')
                 self.assertFalse(result.is_error)
                 self.assertEqual(result.data['status'], 'success')
                 self.assertIn('NE555', {part['part_id'] for part in result.data['parts']})
-                self.assertLess(len(json.dumps(result.data)), 12000)
+                self.assertLess(len(json.dumps(result.data)), 16000)
                 self.assertTrue(all('footprint_sexpr' not in part for part in result.data['parts']))
             message = subprocess.check_output(['git', 'log', '-1', '--format=%s'], cwd=directory, text=True)
             self.assertIn('MCP [list_curated_parts]', message)

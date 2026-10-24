@@ -7,11 +7,13 @@
     "pins": [
       {
         "number": "1",
-        "name": "1"
+        "name": "1",
+        "function": "Terminal 1 (non-polarized)"
       },
       {
         "number": "2",
-        "name": "2"
+        "name": "2",
+        "function": "Terminal 2 (non-polarized)"
       }
     ],
     "pads": [
@@ -42,7 +44,13 @@
       "1": 1,
       "2": 2
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Generic 0805 resistor for pull-ups, LED current limiting, dividers and RC timing. LED limit R = (Vsupply - Vf) / I.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "power_w": 0.125,
+      "voltage_v": 150
+    }
   },
   "C": {
     "part_id": "C",
@@ -52,11 +60,13 @@
     "pins": [
       {
         "number": "1",
-        "name": "1"
+        "name": "1",
+        "function": "Terminal 1 (non-polarized)"
       },
       {
         "number": "2",
-        "name": "2"
+        "name": "2",
+        "function": "Terminal 2 (non-polarized)"
       }
     ],
     "pads": [
@@ -87,7 +97,12 @@
       "1": 1,
       "2": 2
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Generic 0805 ceramic capacitor for decoupling (100 nF per IC supply pin) and timing. Check DC-bias derating above 6.3 V.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "voltage_v": 50
+    }
   },
   "LED": {
     "part_id": "LED",
@@ -97,11 +112,13 @@
     "pins": [
       {
         "number": "1",
-        "name": "K"
+        "name": "K",
+        "function": "Cathode; connect toward GND/driver"
       },
       {
         "number": "2",
-        "name": "A"
+        "name": "A",
+        "function": "Anode; connect toward supply via resistor"
       }
     ],
     "pads": [
@@ -132,7 +149,16 @@
       "1": 1,
       "2": 2
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "0805 indicator LED; always use a series resistor, about 330R-1k for 5 V at 5-10 mA.",
+    "required_support_parts": [
+      "Series resistor R to the anode or cathode"
+    ],
+    "max_ratings": {
+      "if_max_ma": 20,
+      "vr_max_v": 5,
+      "vf_typ_v": 2.0
+    }
   },
   "NE555": {
     "part_id": "NE555",
@@ -142,35 +168,43 @@
     "pins": [
       {
         "number": "1",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground"
       },
       {
         "number": "2",
-        "name": "TRIG"
+        "name": "TRIG",
+        "function": "Trigger; starts cycle when < 1/3 VCC"
       },
       {
         "number": "3",
-        "name": "OUT"
+        "name": "OUT",
+        "function": "Output; sources/sinks up to 200 mA"
       },
       {
         "number": "4",
-        "name": "RESET"
+        "name": "RESET",
+        "function": "Active-low reset; tie to VCC if unused"
       },
       {
         "number": "5",
-        "name": "CTRL"
+        "name": "CTRL",
+        "function": "Control voltage (2/3 VCC); decouple with 10 nF"
       },
       {
         "number": "6",
-        "name": "THR"
+        "name": "THR",
+        "function": "Threshold; ends timing when > 2/3 VCC"
       },
       {
         "number": "7",
-        "name": "DISCH"
+        "name": "DISCH",
+        "function": "Discharge; open-collector to ground for timing cap"
       },
       {
         "number": "8",
-        "name": "VCC"
+        "name": "VCC",
+        "function": "Supply, 4.5-16 V"
       }
     ],
     "pads": [
@@ -257,7 +291,20 @@
       "7": 7,
       "8": 8
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Astable: f = 1.44 / ((Ra + 2*Rb) * C), duty = (Ra+Rb)/(Ra+2*Rb). Tie TRIG to THR, RESET to VCC, decouple VCC.",
+    "required_support_parts": [
+      "100nF C on VCC to GND",
+      "10nF C on CTRL to GND (optional)",
+      "Ra between VCC and DISCH",
+      "Rb between DISCH and THR",
+      "Timing C between THR and GND"
+    ],
+    "max_ratings": {
+      "vcc_max_v": 16,
+      "i_out_max_ma": 200,
+      "vcc_min_v": 4.5
+    }
   },
   "USB_C_Receptacle_PowerOnly": {
     "part_id": "USB_C_Receptacle_PowerOnly",
@@ -267,51 +314,63 @@
     "pins": [
       {
         "number": "A1",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground"
       },
       {
         "number": "A4",
-        "name": "VBUS"
+        "name": "VBUS",
+        "function": "VBUS 5 V power"
       },
       {
         "number": "A5",
-        "name": "CC1"
+        "name": "CC1",
+        "function": "Configuration channel 1; 5.1k to GND (Rd)"
       },
       {
         "number": "A9",
-        "name": "VBUS"
+        "name": "VBUS",
+        "function": "VBUS 5 V power"
       },
       {
         "number": "A12",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground"
       },
       {
         "number": "B1",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground"
       },
       {
         "number": "B4",
-        "name": "VBUS"
+        "name": "VBUS",
+        "function": "VBUS 5 V power"
       },
       {
         "number": "B5",
-        "name": "CC2"
+        "name": "CC2",
+        "function": "Configuration channel 2; 5.1k to GND (Rd)"
       },
       {
         "number": "B9",
-        "name": "VBUS"
+        "name": "VBUS",
+        "function": "VBUS 5 V power"
       },
       {
         "number": "B12",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground"
       },
       {
         "number": "S1",
-        "name": "SHIELD"
+        "name": "SHIELD",
+        "function": "Shield; tie to GND"
       },
       {
         "number": "S2",
-        "name": "SHIELD"
+        "name": "SHIELD",
+        "function": "Shield; tie to GND"
       }
     ],
     "pads": [
@@ -430,7 +489,18 @@
       "S1": 11,
       "S2": 12
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Power-only USB-C sink. Put 5.1k pull-down from each of CC1 and CC2 to GND so a source supplies 5 V on VBUS.",
+    "required_support_parts": [
+      "5.1k R from CC1 to GND",
+      "5.1k R from CC2 to GND",
+      "10uF C on VBUS to GND"
+    ],
+    "max_ratings": {
+      "vbus_max_v": 5.5,
+      "current_default_a": 0.9,
+      "current_max_a": 3
+    }
   },
   "AMS1117_3V3": {
     "part_id": "AMS1117_3V3",
@@ -440,15 +510,18 @@
     "pins": [
       {
         "number": "1",
-        "name": "GND"
+        "name": "GND",
+        "function": "Ground/adjust reference"
       },
       {
         "number": "2",
-        "name": "VOUT"
+        "name": "VOUT",
+        "function": "Regulated 3.3 V output (also tab pad); up to 800 mA"
       },
       {
         "number": "3",
-        "name": "VIN"
+        "name": "VIN",
+        "function": "Input voltage, 4.5-12 V"
       }
     ],
     "pads": [
@@ -497,7 +570,18 @@
       "2": 2,
       "3": 3
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Input 4.5-12 V; place 10 uF ceramic/tantalum on VIN and 22 uF on VOUT close to pins. Dropout ~1.1 V; dissipates (Vin-Vout)*I.",
+    "required_support_parts": [
+      "10uF C on VIN to GND",
+      "22uF C on VOUT to GND"
+    ],
+    "max_ratings": {
+      "vin_max_v": 15,
+      "i_out_max_ma": 800,
+      "dropout_v": 1.1,
+      "vout_v": 3.3
+    }
   },
   "PinHeader_1x04": {
     "part_id": "PinHeader_1x04",
@@ -507,19 +591,23 @@
     "pins": [
       {
         "number": "1",
-        "name": "1"
+        "name": "1",
+        "function": "Header pin 1 (square pad)"
       },
       {
         "number": "2",
-        "name": "2"
+        "name": "2",
+        "function": "Header pin 2"
       },
       {
         "number": "3",
-        "name": "3"
+        "name": "3",
+        "function": "Header pin 3"
       },
       {
         "number": "4",
-        "name": "4"
+        "name": "4",
+        "function": "Header pin 4"
       }
     ],
     "pads": [
@@ -566,7 +654,13 @@
       "3": 3,
       "4": 4
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "2.54 mm 1x4 header for power/UART/I2C/SWD breakout; label pins by net names.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "current_per_pin_a": 3,
+      "voltage_v": 250
+    }
   },
   "2N7002": {
     "part_id": "2N7002",
@@ -576,15 +670,18 @@
     "pins": [
       {
         "number": "1",
-        "name": "G"
+        "name": "G",
+        "function": "Gate; Vgs(th) 1-2.5 V"
       },
       {
         "number": "2",
-        "name": "S"
+        "name": "S",
+        "function": "Source; connect to GND for low-side switching"
       },
       {
         "number": "3",
-        "name": "D"
+        "name": "D",
+        "function": "Drain; connect to load"
       }
     ],
     "pads": [
@@ -625,7 +722,17 @@
       "2": 2,
       "3": 3
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "N-channel logic-level low-side switch: gate from MCU via ~100R, 10k gate pull-down, load between supply and drain.",
+    "required_support_parts": [
+      "10k R gate to source (pull-down)",
+      "Optional 100R series gate R"
+    ],
+    "max_ratings": {
+      "vds_max_v": 60,
+      "id_max_ma": 115,
+      "vgs_max_v": 20
+    }
   },
   "1N4148": {
     "part_id": "1N4148",
@@ -635,11 +742,13 @@
     "pins": [
       {
         "number": "1",
-        "name": "K"
+        "name": "K",
+        "function": "Cathode (banded side)"
       },
       {
         "number": "2",
-        "name": "A"
+        "name": "A",
+        "function": "Anode"
       }
     ],
     "pads": [
@@ -671,6 +780,505 @@
       "1": 1,
       "2": 2
     },
-    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Small-signal switching diode: flyback/clamp for small loads, reverse-polarity or signal steering. Not for power rectification.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "vr_max_v": 75,
+      "if_max_ma": 150,
+      "trr_ns": 4
+    }
+  },
+  "Crystal_16MHz": {
+    "part_id": "Crystal_16MHz",
+    "category": "clock",
+    "description": "16 MHz SMD crystal, 3.2x2.5 mm, 4-pad (pins 2,4 are case ground)",
+    "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+    "pins": [
+      {
+        "number": "1",
+        "name": "X1",
+        "function": "Crystal terminal X1"
+      },
+      {
+        "number": "2",
+        "name": "GND",
+        "function": "Case ground; tie to GND"
+      },
+      {
+        "number": "3",
+        "name": "X2",
+        "function": "Crystal terminal X2"
+      },
+      {
+        "number": "4",
+        "name": "GND",
+        "function": "Case ground; tie to GND"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -1.1,
+        "y_mm": 0.85,
+        "width_mm": 1.4,
+        "height_mm": 1.2,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 1.1,
+        "y_mm": 0.85,
+        "width_mm": 1.4,
+        "height_mm": 1.2,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 1.1,
+        "y_mm": -0.85,
+        "width_mm": 1.4,
+        "height_mm": 1.2,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": -1.1,
+        "y_mm": -0.85,
+        "width_mm": 1.4,
+        "height_mm": 1.2,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm\" (layer \"F.Cu\")\n  (fp_rect (start -1.6 -1.25) (end 1.6 1.25) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -1.1 0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 1.1 0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 1.1 -0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -1.1 -0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C13738",
+    "price_usd": 0.12,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Parallel-resonant 16 MHz crystal for MCU oscillator. Connect X1/X2 across the MCU oscillator pins with a load capacitor from each to GND; keep traces short.",
+    "required_support_parts": [
+      "~18pF C from X1 to GND",
+      "~18pF C from X2 to GND (adjust to CL: C = 2*(CL - Cstray))"
+    ],
+    "max_ratings": {
+      "frequency_mhz": 16,
+      "load_cap_pf": 20,
+      "tolerance_ppm": 20,
+      "drive_level_uw_max": 100
+    }
+  },
+  "Button_Tactile_SMD": {
+    "part_id": "Button_Tactile_SMD",
+    "category": "switch",
+    "description": "SMD tactile push button SPST (TL3342), pads 1+1 and 2+2 internally joined",
+    "footprint": "Button_Switch_SMD:SW_SPST_TL3342",
+    "pins": [
+      {
+        "number": "1",
+        "name": "A",
+        "function": "Terminal A; both A pads are internally connected"
+      },
+      {
+        "number": "2",
+        "name": "B",
+        "function": "Terminal B; both B pads are internally connected; A-B shorts when pressed"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -3.15,
+        "y_mm": -1.9,
+        "width_mm": 1.7,
+        "height_mm": 1,
+        "through_hole": false
+      },
+      {
+        "number": "1",
+        "x_mm": 3.15,
+        "y_mm": -1.9,
+        "width_mm": 1.7,
+        "height_mm": 1,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -3.15,
+        "y_mm": 1.9,
+        "width_mm": 1.7,
+        "height_mm": 1,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 3.15,
+        "y_mm": 1.9,
+        "width_mm": 1.7,
+        "height_mm": 1,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Button_Switch_SMD:SW_SPST_TL3342\" (layer \"F.Cu\")\n  (fp_rect (start -2.1 -1.6) (end 2.1 1.6) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -3.15 -1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"1\" smd rect (at 3.15 -1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -3.15 1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 3.15 1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C318884",
+    "price_usd": 0.06,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Momentary push button: one side to GND, other to an MCU input with internal or 10k pull-up (active low); debounce in firmware or with 100nF C.",
+    "required_support_parts": [
+      "10k pull-up R to VCC (or MCU internal pull-up)",
+      "100nF C across A-B for hardware debounce (optional)"
+    ],
+    "max_ratings": {
+      "current_ma": 50,
+      "voltage_v": 12,
+      "contact_resistance_mohm": 100
+    }
+  },
+  "Buzzer_Magnetic": {
+    "part_id": "Buzzer_Magnetic",
+    "category": "audio",
+    "description": "Through-hole 12x9.5 mm magnetic buzzer, 7.6 mm pitch (needs oscillating drive)",
+    "footprint": "Buzzer_Beeper:Buzzer_12x9.5RM7.6",
+    "pins": [
+      {
+        "number": "1",
+        "name": "+",
+        "function": "Positive terminal; connect to supply"
+      },
+      {
+        "number": "2",
+        "name": "-",
+        "function": "Negative terminal; connect to MOSFET drain/GND"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": 0,
+        "y_mm": 0,
+        "width_mm": 2,
+        "height_mm": 2,
+        "through_hole": true
+      },
+      {
+        "number": "2",
+        "x_mm": 7.6,
+        "y_mm": 0,
+        "width_mm": 2,
+        "height_mm": 2,
+        "through_hole": true
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Buzzer_Beeper:Buzzer_12x9.5RM7.6\" (layer \"F.Cu\")\n  (fp_rect (start -1.5 -4.75) (end 9.1 4.75) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" thru_hole rect (at 0 0) (size 2 2) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"2\" thru_hole circle (at 7.6 0) (size 2 2) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n)",
+    "lcsc": "C94598",
+    "price_usd": 0.35,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Passive magnetic transducer: drive with a ~2-4 kHz square wave from a 555/MCU PWM via a low-side N-MOSFET (e.g. 2N7002) with a flyback diode across it.",
+    "required_support_parts": [
+      "N-MOSFET low-side switch (e.g. 2N7002)",
+      "1N4148 flyback diode across buzzer (cathode to +)",
+      "100R series R on MOSFET gate"
+    ],
+    "max_ratings": {
+      "rated_v": 5,
+      "current_ma_max": 30,
+      "resonant_freq_hz": 2700,
+      "spl_db_at_10cm": 85
+    }
+  },
+  "WS2812B": {
+    "part_id": "WS2812B",
+    "category": "opto",
+    "description": "WS2812B addressable RGB LED, 5x5 mm PLCC4",
+    "footprint": "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm",
+    "pins": [
+      {
+        "number": "1",
+        "name": "VDD",
+        "function": "Supply, 3.7-5.3 V"
+      },
+      {
+        "number": "2",
+        "name": "DOUT",
+        "function": "Data out; connect to next LED DIN"
+      },
+      {
+        "number": "3",
+        "name": "VSS",
+        "function": "Ground"
+      },
+      {
+        "number": "4",
+        "name": "DIN",
+        "function": "Data in; high >= 0.7*VDD"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -2.45,
+        "y_mm": -1.65,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -2.45,
+        "y_mm": 1.65,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 2.45,
+        "y_mm": 1.65,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": 2.45,
+        "y_mm": -1.65,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm\" (layer \"F.Cu\")\n  (fp_rect (start -2.5 -2.5) (end 2.5 2.5) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -2.45 -1.65) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -2.45 1.65) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 2.45 1.65) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at 2.45 -1.65) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C114586",
+    "price_usd": 0.09,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Single-wire RGB LED at 800 kHz; chain DOUT to next DIN. Supply 3.7-5.3 V; data high level must be >= 0.7*VDD (use level shifter from 3.3 V MCU at 5 V).",
+    "required_support_parts": [
+      "100nF C on VDD to GND per LED",
+      "300-470R series R on DIN",
+      "Bulk 100uF+ C per strip supply"
+    ],
+    "max_ratings": {
+      "vdd_max_v": 5.3,
+      "vdd_min_v": 3.7,
+      "i_max_ma_per_led": 60,
+      "data_rate_khz": 800
+    }
+  },
+  "ATtiny85_SOIC8": {
+    "part_id": "ATtiny85_SOIC8",
+    "category": "mcu",
+    "description": "ATtiny85-20SU 8-bit AVR MCU, 8 KB flash, SOIC-8 (5.3 mm body)",
+    "footprint": "Package_SO:SOIC-8_5.3x5.3mm_P1.27mm",
+    "pins": [
+      {
+        "number": "1",
+        "name": "PB5/RESET",
+        "function": "PB5/RESET; active-low reset (pull up 10k), GPIO if RESET fuse disabled"
+      },
+      {
+        "number": "2",
+        "name": "PB3",
+        "function": "PB3 GPIO / ADC3 / XTAL1"
+      },
+      {
+        "number": "3",
+        "name": "PB4",
+        "function": "PB4 GPIO / ADC2 / XTAL2"
+      },
+      {
+        "number": "4",
+        "name": "GND",
+        "function": "Ground"
+      },
+      {
+        "number": "5",
+        "name": "PB0",
+        "function": "PB0 GPIO / MOSI / SDA / PWM OC0A"
+      },
+      {
+        "number": "6",
+        "name": "PB1",
+        "function": "PB1 GPIO / MISO / PWM OC0B"
+      },
+      {
+        "number": "7",
+        "name": "PB2",
+        "function": "PB2 GPIO / SCK / SCL / ADC1"
+      },
+      {
+        "number": "8",
+        "name": "VCC",
+        "function": "Supply, 2.7-5.5 V"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -3.5875,
+        "y_mm": -1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -3.5875,
+        "y_mm": -0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": -3.5875,
+        "y_mm": 0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": -3.5875,
+        "y_mm": 1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "8",
+        "x_mm": 3.5875,
+        "y_mm": -1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "7",
+        "x_mm": 3.5875,
+        "y_mm": -0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "6",
+        "x_mm": 3.5875,
+        "y_mm": 0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "5",
+        "x_mm": 3.5875,
+        "y_mm": 1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_SO:SOIC-8_5.3x5.3mm_P1.27mm\" (layer \"F.Cu\")\n  (fp_rect (start -2.65 -2.65) (end 2.65 2.65) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at 3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at 3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at 3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at 3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C89852",
+    "price_usd": 0.95,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 8
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Small AVR MCU: 2.7-5.5 V, internal 8 MHz RC (no crystal needed). Program via ISP using RESET, PB0 (MOSI), PB1 (MISO), PB2 (SCK).",
+    "required_support_parts": [
+      "100nF C on VCC to GND",
+      "10k pull-up R on RESET to VCC",
+      "6-pin ISP header (optional)"
+    ],
+    "max_ratings": {
+      "vcc_max_v": 5.5,
+      "vcc_min_v": 2.7,
+      "i_per_pin_ma": 40,
+      "f_max_mhz_at_4v5": 20
+    }
+  },
+  "Capacitor_Electrolytic": {
+    "part_id": "Capacitor_Electrolytic",
+    "category": "passive",
+    "description": "SMD polarized electrolytic capacitor 6.3x5.4 mm (e.g. 100uF 16V)",
+    "footprint": "Capacitor_SMD:CP_Elec_6.3x5.4",
+    "pins": [
+      {
+        "number": "1",
+        "name": "+",
+        "function": "Positive terminal (marked side)"
+      },
+      {
+        "number": "2",
+        "name": "-",
+        "function": "Negative terminal"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -2.8,
+        "y_mm": 0,
+        "width_mm": 3.5,
+        "height_mm": 1.6,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 2.8,
+        "y_mm": 0,
+        "width_mm": 3.5,
+        "height_mm": 1.6,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Capacitor_SMD:CP_Elec_6.3x5.4\" (layer \"F.Cu\")\n  (fp_rect (start -3.3 -3.3) (end 3.3 3.3) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -2.8 0) (size 3.5 1.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 2.8 0) (size 3.5 1.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C3342",
+    "price_usd": 0.1,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Bulk decoupling/reservoir on power rails; observe polarity (+ to higher potential). Use voltage rating >= 1.5x rail.",
+    "required_support_parts": [
+      "100nF ceramic C in parallel for high-frequency decoupling"
+    ],
+    "max_ratings": {
+      "voltage_v": 16,
+      "capacitance_uf": 100,
+      "temp_max_c": 105
+    }
   }
 }

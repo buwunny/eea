@@ -19,6 +19,13 @@ def engineering(value):
     return finite(float(match[1])*scales[match[2]], 'passive value', 1e-15, 1e15)
 
 
+SPICE_PARTS = {'R','C','Capacitor_Electrolytic','NE555','LED','1N4148','AMS1117_3V3','2N7002'}
+
+
+def skipped_refs(design):
+    return [c['ref'] for c in design['components'] if c['part_id'] not in SPICE_PARTS]
+
+
 def spice_text(design, config):
     catalog = load_catalog()
     pin_nets = {p:n['name'] for n in design['nets'] for p in n['connections']}
@@ -35,18 +42,22 @@ def spice_text(design, config):
     for c in design['components']:
         pid, ref = c['part_id'],c['ref']
         p = catalog[pid]
-        if pid in ('R','C'):
-            lines.append(f"{pid}{ref} {pin(c,'1')} {pin(c,'2')} {engineering(c['value']):g}")
+        if pid in ('R','C','Capacitor_Electrolytic'):
+            kind = 'R' if pid == 'R' else 'C'
+            lines.append(f"{kind}{ref} {pin(c,'1')} {pin(c,'2')} {engineering(c['value']):g}")
         elif pid == 'NE555':
             definitions.add(p['spice_model']['subcircuit'])
             lines.append(f"X{ref} {' '.join(pin(c,str(i)) for i in range(1,9))} EEA555")
         elif pid in ('LED','1N4148'):
             definitions.add('.model EEA_D D(Is=1e-14 N=1.8)')
             lines.append(f"D{ref} {pin(c,'2' if pid=='LED' else '1')} {pin(c,'1' if pid=='LED' else '2')} EEA_D")
-        elif pid in ('USB_C_Receptacle_PowerOnly','PinHeader_1x04'):
-            continue
+        elif pid == 'AMS1117_3V3':
+            lines.append(f"B{ref} {pin(c,'2')} {pin(c,'1')} V = 3.3*u(v({pin(c,'3')},{pin(c,'1')})-4.5)")
+        elif pid == '2N7002':
+            definitions.add(p['spice_model']['model'])
+            lines.append(f"M{ref} {pin(c,'3')} {pin(c,'1')} {pin(c,'2')} {pin(c,'2')} EEA2N7002")
         else:
-            raise ValueError(f'{pid} has no validated executable SPICE model in this version')
+            continue  # no executable model (connectors, MCUs, LEDs strips...): skipped and reported
     lines.extend(sorted(definitions))
     probes = [names[n] for n in config['probe_nets']]
     analysis_command = f"dc VSUPPLY {config['sweep_start_v']:g} {config['sweep_stop_v']:g} {config['sweep_step_v']:g}" if config['analysis_type']=='dc' else f"tran {config['step_time_ms']/1000:g} {config['end_time_ms']/1000:g} uic"
@@ -100,10 +111,48 @@ def analytic_555(design, config):
     return xs,signals,{'frequency_hz':1/period,'vpp':voltage-0.3,'duty_cycle_pct':100*high/period,'dc_average_v':((voltage-0.2)*high+0.1*low)/period}
 
 
+def load_saved_design(workspace):
+    path = Path(workspace) / 'build/design.json'
+    if not path.exists():
+        raise ValueError('No components/nets given and no saved design found: call synthesize_pcb (or build_and_verify) first, or pass components and nets')
+    return json.loads(path.read_text())
+
+
+def default_sim_config(design):
+    """Sensible defaults: ~5 periods for a 555 astable, otherwise a short transient."""
+    names = [n['name'] for n in design['nets']]
+    lookup = {p: n['name'] for n in design['nets'] for p in n['connections']}
+    config = {'analysis_type': 'transient', 'step_time_ms': 0.01, 'end_time_ms': 10}
+    nonground = [n for n in names if n.upper() not in ('GND', '0')]
+    probes = nonground[:2]
+    ne555 = next((c for c in design['components'] if c['part_id'] == 'NE555'), None)
+    if ne555:
+        out, thr = lookup.get(f"{ne555['ref']}.3"), lookup.get(f"{ne555['ref']}.6")
+        probes = [n for n in (out, thr) if n] or probes
+        try:
+            _, _, m = analytic_555(design, {'end_time_ms': 1, 'step_time_ms': 1, 'supply_voltage_v': 5, 'probe_nets': []})
+            period_ms = 1000 / m['frequency_hz']
+            config.update(end_time_ms=round(5 * period_ms, 6), step_time_ms=round(period_ms / 400, 9), target_freq_hz=m['frequency_hz'])
+        except (ValueError, KeyError, ZeroDivisionError):
+            config.update(end_time_ms=1000, step_time_ms=0.5)
+    if probes:
+        config['probe_nets'] = probes
+    return config
+
+
 def simulate(components, nets, sim_config, workspace):
+    if components is None and nets is None:
+        saved = load_saved_design(workspace)
+        components, nets = saved['components'], saved['nets']
+    if components is None or nets is None:
+        raise ValueError('Provide both components and nets, or neither to reuse the saved design')
     if not isinstance(components,list): raise ValueError('components must be a list')
     simulation_components=[{**{key:value for key,value in c.items() if key not in ('x_mm','y_mm','rotation_deg')},'x_mm':150,'y_mm':150} if isinstance(c,dict) else c for c in components]
     design = normalize_design(simulation_components,nets,300,300)
+    if sim_config is None:
+        sim_config = default_sim_config(design)
+    elif isinstance(sim_config, dict) and 'probe_nets' not in sim_config:
+        sim_config = {**{k: v for k, v in default_sim_config(design).items() if k == 'probe_nets'}, **sim_config}
     if not isinstance(sim_config,dict): raise ValueError('sim_config must be an object')
     config = dict(sim_config)
     config['analysis_type']=sim_config.get('analysis_type','transient')
@@ -127,7 +176,10 @@ def simulate(components, nets, sim_config, workspace):
     raw=spice_text(design,config)
     (build/'circuit.cir').write_text(raw)
     (workspace/'src/testbench.py').write_text(render_template('pyspice_sim.py.j2', circuit_literal=repr(raw)))
-    warnings=[]; backend='analytical-555'; verified=False
+    warnings=[]
+    skipped=skipped_refs(design)
+    if skipped: warnings.append('No SPICE model, excluded from simulation: '+', '.join(skipped))
+    backend='analytical-555'; verified=False
     data_file=build/'spice_data.txt'; data_file.unlink(missing_ok=True)
     native_commands = [('pyspice', [sys.executable, str(workspace/'src/testbench.py')])] if config['analysis_type']=='transient' else []
     if shutil.which('ngspice'): native_commands.append(('ngspice', ['ngspice','-b','build/circuit.cir']))

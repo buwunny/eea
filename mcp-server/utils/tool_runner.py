@@ -11,6 +11,7 @@ def execute(name, stage, operation):
             'autoroute_pcb': 'Routing board',
             'run_drc_verification': 'Checking design rules',
             'export_manufacturing_files': 'Exporting manufacturing files',
+            'build_and_verify': 'Building and verifying board',
         }.get(name, name))
         try:
             activity.start()
