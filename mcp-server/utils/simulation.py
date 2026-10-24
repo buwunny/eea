@@ -12,14 +12,23 @@ from .pcb_builder import normalize_design, load_catalog, finite, render_template
 
 
 def engineering(value):
-    match = re.fullmatch(r'\s*([0-9]+(?:\.[0-9]*)?|\.[0-9]+)(meg|[TGMkmunpfµ]?)(?:[FfHhΩ]|[oO][hH][mM])?\s*', str(value))
+    match = re.fullmatch(r'\s*([0-9]+(?:\.[0-9]*)?|\.[0-9]+)(meg|Meg|MEG|[TGMkmunpfµ]?)(?:[FfHhΩ]|[oO][hH][mM])?\s*', str(value))
     if not match:
         raise ValueError(f'Unsupported passive value {value!r}; use e.g. 10k or 10u')
-    scales = {'':1, 'T':1e12,'G':1e9,'M':1e6,'meg':1e6,'k':1e3,'m':1e-3,'u':1e-6,'µ':1e-6,'n':1e-9,'p':1e-12,'f':1e-15}
+    scales = {'':1, 'T':1e12,'G':1e9,'M':1e6,'meg':1e6,'Meg':1e6,'MEG':1e6,'k':1e3,'m':1e-3,'u':1e-6,'µ':1e-6,'n':1e-9,'p':1e-12,'f':1e-15}
     return finite(float(match[1])*scales[match[2]], 'passive value', 1e-15, 1e15)
 
 
-SPICE_PARTS = {'R','C','Capacitor_Electrolytic','NE555','LED','1N4148','AMS1117_3V3','2N7002'}
+SPICE_PARTS = {'R','C','Capacitor_Electrolytic','NE555','LED','1N4148','AMS1117_3V3','2N7002',
+               'LM358','MMBT3904','NTC_10k_0805','LDR_GL5528','Potentiometer_10k','Switch_Slide_SPDT'}
+
+
+def resistance(component, part):
+    """Ohms from the component value, or the part's default (e.g. value 'GL5528')."""
+    value = str(component.get('value', ''))
+    if re.match(r'\s*[0-9.]', value):
+        return engineering(value)  # a typo like '10kk' is an error, not a silent default
+    return part['spice_model']['default_ohms']
 
 
 def skipped_refs(design):
@@ -56,6 +65,20 @@ def spice_text(design, config):
         elif pid == '2N7002':
             definitions.add(p['spice_model']['model'])
             lines.append(f"M{ref} {pin(c,'3')} {pin(c,'1')} {pin(c,'2')} {pin(c,'2')} EEA2N7002")
+        elif pid == 'LM358':
+            definitions.add(p['spice_model']['subcircuit'])
+            lines.append(f"X{ref} {' '.join(pin(c,str(i)) for i in range(1,9))} EEALM358")
+        elif pid == 'MMBT3904':
+            definitions.add(p['spice_model']['model'])
+            lines.append(f"Q{ref} {pin(c,'3')} {pin(c,'1')} {pin(c,'2')} EEA3904")
+        elif pid in ('NTC_10k_0805', 'LDR_GL5528'):
+            lines.append(f"R{ref} {pin(c,'1')} {pin(c,'2')} {resistance(c, p):g}")
+        elif pid == 'Potentiometer_10k':
+            half = resistance(c, p) / 2  # wiper at mid-travel
+            lines.append(f"R{ref}A {pin(c,'1')} {pin(c,'2')} {half:g}")
+            lines.append(f"R{ref}B {pin(c,'2')} {pin(c,'3')} {half:g}")
+        elif pid == 'Switch_Slide_SPDT':
+            lines.append(f"R{ref} {pin(c,'2')} {pin(c,'1')} 0.05")  # COM closed to A
         else:
             continue  # no executable model (connectors, MCUs, LEDs strips...): skipped and reported
     lines.extend(sorted(definitions))
@@ -211,9 +234,10 @@ def simulate(components, nets, sim_config, workspace):
         xs,signals,metrics=analytic_555(design,config)
         warnings.append('Analytical 555 timing estimate only; not a SPICE-verified waveform')
     frequency=metrics.get('frequency_hz'); target=config.get('target_freq_hz')
-    target_met=bool(frequency and (target is None or abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100))
+    # No target: a settled (non-oscillating) result is fine, e.g. comparators or regulators.
+    target_met=True if target is None else bool(frequency and abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100)
     passed=verified and (target_met if config['analysis_type']=='transient' else True)
-    summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else f'{backend}: insufficient cycles for frequency measurement')
+    summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
     report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'target_met':target_met,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
     (build/'sim_results.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     return {k:v for k,v in report.items() if k not in ('x_data','signals')}

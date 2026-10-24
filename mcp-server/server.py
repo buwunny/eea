@@ -11,20 +11,20 @@ mcp = FastMCP('ee-anything')
 
 @mcp.tool()
 def list_curated_parts(category_filter: str | None = None) -> dict:
-    """Discover exact supported parts, pins, footprints and model pin maps."""
+    """Discover exact supported parts: pins as "number name: function" (connect by number or name),
+    footprints, support parts, ratings and whether the part simulates in SPICE."""
     def operation():
+        from utils.simulation import SPICE_PARTS
         parts = []
         for key, value in load_catalog().items():
             if category_filter and category_filter.lower() not in (str(value.get('category', '')) + ' ' + key).lower():
                 continue
-            model = value.get('spice_model') or {}
             parts.append({
-                'part_id': key, 'category': value.get('category'), 'pins': value['pins'],
+                'part_id': key, 'category': value.get('category'),
+                'pins': [f"{pin['number']} {pin['name']}: {pin.get('function', '')}".rstrip(': ') for pin in value['pins']],
                 'footprint': value['footprint'], 'lcsc': value.get('lcsc'), 'price_usd': value.get('price_usd'),
-                'spice_pin_map': value.get('spice_pin_map', {}),
-                **({'typical_application': value['typical_application'][:110]} if value.get('typical_application') else {}),
-                **{field: value[field] for field in ('required_support_parts', 'max_ratings') if value.get(field)},
-                'spice_model': {field: data for field, data in model.items() if field not in ('subcircuit', 'definition')},
+                **{field: value[field] for field in ('typical_application', 'required_support_parts', 'max_ratings') if value.get(field)},
+                'simulates': key in SPICE_PARTS,
             })
         return {'status': 'success', 'parts': parts, 'summary': f'Listed {len(parts)} curated parts'}
     return execute('list_curated_parts', None, operation)

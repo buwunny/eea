@@ -123,7 +123,7 @@ def _buzzer(p):
     nets = {'IN': ['RG.1'], 'GATE': ['RG.2', 'Q.1', 'RP.1'], 'DRAIN': ['Q.3', 'BZ.2', 'DF.2'],
             'VCC': ['BZ.1', 'DF.1'], 'GND': ['Q.2', 'RP.2']}
     return {'components': comps, 'nets': nets, 'ports': {'IN': 'IN', 'VCC': 'VCC', 'GND': 'GND'},
-            'notes': ['Magnetic buzzer switched low-side by a 2N7002 with a 1N4148 flyback diode; drive IN with a ~2.7 kHz square wave.']}
+            'notes': ['Active buzzer switched low-side by a 2N7002 with a 1N4148 flyback diode; it beeps its own 2.7 kHz tone while IN is high, so drive IN with a steady or slow (under ~20 Hz) signal.']}
 
 
 def _ws2812(p):
@@ -209,10 +209,10 @@ BLOCKS = {
                   'LOAD': _port('bidir', 'Drain: load return, up to 60 V / 115 mA', max_voltage_v=60.0, max_current_ma=115),
                   'GND': _port('ground', 'Ground (source)')}},
     'buzzer_output': {
-        'title': 'Magnetic buzzer driver', 'build': _buzzer, 'params': {},
-        'description': 'Magnetic buzzer switched by a 2N7002 with 1N4148 flyback diode; needs a ~2.7 kHz drive on IN.',
+        'title': 'Active buzzer driver', 'build': _buzzer, 'params': {},
+        'description': 'Active buzzer (built-in 2.7 kHz tone) switched by a 2N7002 with 1N4148 flyback diode; beeps while IN is high, e.g. in time with a slow 555.',
         'parts_used': ['Buzzer_Magnetic', '2N7002', '1N4148', 'R'],
-        'ports': {'IN': _port('signal_in', 'Oscillating drive input (2-4 kHz)', draw_ma=0.5),
+        'ports': {'IN': _port('signal_in', 'On/off input: high = beep (steady or under ~20 Hz)', draw_ma=0.5),
                   'VCC': _port('power_in', 'Buzzer supply, rated 5 V', max_voltage_v=5.5, draw_ma=30),
                   'GND': _port('ground', 'Ground')}},
     'ws2812_chain': {
@@ -422,8 +422,8 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
                 warnings.append(f"Net {net}: loads draw about {draws:g} mA but {i}.{p} can source/sink only {m['max_current_ma']:g} mA; use a mosfet_switch")
             if m['direction'] == 'signal_out' and m.get('freq_hz') is not None:
                 for i2, p2, m2 in ports:
-                    if inst[i2]['block'] == 'buzzer_output' and p2 == 'IN' and not 500 <= m['freq_hz'] <= 10000:
-                        warnings.append(f"{i2}.IN is driven at {m['freq_hz']:g} Hz; a magnetic buzzer needs roughly 2-4 kHz (try freq_hz 2700)")
+                    if inst[i2]['block'] == 'buzzer_output' and p2 == 'IN' and m['freq_hz'] > 20:
+                        warnings.append(f"{i2}.IN is driven at {m['freq_hz']:g} Hz; the active buzzer makes its own tone, so switch it slowly (under ~20 Hz, e.g. freq_hz 2)")
         if not outs and any(m['direction'] == 'power_in' for _, _, m in ports) and not any(
                 m['direction'] == 'signal_out' for _, _, m in ports):
             warnings.append(f"Net {net}: power_in ports have no power_out source connected")

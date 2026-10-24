@@ -13,7 +13,8 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from utils.pcb_builder import load_catalog, normalize_design, build_board
 
-NEW_PARTS = ['Crystal_16MHz', 'Button_Tactile_SMD', 'Buzzer_Magnetic', 'WS2812B', 'ATtiny85_SOIC8', 'Capacitor_Electrolytic']
+NEW_PARTS = ['Crystal_16MHz', 'Button_Tactile_SMD', 'Buzzer_Magnetic', 'WS2812B', 'ATtiny85_SOIC8', 'Capacitor_Electrolytic',
+             'LM358', 'MMBT3904', 'NTC_10k_0805', 'LDR_GL5528', 'Potentiometer_10k', 'Switch_Slide_SPDT', 'ESP32_C3_WROOM_02']
 
 
 class CatalogTests(unittest.TestCase):
@@ -54,7 +55,7 @@ class CatalogTests(unittest.TestCase):
         nets.append({'name': 'GND', 'connections': ['X1.GND', 'X2.2', 'X4.VSS', 'X5.GND']})
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'EEA_WORKSPACE': directory}):
             workspace = Path(directory)
-            design = normalize_design(components, nets, 100, 60)
+            design = normalize_design(components, nets, 100, 120)
             build_board(design, workspace / 'build')
             board = workspace / 'build' / 'board.kicad_pcb'
             text = board.read_text()
@@ -67,6 +68,79 @@ class CatalogTests(unittest.TestCase):
                                         capture_output=True, text=True, timeout=120)
                 self.assertTrue(report.exists(), result.stderr)
                 self.assertIn('violations', json.loads(report.read_text()))
+
+
+
+def light_sensor(ldr_value='1k', coordinates=True):
+    """LDR divider -> LM358 comparator (pot reference) -> MMBT3904 LED switch, behind a slide switch."""
+    parts = [('SW1', 'Switch_Slide_SPDT', 'MSK12C02'), ('LDR1', 'LDR_GL5528', ldr_value), ('R1', 'R', '10k'),
+             ('RV1', 'Potentiometer_10k', '10k'), ('U1', 'LM358', 'LM358'), ('C1', 'C', '100n'), ('R2', 'R', '4.7k'),
+             ('Q1', 'MMBT3904', 'MMBT3904'), ('R3', 'R', '330'), ('D1', 'LED', 'RED'), ('TH1', 'NTC_10k_0805', '10k'),
+             ('R4', 'R', '10k'), ('J1', 'PinHeader_1x04', 'PWR')]
+    components = [{'ref': r, 'part_id': p, 'value': v} for r, p, v in parts]
+    if coordinates:
+        for i, c in enumerate(components):
+            c.update(x_mm=6 + 7 * (i % 6), y_mm=6 + 9 * (i // 6))
+    nets = [
+        {'name': 'VIN', 'connections': ['J1.1', 'SW1.COM']},
+        {'name': 'VCC', 'connections': ['SW1.A', 'LDR1.1', 'RV1.END1', 'U1.VCC', 'C1.1', 'R3.1', 'TH1.1']},
+        {'name': 'SENSE', 'connections': ['LDR1.2', 'R1.1', 'U1.IN1+']},
+        {'name': 'REF', 'connections': ['RV1.WIPER', 'U1.IN1-']},
+        {'name': 'OUT', 'connections': ['U1.OUT1', 'R2.1']},
+        {'name': 'BASE', 'connections': ['R2.2', 'Q1.B']},
+        {'name': 'LEDA', 'connections': ['R3.2', 'D1.A']},
+        {'name': 'LEDK', 'connections': ['D1.K', 'Q1.C']},
+        {'name': 'TEMP', 'connections': ['TH1.2', 'R4.1', 'J1.3']},
+        {'name': 'GND', 'connections': ['J1.2', 'R1.2', 'RV1.END2', 'U1.GND', 'C1.2', 'Q1.E', 'R4.2', 'U1.IN2+', 'U1.IN2-']},
+    ]
+    return components, nets
+
+
+class NewPartSimulationTests(unittest.TestCase):
+    def run_sensor(self, ldr_value):
+        from utils.simulation import simulate
+        components, nets = light_sensor(ldr_value)
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'EEA_WORKSPACE': directory}):
+            workspace = Path(directory)
+            (workspace / 'build').mkdir(); (workspace / 'src').mkdir()
+            report = simulate(components, nets, {'step_time_ms': 0.001, 'end_time_ms': 0.2, 'supply_voltage_v': 5,
+                                                 'probe_nets': ['SENSE', 'OUT', 'LEDK']}, workspace)
+            if not report.get('verified'):
+                self.skipTest('ngspice not available')
+            signals = json.loads((workspace / 'build/sim_results.json').read_text())['signals']
+            return report, {k: v[-1] for k, v in signals.items()}
+
+    def test_comparator_switches_led_with_light(self):
+        lit, v = self.run_sensor('1k')
+        self.assertEqual(lit['status'], 'success')  # steady-state circuits pass without a frequency target
+        self.assertGreater(v['V(OUT)'], 3.2)        # LM358 high is about VCC - 1.5 V
+        self.assertLess(v['V(LEDK)'], 0.3)          # MMBT3904 saturated, LED on
+        _, v = self.run_sensor('1Meg')
+        self.assertLess(v['V(SENSE)'], 0.1)
+        self.assertLess(v['V(OUT)'], 0.1)
+        self.assertGreater(v['V(LEDK)'], 4)          # LED off
+
+    def test_value_parsing(self):
+        from utils.simulation import engineering, resistance
+        self.assertEqual(engineering('1Meg'), 1e6)
+        part = load_catalog()['LDR_GL5528']
+        self.assertEqual(resistance({'value': 'GL5528'}, part), 10000)
+        with self.assertRaises(ValueError):
+            resistance({'value': '10kk'}, part)
+
+    @unittest.skipUnless(shutil.which('kicad-cli') and shutil.which('java'), 'needs kicad-cli and java')
+    def test_auto_placed_sensor_board_routes_clean(self):
+        from utils.freerouting_runner import autoroute
+        from utils.kicad_runner import verify_drc
+        components, nets = light_sensor(coordinates=False)
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'EEA_WORKSPACE': directory}):
+            workspace = Path(directory)
+            build_board(normalize_design(components, nets, 45, 35), workspace / 'build')
+            routed = autoroute(workspace, 0.25, 0.2)
+            self.assertEqual(routed.get('unconnected_items', 0), 0, routed.get('summary'))
+            drc = verify_drc(workspace)
+            self.assertEqual(drc['drc_errors'], 0, [v.get('type') for v in drc.get('violations', [])])
+            self.assertEqual(drc['unconnected_items'], 0)
 
 
 if __name__ == '__main__':

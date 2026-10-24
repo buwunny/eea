@@ -124,6 +124,9 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
                 if ground:
                     zone=pcbnew.ZONE(board); zone.SetLayer(pcbnew.B_Cu); zone.SetNetCode(ground.GetNetCode())
                     zone.SetLocalClearance(pcbnew.FromMM(clearance_mm)); zone.SetThermalReliefGap(pcbnew.FromMM(clearance_mm)); zone.SetThermalReliefSpokeWidth(pcbnew.FromMM(trace_width_mm))
+                    # Solid pad connections: thermal spokes on a pad near the board edge can land on an
+                    # isolated scrap of fill, which KiCad DRC rejects as a starved thermal.
+                    zone.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
                     outline=zone.Outline(); outline.NewOutline()
                     inset=clearance_mm+0.3; width=design['board_width_mm']; height=design['board_height_mm']
                     for x,y in ((inset,inset),(width-inset,inset),(width-inset,height-inset),(inset,height-inset)):

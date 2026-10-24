@@ -93,7 +93,7 @@ class BlockTests(unittest.TestCase):
     def test_modified_composition_with_buzzer_and_header_power(self):
         r = compose_design(
             [{'block': 'header_power', 'id': 'pwr'},
-             {'block': 'timer_555_astable', 'id': 'tmr', 'params': {'freq_hz': 2700}},
+             {'block': 'timer_555_astable', 'id': 'tmr', 'params': {'freq_hz': 2}},
              {'block': 'buzzer_output', 'id': 'bz'},
              {'block': 'led_indicator', 'id': 'led1'}],
             [{'name': '5V', 'ports': ['pwr.VBUS', 'tmr.VCC', 'bz.VCC']},
@@ -107,7 +107,7 @@ class BlockTests(unittest.TestCase):
 
     def test_buzzer_frequency_warning(self):
         r = compose_design(
-            [{'block': 'usb_c_power', 'id': 'pwr'}, {'block': 'timer_555_astable', 'id': 'tmr'}, {'block': 'buzzer_output', 'id': 'bz'}],
+            [{'block': 'usb_c_power', 'id': 'pwr'}, {'block': 'timer_555_astable', 'id': 'tmr', 'params': {'freq_hz': 2700}}, {'block': 'buzzer_output', 'id': 'bz'}],
             [{'name': 'VCC', 'ports': ['pwr.VBUS', 'tmr.VCC', 'bz.VCC']}, {'name': 'OUT', 'ports': ['tmr.OUT', 'bz.IN']}])
         self.assertTrue(any('buzzer' in w for w in r['warnings']), r['warnings'])
 

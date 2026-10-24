@@ -792,7 +792,7 @@
   "Crystal_16MHz": {
     "part_id": "Crystal_16MHz",
     "category": "clock",
-    "description": "16 MHz SMD crystal, 3.2x2.5 mm, 4-pad (pins 2,4 are case ground)",
+    "description": "16 MHz SMD crystal (YXC X322516MLB4SI), 3.2x2.5 mm, 4-pad (pins 2,4 are case ground), 9 pF load",
     "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
     "pins": [
       {
@@ -868,15 +868,15 @@
     ],
     "max_ratings": {
       "frequency_mhz": 16,
-      "load_cap_pf": 20,
-      "tolerance_ppm": 20,
+      "load_cap_pf": 9,
+      "tolerance_ppm": 10,
       "drive_level_uw_max": 100
     }
   },
   "Button_Tactile_SMD": {
     "part_id": "Button_Tactile_SMD",
     "category": "switch",
-    "description": "SMD tactile push button SPST (TL3342), pads 1+1 and 2+2 internally joined",
+    "description": "SMD tactile push button SPST (E-Switch TL3342F160QG, 5.2x5.2 mm), pads 1+1 and 2+2 internally joined",
     "footprint": "Button_Switch_SMD:SW_SPST_TL3342",
     "pins": [
       {
@@ -925,8 +925,8 @@
       }
     ],
     "footprint_sexpr": "(footprint \"Button_Switch_SMD:SW_SPST_TL3342\" (layer \"F.Cu\")\n  (fp_rect (start -2.1 -1.6) (end 2.1 1.6) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -3.15 -1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"1\" smd rect (at 3.15 -1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -3.15 1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 3.15 1.9) (size 1.7 1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
-    "lcsc": "C318884",
-    "price_usd": 0.06,
+    "lcsc": "C2886898",
+    "price_usd": 0.25,
     "spice_model": null,
     "spice_pin_map": {
       "1": 1,
@@ -947,7 +947,7 @@
   "Buzzer_Magnetic": {
     "part_id": "Buzzer_Magnetic",
     "category": "audio",
-    "description": "Through-hole 12x9.5 mm magnetic buzzer, 7.6 mm pitch (needs oscillating drive)",
+    "description": "Through-hole 12 mm active magnetic buzzer (S&S SUN-12095-5VPA7.6), 7.6 mm pitch, built-in 2.7 kHz tone",
     "footprint": "Buzzer_Beeper:Buzzer_12x9.5RM7.6",
     "pins": [
       {
@@ -980,15 +980,15 @@
       }
     ],
     "footprint_sexpr": "(footprint \"Buzzer_Beeper:Buzzer_12x9.5RM7.6\" (layer \"F.Cu\")\n  (fp_rect (start -1.5 -4.75) (end 9.1 4.75) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" thru_hole rect (at 0 0) (size 2 2) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"2\" thru_hole circle (at 7.6 0) (size 2 2) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n)",
-    "lcsc": "C94598",
-    "price_usd": 0.35,
+    "lcsc": "C360615",
+    "price_usd": 0.3,
     "spice_model": null,
     "spice_pin_map": {
       "1": 1,
       "2": 2
     },
     "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
-    "typical_application": "Passive magnetic transducer: drive with a ~2-4 kHz square wave from a 555/MCU PWM via a low-side N-MOSFET (e.g. 2N7002) with a flyback diode across it.",
+    "typical_application": "Active buzzer: sounds its own 2.7 kHz tone whenever powered. Switch it on/off at a slow rate (DC to ~20 Hz) from a 555 or MCU pin via a low-side N-MOSFET (e.g. 2N7002) with a flyback diode across it.",
     "required_support_parts": [
       "N-MOSFET low-side switch (e.g. 2N7002)",
       "1N4148 flyback diode across buzzer (cathode to +)",
@@ -996,8 +996,9 @@
     ],
     "max_ratings": {
       "rated_v": 5,
+      "supply_v_range": "4-7",
       "current_ma_max": 30,
-      "resonant_freq_hz": 2700,
+      "tone_freq_hz": 2700,
       "spl_db_at_10cm": 85
     }
   },
@@ -1230,7 +1231,7 @@
   "Capacitor_Electrolytic": {
     "part_id": "Capacitor_Electrolytic",
     "category": "passive",
-    "description": "SMD polarized electrolytic capacitor 6.3x5.4 mm (e.g. 100uF 16V)",
+    "description": "SMD polarized electrolytic capacitor 6.3x5.4 mm (KNSCHA 100uF 16V)",
     "footprint": "Capacitor_SMD:CP_Elec_6.3x5.4",
     "pins": [
       {
@@ -1263,8 +1264,8 @@
       }
     ],
     "footprint_sexpr": "(footprint \"Capacitor_SMD:CP_Elec_6.3x5.4\" (layer \"F.Cu\")\n  (fp_rect (start -3.3 -3.3) (end 3.3 3.3) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -2.8 0) (size 3.5 1.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 2.8 0) (size 3.5 1.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
-    "lcsc": "C3342",
-    "price_usd": 0.1,
+    "lcsc": "C5246591",
+    "price_usd": 0.05,
     "spice_model": null,
     "spice_pin_map": {
       "1": 1,
@@ -1279,6 +1280,810 @@
       "voltage_v": 16,
       "capacitance_uf": 100,
       "temp_max_c": 105
+    }
+  },
+  "LM358": {
+    "part_id": "LM358",
+    "category": "ic",
+    "description": "LM358 dual op-amp, SOIC-8 (onsemi LM358DR2G); single supply 3-32 V, output swings to about VCC-1.5 V",
+    "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+    "pins": [
+      {
+        "number": "1",
+        "name": "OUT1",
+        "function": "Output A"
+      },
+      {
+        "number": "2",
+        "name": "IN1-",
+        "function": "Inverting input A"
+      },
+      {
+        "number": "3",
+        "name": "IN1+",
+        "function": "Non-inverting input A"
+      },
+      {
+        "number": "4",
+        "name": "GND",
+        "function": "Ground / negative supply"
+      },
+      {
+        "number": "5",
+        "name": "IN2+",
+        "function": "Non-inverting input B"
+      },
+      {
+        "number": "6",
+        "name": "IN2-",
+        "function": "Inverting input B"
+      },
+      {
+        "number": "7",
+        "name": "OUT2",
+        "function": "Output B"
+      },
+      {
+        "number": "8",
+        "name": "VCC",
+        "function": "Supply, 3-32 V"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -3.5875,
+        "y_mm": -1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -3.5875,
+        "y_mm": -0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": -3.5875,
+        "y_mm": 0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": -3.5875,
+        "y_mm": 1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "8",
+        "x_mm": 3.5875,
+        "y_mm": -1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "7",
+        "x_mm": 3.5875,
+        "y_mm": -0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "6",
+        "x_mm": 3.5875,
+        "y_mm": 0.635,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      },
+      {
+        "number": "5",
+        "x_mm": 3.5875,
+        "y_mm": 1.905,
+        "width_mm": 1.625,
+        "height_mm": 0.65,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_SO:SOIC-8_3.9x4.9mm_P1.27mm\" (layer \"F.Cu\")\n  (fp_rect (start -1.95 -2.45) (end 1.95 2.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at 3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at 3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at 3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at 3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C7950",
+    "price_usd": 0.07,
+    "spice_model": {
+      "kind": "subcircuit",
+      "name": "EEALM358",
+      "subcircuit": ".subckt EEALM358 OUT1 INN1 INP1 VN INP2 INN2 OUT2 VP\n* Behavioral LM358: 100 dB gain, 1 MHz GBW, 0.3 V/us slew, output between ground and VCC-1.5 V\nBI1 VN P1 I=max(min(0.1*(v(INP1)-v(INN1)), 4.8m), -4.8m)\nRP1 P1 VN 1Meg\nCP1 P1 VN 15.9n\nDH1 P1 VP DCLAMP\nDL1 VN P1 DCLAMP\nBO1 O1 VN V=max(min(v(P1,VN), v(VP,VN)-1.5), 0.005)\nRO1 O1 OUT1 50\nBI2 VN P2 I=max(min(0.1*(v(INP2)-v(INN2)), 4.8m), -4.8m)\nRP2 P2 VN 1Meg\nCP2 P2 VN 15.9n\nDH2 P2 VP DCLAMP\nDL2 VN P2 DCLAMP\nBO2 O2 VN V=max(min(v(P2,VN), v(VP,VN)-1.5), 0.005)\nRO2 O2 OUT2 50\n.model DCLAMP D(Is=1e-14 N=1)\nRQ VP VN 7k\n.ends"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 8
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Comparator or amplifier on one supply. Comparator: sensor divider on IN+, pot/reference divider on IN-. Non-inverting gain = 1 + Rf/Rg. Tie unused amp as a follower with IN+ to a mid-rail divider.",
+    "required_support_parts": [
+      "100nF C on VCC to GND"
+    ],
+    "max_ratings": {
+      "vcc_max_v": 32,
+      "vcc_min_v": 3,
+      "i_out_ma": 20,
+      "gbw_mhz": 1,
+      "output_high_v_below_vcc": 1.5
+    }
+  },
+  "MMBT3904": {
+    "part_id": "MMBT3904",
+    "category": "transistor",
+    "description": "MMBT3904 NPN transistor, SOT-23 (JSCJ); 40 V, 200 mA, hFE 100-300",
+    "footprint": "Package_TO_SOT_SMD:SOT-23",
+    "pins": [
+      {
+        "number": "1",
+        "name": "B",
+        "function": "Base; drive through a resistor"
+      },
+      {
+        "number": "2",
+        "name": "E",
+        "function": "Emitter; connect to GND for low-side switching"
+      },
+      {
+        "number": "3",
+        "name": "C",
+        "function": "Collector; connect to load"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 0,
+        "y_mm": -1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_TO_SOT_SMD:SOT-23\" (layer \"F.Cu\")\n  (fp_rect (start -0.65 -1.45) (end 0.65 1.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -0.95 1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 0 -1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C20526",
+    "price_usd": 0.01,
+    "spice_model": {
+      "kind": "bjt",
+      "model": ".model EEA3904 NPN(Is=6.734f Xti=3 Eg=1.11 Vaf=74.03 Bf=416.4 Ne=1.259 Ise=6.734f Ikf=66.78m Xtb=1.5 Br=.7371 Nc=2 Rc=1 Cjc=3.638p Mjc=.3085 Vjc=.75 Fc=.5 Cje=4.493p Mje=.2593 Vje=.75 Tr=239.5n Tf=301.2p Itf=.4 Vtf=4 Xtf=2 Rb=10)"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Low-side switch for LEDs, buzzers or relays up to ~100 mA: base resistor ~1-10k from the driving signal, emitter to GND, load between supply and collector.",
+    "required_support_parts": [
+      "Base resistor (1k-10k) from the drive signal",
+      "Optional 100k base-to-emitter pull-down"
+    ],
+    "max_ratings": {
+      "vceo_max_v": 40,
+      "ic_max_ma": 200,
+      "pd_mw": 200,
+      "hfe_min": 100
+    }
+  },
+  "NTC_10k_0805": {
+    "part_id": "NTC_10k_0805",
+    "category": "sensor",
+    "description": "10k NTC thermistor, 0805, B25/50 = 3950 K (FH CMFB103F3950FANT)",
+    "footprint": "Resistor_SMD:R_0805_2012Metric",
+    "pins": [
+      {
+        "number": "1",
+        "name": "1",
+        "function": "Terminal 1 (non-polarized)"
+      },
+      {
+        "number": "2",
+        "name": "2",
+        "function": "Terminal 2 (non-polarized)"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Resistor_SMD:R_0805_2012Metric\" (layer \"F.Cu\")\n  (fp_rect (start -1 -0.625) (end 1 0.625) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C51597",
+    "price_usd": 0.02,
+    "spice_model": {
+      "kind": "R",
+      "default_ohms": 10000
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Temperature sensing: put it in a divider with a 10k fixed resistor; the midpoint voltage falls as temperature rises. R(T) = 10k * exp(3950 * (1/T - 1/298.15)). Simulates as its 25 C value unless value gives another resistance.",
+    "required_support_parts": [
+      "10k fixed resistor to form a divider"
+    ],
+    "max_ratings": {
+      "r25_ohms": 10000,
+      "b_value_k": 3950,
+      "temp_min_c": -40,
+      "temp_max_c": 125
+    }
+  },
+  "LDR_GL5528": {
+    "part_id": "LDR_GL5528",
+    "category": "sensor",
+    "description": "GL5528 photoresistor (LDR), 5 mm through-hole, 3.4 mm pitch (JCHL GL5528(10-20)); 8-20k at 10 lux, about 1M dark",
+    "footprint": "OptoDevice:R_LDR_5.1x4.3mm_P3.4mm_Vertical",
+    "pins": [
+      {
+        "number": "1",
+        "name": "1",
+        "function": "Terminal 1 (non-polarized)"
+      },
+      {
+        "number": "2",
+        "name": "2",
+        "function": "Terminal 2 (non-polarized)"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": 0,
+        "y_mm": 0,
+        "width_mm": 1.5,
+        "height_mm": 1.5,
+        "through_hole": true
+      },
+      {
+        "number": "2",
+        "x_mm": 3.4,
+        "y_mm": 0,
+        "width_mm": 1.5,
+        "height_mm": 1.5,
+        "through_hole": true
+      }
+    ],
+    "footprint_sexpr": "(footprint \"OptoDevice:R_LDR_5.1x4.3mm_P3.4mm_Vertical\" (layer \"F.Cu\")\n  (fp_rect (start -0.85 -2.15) (end 4.25 2.15) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" thru_hole circle (at 0 0) (size 1.5 1.5) (drill 0.8) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"2\" thru_hole circle (at 3.4 0) (size 1.5 1.5) (drill 0.8) (layers \"*.Cu\" \"*.Mask\"))\n)",
+    "lcsc": "C10081",
+    "price_usd": 0.03,
+    "spice_model": {
+      "kind": "R",
+      "default_ohms": 10000
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Light sensing: divider with a ~10k fixed resistor feeding a comparator or ADC; resistance drops in light. Simulates as its value (use about 10k for light, 1Meg for dark).",
+    "required_support_parts": [
+      "~10k fixed resistor to form a divider"
+    ],
+    "max_ratings": {
+      "v_max": 150,
+      "p_max_mw": 100,
+      "r_light_10lux_ohms": "8k-20k",
+      "r_dark_ohms": 1000000
+    }
+  },
+  "Potentiometer_10k": {
+    "part_id": "Potentiometer_10k",
+    "category": "passive",
+    "description": "10k single-turn SMD trimmer potentiometer, 3.8x3.6 mm (Bourns TC33X-2-103E)",
+    "footprint": "Potentiometer_SMD:Potentiometer_Bourns_TC33X_Vertical",
+    "pins": [
+      {
+        "number": "1",
+        "name": "END1",
+        "function": "Track end 1"
+      },
+      {
+        "number": "2",
+        "name": "WIPER",
+        "function": "Wiper"
+      },
+      {
+        "number": "3",
+        "name": "END2",
+        "function": "Track end 2"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -1.8,
+        "y_mm": -1.0,
+        "width_mm": 1.2,
+        "height_mm": 1.2,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 1.45,
+        "y_mm": 0.0,
+        "width_mm": 1.5,
+        "height_mm": 1.6,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": -1.8,
+        "y_mm": 1.0,
+        "width_mm": 1.2,
+        "height_mm": 1.2,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Potentiometer_SMD:Potentiometer_Bourns_TC33X_Vertical\" (layer \"F.Cu\")\n  (fp_rect (start -1.9 -1.8) (end 1.9 1.8) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -1.8 -1.0) (size 1.2 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 1.45 0.0) (size 1.5 1.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -1.8 1.0) (size 1.2 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C719176",
+    "price_usd": 0.3,
+    "spice_model": {
+      "kind": "potentiometer",
+      "default_ohms": 10000
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Adjustable threshold or divider: ends across the supply, wiper gives 0-VCC (e.g. comparator reference). As a variable resistor, use one end plus the wiper. Simulates with the wiper at mid-travel.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "r_total_ohms": 10000,
+      "power_mw": 100,
+      "tolerance_pct": 25
+    }
+  },
+  "Switch_Slide_SPDT": {
+    "part_id": "Switch_Slide_SPDT",
+    "category": "switch",
+    "description": "SPDT SMD slide switch, 8x2.8 mm right-angle (Shouhan MSK12C02); 50 mA, 12 V",
+    "footprint": "Button_Switch_SMD:SW_SPDT_Shouhan_MSK12C02",
+    "pins": [
+      {
+        "number": "1",
+        "name": "A",
+        "function": "Throw A; connected to COM in one position"
+      },
+      {
+        "number": "2",
+        "name": "COM",
+        "function": "Common"
+      },
+      {
+        "number": "3",
+        "name": "B",
+        "function": "Throw B; connected to COM in the other position"
+      },
+      {
+        "number": "SH",
+        "name": "SH",
+        "function": "Mounting tabs (mechanical); leave unconnected or tie to GND"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -2.25,
+        "y_mm": -1.95,
+        "width_mm": 0.6,
+        "height_mm": 1.3,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.75,
+        "y_mm": -1.95,
+        "width_mm": 0.6,
+        "height_mm": 1.3,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 2.25,
+        "y_mm": -1.95,
+        "width_mm": 0.6,
+        "height_mm": 1.3,
+        "through_hole": false
+      },
+      {
+        "number": "SH",
+        "x_mm": -3.675,
+        "y_mm": -1.1,
+        "width_mm": 1.05,
+        "height_mm": 0.7,
+        "through_hole": false
+      },
+      {
+        "number": "SH",
+        "x_mm": -3.675,
+        "y_mm": 1.1,
+        "width_mm": 1.05,
+        "height_mm": 0.7,
+        "through_hole": false
+      },
+      {
+        "number": "SH",
+        "x_mm": 3.675,
+        "y_mm": -1.1,
+        "width_mm": 1.05,
+        "height_mm": 0.7,
+        "through_hole": false
+      },
+      {
+        "number": "SH",
+        "x_mm": 3.675,
+        "y_mm": 1.1,
+        "width_mm": 1.05,
+        "height_mm": 0.7,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Button_Switch_SMD:SW_SPDT_Shouhan_MSK12C02\" (layer \"F.Cu\")\n  (fp_rect (start -3.35 -1.4) (end 3.35 1.4) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"\" np_thru_hole circle (at -1.5 0) (size 0.85 0.85) (drill 0.85) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"\" np_thru_hole circle (at 1.5 0) (size 0.85 0.85) (drill 0.85) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"1\" smd rect (at -2.25 -1.95) (size 0.6 1.3) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.75 -1.95) (size 0.6 1.3) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 2.25 -1.95) (size 0.6 1.3) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"SH\" smd rect (at -3.675 -1.1) (size 1.05 0.7) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"SH\" smd rect (at -3.675 1.1) (size 1.05 0.7) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"SH\" smd rect (at 3.675 -1.1) (size 1.05 0.7) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"SH\" smd rect (at 3.675 1.1) (size 1.05 0.7) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C431540",
+    "price_usd": 0.03,
+    "spice_model": {
+      "kind": "switch"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "SH": 4
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "Power or mode select. 50 mA rating: fine for signals and small loads, too low to switch a whole board; for power, switch a MOSFET gate instead. Simulates with COM connected to A.",
+    "required_support_parts": [],
+    "max_ratings": {
+      "current_ma": 50,
+      "voltage_v": 12
+    }
+  },
+  "ESP32_C3_WROOM_02": {
+    "part_id": "ESP32_C3_WROOM_02",
+    "category": "mcu",
+    "description": "ESP32-C3-WROOM-02-N4 WiFi + BLE module, RISC-V 160 MHz, 4 MB flash, PCB antenna, 18x20 mm (Espressif)",
+    "footprint": "RF_Module:ESP32-C3-WROOM-02",
+    "pins": [
+      {
+        "number": "1",
+        "name": "3V3",
+        "function": "3.3 V supply (3.0-3.6 V, ~350 mA peaks)"
+      },
+      {
+        "number": "2",
+        "name": "EN",
+        "function": "Chip enable; high = run. 10k pull-up + 1uF to GND"
+      },
+      {
+        "number": "3",
+        "name": "IO4",
+        "function": "GPIO4 / ADC1_CH4"
+      },
+      {
+        "number": "4",
+        "name": "IO5",
+        "function": "GPIO5"
+      },
+      {
+        "number": "5",
+        "name": "IO6",
+        "function": "GPIO6"
+      },
+      {
+        "number": "6",
+        "name": "IO7",
+        "function": "GPIO7"
+      },
+      {
+        "number": "7",
+        "name": "IO8",
+        "function": "GPIO8; strapping pin, keep high at boot (LED is OK)"
+      },
+      {
+        "number": "8",
+        "name": "IO9",
+        "function": "GPIO9; strapping pin, low at reset = download mode"
+      },
+      {
+        "number": "9",
+        "name": "GND",
+        "function": "Ground"
+      },
+      {
+        "number": "10",
+        "name": "IO10",
+        "function": "GPIO10"
+      },
+      {
+        "number": "11",
+        "name": "IO20",
+        "function": "GPIO20 / UART0 RX"
+      },
+      {
+        "number": "12",
+        "name": "IO21",
+        "function": "GPIO21 / UART0 TX"
+      },
+      {
+        "number": "13",
+        "name": "IO18",
+        "function": "GPIO18 / USB D-"
+      },
+      {
+        "number": "14",
+        "name": "IO19",
+        "function": "GPIO19 / USB D+"
+      },
+      {
+        "number": "15",
+        "name": "IO3",
+        "function": "GPIO3 / ADC1_CH3"
+      },
+      {
+        "number": "16",
+        "name": "IO2",
+        "function": "GPIO2; strapping pin, keep high at boot"
+      },
+      {
+        "number": "17",
+        "name": "IO1",
+        "function": "GPIO1 / ADC1_CH1"
+      },
+      {
+        "number": "18",
+        "name": "IO0",
+        "function": "GPIO0 / ADC1_CH0"
+      },
+      {
+        "number": "19",
+        "name": "GND",
+        "function": "Exposed ground pad"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -8.75,
+        "y_mm": -6.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -8.75,
+        "y_mm": -4.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": -8.75,
+        "y_mm": -3.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": -8.75,
+        "y_mm": -1.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "5",
+        "x_mm": -8.75,
+        "y_mm": 0.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "6",
+        "x_mm": -8.75,
+        "y_mm": 1.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "7",
+        "x_mm": -8.75,
+        "y_mm": 3.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "8",
+        "x_mm": -8.75,
+        "y_mm": 4.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "9",
+        "x_mm": -8.75,
+        "y_mm": 6.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "10",
+        "x_mm": 8.75,
+        "y_mm": 6.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "11",
+        "x_mm": 8.75,
+        "y_mm": 4.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "12",
+        "x_mm": 8.75,
+        "y_mm": 3.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "13",
+        "x_mm": 8.75,
+        "y_mm": 1.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "14",
+        "x_mm": 8.75,
+        "y_mm": 0.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "15",
+        "x_mm": 8.75,
+        "y_mm": -1.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "16",
+        "x_mm": 8.75,
+        "y_mm": -3.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "17",
+        "x_mm": 8.75,
+        "y_mm": -4.5,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "18",
+        "x_mm": 8.75,
+        "y_mm": -6.0,
+        "width_mm": 1.5,
+        "height_mm": 0.9,
+        "through_hole": false
+      },
+      {
+        "number": "19",
+        "x_mm": 0.96,
+        "y_mm": 0.2,
+        "width_mm": 2.9,
+        "height_mm": 2.9,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"RF_Module:ESP32-C3-WROOM-02\" (layer \"F.Cu\")\n  (fp_rect (start -9 -12.8) (end 9 7.2) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -8.75 -6.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -8.75 -4.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -8.75 -3.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -8.75 -1.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at -8.75 0.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at -8.75 1.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at -8.75 3.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at -8.75 4.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"9\" smd rect (at -8.75 6.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"10\" smd rect (at 8.75 6.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"11\" smd rect (at 8.75 4.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"12\" smd rect (at 8.75 3.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"13\" smd rect (at 8.75 1.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"14\" smd rect (at 8.75 0.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"15\" smd rect (at 8.75 -1.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"16\" smd rect (at 8.75 -3.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"17\" smd rect (at 8.75 -4.5) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"18\" smd rect (at 8.75 -6.0) (size 1.5 0.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"19\" smd rect (at 0.96 0.2) (size 2.9 2.9) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C2934560",
+    "price_usd": 2.0,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 8,
+      "9": 9,
+      "10": 10,
+      "11": 11,
+      "12": 12,
+      "13": 13,
+      "14": 14,
+      "15": 15,
+      "16": 16,
+      "17": 17,
+      "18": 18,
+      "19": 19
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "typical_application": "WiFi/BLE MCU on 3.3 V (feed from AMS1117_3V3). Put the antenna end at the board edge with no copper under it. EN needs 10k pull-up + 1uF to GND. IO9 low at reset enters download mode; IO18/IO19 are native USB D-/D+.",
+    "required_support_parts": [
+      "10uF + 100nF C on 3V3 to GND",
+      "10k R pull-up on EN plus 1uF C from EN to GND",
+      "10k R pull-up on IO9 (boot strap)",
+      "Button from IO9 to GND for download mode (optional)"
+    ],
+    "max_ratings": {
+      "vdd_min_v": 3.0,
+      "vdd_max_v": 3.6,
+      "peak_current_ma": 350,
+      "gpio_max_v": 3.6,
+      "flash_mb": 4
     }
   }
 }
