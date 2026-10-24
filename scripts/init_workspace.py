@@ -23,7 +23,7 @@ def initialize(workspace=None, name=None, refresh_mcp=False):
         ".gemini/settings.json": json.dumps(config, indent=2) + "\n",
         "project_spec.md": "# Untitled circuit\n\nDescribe the circuit, power supply, constraints, and acceptance criteria here.\n",
         "telemetry.json": json.dumps({"project_name": name or "EEA", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
-        ".gitignore": "__pycache__/\n*.pyc\n",
+        ".gitignore": "__pycache__/\n*.pyc\n.eea-workspace.lock\n",
         "AGENTS.md": """# EEA circuit workspace
 
 Use the ee-anything MCP tools for circuit design. Fastest path: call list_design_blocks (and list_example_compositions for editable starting points), choose blocks and wire their ports with compose_design, then pass its components, nets, board size and sim_config to build_and_verify. Act on compose_design warnings before building. Otherwise call list_curated_parts and use its exact part IDs and pins. Use calc_555_astable, calc_led_resistor and calc_voltage_divider for component values instead of trial-and-error simulation. Omit x_mm/y_mm and let the server auto-place unless the user asks for a specific layout. Do not inspect application source or execute generated design scripts as a substitute for MCP calls. If the tools are unavailable, stop and report the connection error.

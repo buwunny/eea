@@ -10,7 +10,7 @@ import zipfile
 import tempfile
 import os
 import math
-from .telemetry import progress
+from .telemetry import progress, atomic_json
 from .pcb_builder import pad_positions
 
 
@@ -35,9 +35,14 @@ def export_3d(workspace):
 def verify_drc(workspace):
     workspace=Path(workspace); build=workspace/'build'
     if not (build/'board.kicad_pcb').exists(): raise ValueError('Synthesize a board before DRC')
+    board = build / 'board.kicad_pcb'
+    digest = hashlib.sha256(board.read_bytes()).hexdigest()
     try:
-        _run(['pcb','drc','--format','json','--output','build/drc_report.json','build/board.kicad_pcb'],workspace)
-        raw=json.loads((build/'drc_report.json').read_text())
+        # Never expose KiCad's partially written JSON to the filesystem watcher.
+        with tempfile.TemporaryDirectory(prefix='.drc-', dir=build) as staging:
+            output = Path(staging) / 'native.json'
+            _run(['pcb','drc','--format','json','--output',str(output),'build/board.kicad_pcb'],workspace)
+            raw=json.loads(output.read_text())
         if not isinstance(raw.get('violations'),list) or not isinstance(raw.get('unconnected_items'),list): raise RuntimeError('KiCad DRC report is missing required violation arrays')
         violations=raw['violations']; unconnected=raw['unconnected_items']
         errors=sum(v.get('severity','error')=='error' for v in violations)
@@ -54,8 +59,12 @@ def verify_drc(workspace):
         routes=json.loads((build/'routes.json').read_text()) if (build/'routes.json').exists() else None
         count=routes.get('unconnected_items') if routes else sum(max(0,len(n['connections'])-1) for n in design['nets'])
         report={'status':'degraded','backend':'python-geometric-precheck','verified':False,'drc_errors':None,'unconnected_items':count,'violations':conflicts,'warnings':[str(error),'Precheck only; track clearance, zones and connectivity are not KiCad-verified']}
-    report['board_sha256']=hashlib.sha256((build/'board.kicad_pcb').read_bytes()).hexdigest()
-    (build/'drc_report.json').write_text(json.dumps(report,indent=2)+'\n')
+    report['board_sha256'] = digest
+    if hashlib.sha256(board.read_bytes()).hexdigest() != digest:
+        report.update(status='failed', verified=False, drc_errors=None, unconnected_items=None,
+                      summary='Board changed during DRC; run verification again',
+                      warnings=report.get('warnings', []) + ['Board changed during DRC; these findings cannot certify the current board'])
+    atomic_json(build/'drc_report.json', report)
     return report
 
 
@@ -134,7 +143,5 @@ def export_manufacturing(workspace, bom):
         (manufacturing / 'gerbers.zip').unlink(missing_ok=True)
         (manufacturing / 'cpl.csv').unlink(missing_ok=True)
         report.update(summary=str(error), warnings=[str(error), 'BOM only; fabrication files are unavailable'])
-    temporary = manufacturing / '.export_report.json.tmp'
-    temporary.write_text(json.dumps(report, indent=2) + '\n')
-    os.replace(temporary, manufacturing / 'export_report.json')
+    atomic_json(manufacturing / 'export_report.json', report)
     return report

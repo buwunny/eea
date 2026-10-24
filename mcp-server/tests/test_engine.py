@@ -111,8 +111,8 @@ class EngineTests(unittest.TestCase):
     def test_empty_native_drc_does_not_certify_board(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace=Path(directory); build_board(normalize_design(*astable()),workspace/'build')
-            def fake_run(*args,**kwargs):
-                (workspace/'build/drc_report.json').write_text('{}')
+            def fake_run(args, workspace, **kwargs):
+                Path(args[args.index('--output') + 1]).write_text('{}')
             with patch('utils.kicad_runner._run',side_effect=fake_run):
                 report=verify_drc(workspace)
                 self.assertFalse(report['verified'])

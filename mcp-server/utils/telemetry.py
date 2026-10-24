@@ -8,6 +8,7 @@ import tempfile
 import threading
 import time
 from datetime import datetime, timezone
+from .workspace_lock import workspace_lock, lock_owned, LOCK_NAME
 
 STAGES = ['ARCHITECTURE', 'SCHEMATIC_PCB', 'SIMULATION', 'AUTOROUTING', 'DRC_VERIFICATION', 'MANUFACTURING']
 LOCK = threading.RLock()
@@ -20,6 +21,8 @@ def utc_now() -> str:
 
 def update_activity(workspace: Path, **changes) -> dict:
     """Update the watched file without committing a heartbeat to Git."""
+    if not lock_owned(workspace):
+        raise RuntimeError('Activity updates require ownership of the workspace lock')
     with ACTIVITY_LOCK:
         telemetry = read_telemetry(workspace)
         activity = telemetry.get('activity')
@@ -100,13 +103,26 @@ def read_telemetry(workspace: Path) -> dict:
 
 def record(tool: str, summary: str, stage: str | None = None, state: str = 'completed', metrics: dict | None = None, bom: list | None = None, warnings: list | None = None) -> dict:
     """Write first, then commit all workspace outputs; commit failures are explicit."""
-    with LOCK:
+    with LOCK, workspace_lock(workspace_path()):
         workspace = workspace_path()
         workspace.mkdir(parents=True, exist_ok=True)
         if not (workspace / '.git').exists():
             result = git(workspace, 'init')
             if result.returncode:
                 raise RuntimeError(result.stderr.strip())
+        # Also ignore it in legacy projects without rewriting user .gitignore.
+        excluded = git(workspace, 'rev-parse', '--git-path', 'info/exclude')
+        if excluded.returncode:
+            raise RuntimeError(excluded.stderr.strip())
+        exclude_path = Path(excluded.stdout.strip())
+        if not exclude_path.is_absolute():
+            exclude_path = workspace / exclude_path
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        rules = exclude_path.read_text() if exclude_path.exists() else ''
+        rule = '/' + LOCK_NAME
+        if rule not in rules.splitlines():
+            with exclude_path.open('a') as stream:
+                stream.write(('\n' if rules and not rules.endswith('\n') else '') + rule + '\n')
         history = git(workspace, 'log', '-30', '--format=%H%x09%s%x09%cI')
         with ACTIVITY_LOCK:
             telemetry = read_telemetry(workspace)

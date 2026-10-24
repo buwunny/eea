@@ -1,7 +1,9 @@
 """Shared filesystem operation lifecycle for MCP and user-triggered local exports."""
 from .telemetry import LOCK, workspace_path, record, read_telemetry, atomic_json, ToolActivity, ACTIVITY_LOCK, progress
+from .workspace_lock import workspace_operation
 
 
+@workspace_operation
 def execute(name, stage, operation):
     with LOCK:
         activity = ToolActivity(workspace_path(), name, {
