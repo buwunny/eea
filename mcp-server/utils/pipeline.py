@@ -112,7 +112,8 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
     elif failed is not None and export:
         warnings.append('Export skipped because an earlier stage failed')
     functional_verified = (stages.get('run_spice_simulation', {}).get('verified') is True
-                           and stages.get('run_spice_simulation', {}).get('sim_passed') is True)
+                           and stages.get('run_spice_simulation', {}).get('sim_passed') is True
+                           and stages.get('run_spice_simulation', {}).get('functional_verified') is True)
     physical_verified = (stages.get('run_drc_verification', {}).get('verified') is True
                          and _stage_ok('run_drc_verification', stages['run_drc_verification']))
     manufacturing_ready = stages.get('export_manufacturing_files', {}).get('manufacturing_ready') is True
@@ -124,7 +125,9 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
         summary = '; '.join(f'{k}: {v.get("summary", v.get("status"))}' for k, v in stages.items())
         next_action = ('Fabrication files exported.' if export else 'Physical checks passed. Call export_manufacturing_files for Gerbers.')
         if not functional_verified:
-            next_action += ' Functional behavior remains unverified: simulation was skipped or estimated.'
+            next_action += ' Functional behavior remains unverified: simulation was skipped, estimated, or omitted functional components.'
+    if not functional_verified and stages.get('run_spice_simulation', {}).get('verified') is True:
+        warnings.append('Native simulation does not cover the complete functional design; review simulation coverage and sources')
     if skip_simulation:
         warnings.append('Functional simulation was explicitly skipped')
     result = {'status': status, 'stages': stages, 'failed_stage': failed, 'next_action': next_action, 'summary': summary,

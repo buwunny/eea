@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils.simulation import measurements, sources_for, spice_text, simulate
+from utils.simulation import measurements, sources_for, spice_text, simulate, simulation_coverage
 from utils.pcb_builder import normalize_design
 
 
@@ -70,6 +70,25 @@ class SourceTests(unittest.TestCase):
             with self.subTest(sources=sources), self.assertRaises(ValueError):
                 sources_for(self.design, {'sources': sources})
 
+    def test_sources_reject_ideal_voltage_loops_and_warn_about_declared_voltage(self):
+        sources = [{'name': 'VMAIN', 'positive_net': 'VIN', 'value': 5},
+                   {'name': 'VAUX', 'positive_net': 'OUT', 'value': 3.3},
+                   {'name': 'VDIFF', 'positive_net': 'VIN', 'negative_net': 'OUT', 'value': 1.7}]
+        with self.assertRaisesRegex(ValueError, 'ideal-source loop'):
+            sources_for(self.design, {'sources': sources})
+        design = {**self.design, 'nets': [{**n, **({'voltage_v': 3.3} if n['name'] == 'VIN' else {})} for n in self.design['nets']]}
+        _, warnings = sources_for(design, {'sources': sources[:1]})
+        self.assertTrue(any('declared terminal voltages imply 3.3 V' in warning for warning in warnings))
+
+    def test_coverage_ignores_connectors_but_reports_omitted_functional_devices(self):
+        design = {'components': [{'ref': 'J1', 'part_id': 'PinHeader_1x04'},
+                                 {'ref': 'U1', 'part_id': 'ATtiny85_SOIC8'}]}
+        coverage = simulation_coverage(design)
+        self.assertFalse(coverage['coverage_complete'])
+        self.assertEqual(coverage['unmodeled_components'], ['U1'])
+        self.assertEqual(coverage['excluded_components'], ['J1', 'U1'])
+        self.assertTrue(simulation_coverage({'components': design['components'][:1]})['coverage_complete'])
+
     def test_inference_is_stable_and_warns(self):
         design = {**self.design, 'nets': self.design['nets'] + [{'name': 'VCC', 'connections': []}]}
         first, warnings = sources_for(design, {})
@@ -86,9 +105,40 @@ class SourceTests(unittest.TestCase):
                           'measurement_net': 'OUT'}
                 report = simulate(self.design['components'], self.design['nets'], config, directory)
                 self.assertTrue(report['verified'], report)
+                self.assertTrue(report['functional_verified'])
                 value = json.loads((Path(directory)/'build/sim_results.json').read_text())['signals']['V(OUT)'][-1]
                 self.assertGreater(value, low)
                 self.assertLess(value, high)
+
+
+class BackendIsolationTests(unittest.TestCase):
+    def test_analytical_measurements_follow_selected_rail_and_window(self):
+        from test_pipeline import COMPONENTS, NETS
+        with tempfile.TemporaryDirectory() as directory, patch('utils.simulation.subprocess.run', side_effect=OSError('no simulator')), patch('utils.simulation.shutil.which', return_value=None):
+            report = simulate(COMPONENTS, NETS, {'probe_nets': ['OUT', 'VCC'], 'measurement_net': 'VCC',
+                                              'measurement_start_ms': 10, 'measurement_end_ms': 20}, directory)
+        self.assertEqual(report['measurement_net'], 'VCC')
+        self.assertEqual(report['measurements']['dc_average_v'], 5)
+        self.assertEqual(report['measurements']['vpp'], 0)
+        self.assertFalse(report['verified'])
+
+
+    def test_failed_backend_samples_cannot_be_reused_by_next_backend(self):
+        from test_pipeline import COMPONENTS, NETS
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            def native(command, **kwargs):
+                data = Path(directory)/'build/spice_data.txt'
+                if command[0] != 'ngspice':
+                    data.write_text('0 0 0\n0.001 5 3\n')
+                    return SimpleNamespace(returncode=1)
+                self.assertFalse(data.exists())
+                return SimpleNamespace(returncode=0)
+            with patch('utils.simulation.subprocess.run', side_effect=native), patch('utils.simulation.shutil.which', return_value='/bin/ngspice'):
+                report = simulate(COMPONENTS, NETS, {'probe_nets': ['OUT', 'THR']}, directory)
+            self.assertFalse(report['verified'])
+            self.assertFalse(report['functional_verified'])
+            self.assertEqual(report['backend'], 'analytical-555')
 
 
 class PipelineOutcomeTests(unittest.TestCase):
@@ -108,3 +158,9 @@ class PipelineOutcomeTests(unittest.TestCase):
             self.assertFalse(result['manufacturing_ready'])
             self.assertIn('remains unverified', result['next_action'])
             self.assertNotIn('All stages passed', result['next_action'])
+        responses['run_spice_simulation'] = {'status': 'success', 'verified': True, 'sim_passed': True, 'coverage_complete': False}
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'EEA_WORKSPACE': directory}), patch.object(pipeline, 'execute', side_effect=lambda name, stage, op: responses[name]):
+            self.assertFalse(pipeline.build_and_verify([], [])['functional_verified'])
+        responses['run_spice_simulation'].update(functional_verified=True, coverage_complete=True)
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'EEA_WORKSPACE': directory}), patch.object(pipeline, 'execute', side_effect=lambda name, stage, op: responses[name]):
+            self.assertTrue(pipeline.build_and_verify([], [])['functional_verified'])

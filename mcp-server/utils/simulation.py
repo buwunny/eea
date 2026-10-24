@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from .telemetry import progress
+from .telemetry import progress, atomic_json
 from .pcb_builder import normalize_design, load_catalog, finite, render_template
 
 
@@ -33,6 +33,16 @@ def resistance(component, part):
 
 def skipped_refs(design):
     return [c['ref'] for c in design['components'] if c['part_id'] not in SPICE_PARTS]
+
+
+def simulation_coverage(design):
+    """Connector boundaries need no model; omitted functional parts limit coverage."""
+    catalog = load_catalog()
+    excluded = skipped_refs(design)
+    unmodeled = [c['ref'] for c in design['components'] if c['ref'] in excluded
+                 and catalog[c['part_id']].get('category') != 'connector']
+    return {'coverage_complete': not unmodeled, 'excluded_components': excluded,
+            'unmodeled_components': unmodeled}
 
 
 SUPPLY_NAMES = ('VBUS', 'VIN', 'VCC', 'VDD', '5V', '+5V')
@@ -77,6 +87,34 @@ def sources_for(design, config):
         value = finite(source.get('value'), f'{name}.value', -1000, 1000)
         out.append({'name': name, 'kind': kind, 'positive_net': positive,
                     'negative_net': negative, 'value': value})
+    # Independent ideal voltage sources may form neither conflicting nor redundant loops.
+    edges = {}
+    declared = {n['name']: n['voltage_v'] for n in design['nets'] if 'voltage_v' in n}
+    def node(name):
+        return '0' if name.upper() in ('GND', '0') else name
+    def path_value(start, end):
+        pending, seen = [(start, 0.0)], set()
+        while pending:
+            point, voltage = pending.pop()
+            if point == end:
+                return voltage
+            if point in seen:
+                continue
+            seen.add(point)
+            pending.extend((target, voltage+delta) for target, delta in edges.get(point, []) if target not in seen)
+        return None
+    for source in out:
+        if source['kind'] != 'voltage':
+            continue
+        a, b = node(source['positive_net']), node(source['negative_net'])
+        if path_value(a, b) is not None:
+            raise ValueError(f"Voltage source {source['name']} closes an ideal-source loop; remove redundant or conflicting voltage sources")
+        edges.setdefault(a, []).append((b, source['value']))
+        edges.setdefault(b, []).append((a, -source['value']))
+        va = declared.get(source['positive_net'], 0 if a == '0' else None)
+        vb = declared.get(source['negative_net'], 0 if b == '0' else None)
+        if va is not None and vb is not None and not math.isclose(va-vb, source['value'], abs_tol=1e-6):
+            warnings.append(f"{source['name']} applies {source['value']:g} V but declared terminal voltages imply {va-vb:g} V")
     return out, warnings
 
 
@@ -133,7 +171,7 @@ def spice_text(design, config):
     lines.extend(sorted(definitions))
     probes = [names[n] for n in config['probe_nets']]
     analysis_command = f"dc {config.get('sweep_source', 'VSUPPLY')} {config['sweep_start_v']:g} {config['sweep_stop_v']:g} {config['sweep_step_v']:g}" if config['analysis_type']=='dc' else f"tran {config['step_time_ms']/1000:g} {config['end_time_ms']/1000:g} uic"
-    lines.extend(['.control', 'set wr_singlescale', 'set wr_vecnames', analysis_command, 'wrdata build/spice_data.txt '+ ' '.join(f'v({n})' for n in probes), 'quit', '.endc', '.end'])
+    lines.extend(['.control', 'set numdgt=15', 'set wr_singlescale', 'set wr_vecnames', analysis_command, 'wrdata build/spice_data.txt '+ ' '.join(f'v({n})' for n in probes), 'quit', '.endc', '.end'])
     return '\n'.join(lines)+'\n'
 
 
@@ -291,14 +329,19 @@ def simulate(components, nets, sim_config, workspace):
     raw=spice_text(design,config)
     (build/'circuit.cir').write_text(raw)
     (workspace/'src/testbench.py').write_text(render_template('pyspice_sim.py.j2', circuit_literal=repr(raw)))
-    skipped=skipped_refs(design)
+    coverage = simulation_coverage(design)
+    skipped = coverage['excluded_components']
     if skipped: warnings.append('No SPICE model, excluded from simulation: '+', '.join(skipped))
+    if coverage['unmodeled_components']:
+        warnings.append('Functional verification is incomplete because functional components lack models: ' + ', '.join(coverage['unmodeled_components']))
     backend='analytical-555'; verified=False
     data_file=build/'spice_data.txt'; data_file.unlink(missing_ok=True)
     native_commands = [('pyspice', [sys.executable, str(workspace/'src/testbench.py')])] if config['analysis_type']=='transient' else []
     if shutil.which('ngspice'): native_commands.append(('ngspice', ['ngspice','-b','build/circuit.cir']))
     for native_backend, command in native_commands:
         try:
+            # A failed backend may have written partial data; the next must produce its own.
+            data_file.unlink(missing_ok=True)
             progress(workspace, f'Simulating with {native_backend}')
             result=subprocess.run(command,cwd=workspace,capture_output=True,text=True,timeout=30)
             rows=[]
@@ -316,8 +359,8 @@ def simulate(components, nets, sim_config, workspace):
         except (OSError,subprocess.TimeoutExpired,ValueError) as error:
             warnings.append(f'{native_backend} unavailable or failed: {error}')
     if not verified and config['analysis_type']=='dc':
-        report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
-        (build/'sim_results.json').write_text(json.dumps(report,indent=2)+'\n')
+        report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,**coverage,'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
+        atomic_json(build/'sim_results.json', report)
         return {k:v for k,v in report.items() if k not in ('x_data','signals')}
     if not verified:
         progress(workspace, 'Estimating 555 timing; native simulation unavailable')
@@ -337,6 +380,6 @@ def simulate(components, nets, sim_config, workspace):
     target_met=True if target is None else bool(frequency and abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100)
     passed=verified and (target_met if config['analysis_type']=='transient' else True)
     summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
-    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
-    (build/'sim_results.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
+    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),**coverage,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
+    atomic_json(build/'sim_results.json', report)
     return {k:v for k,v in report.items() if k not in ('x_data','signals')}
