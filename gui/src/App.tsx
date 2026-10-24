@@ -13,6 +13,25 @@ import { Commit, emptyTelemetry, Simulation, Telemetry } from "./types";
 import { demoSimulation, demoTelemetry } from "./demo";
 import { api, wsUrl } from "./api";
 
+/** Tally-counter readout: each digit sits in its own number wheel. */
+function Counter({ text }: { text: string }) {
+  return (
+    <b aria-label={text}>
+      {[...text].map((c, i) =>
+        /\d/.test(c) ? (
+          <span className="wheel" key={i} aria-hidden>
+            {c}
+          </span>
+        ) : (
+          <span key={i} aria-hidden>
+            {c}
+          </span>
+        ),
+      )}
+    </b>
+  );
+}
+
 export default function App() {
   const [compact, setCompact] = useState(window.innerWidth < 1050);
   const [shortWindow, setShortWindow] = useState(window.innerHeight < 740);
@@ -241,21 +260,23 @@ export default function App() {
               <div className="board-metrics">
                 <div>
                   <small>COMPONENTS</small>
-                  <b>
-                    {telemetry.metrics.component_count
+                  <Counter
+                    text={telemetry.metrics.component_count
                       .toString()
                       .padStart(2, "0")}
-                  </b>
+                  />
                 </div>
                 <div>
                   <small>NETS</small>
-                  <b>
-                    {telemetry.metrics.net_count.toString().padStart(2, "0")}
-                  </b>
+                  <Counter
+                    text={telemetry.metrics.net_count.toString().padStart(2, "0")}
+                  />
                 </div>
                 <div>
                   <small>EST. COST</small>
-                  <b>${telemetry.metrics.estimated_cost_usd.toFixed(2)}</b>
+                  <Counter
+                    text={`$${telemetry.metrics.estimated_cost_usd.toFixed(2)}`}
+                  />
                 </div>
               </div>
               {error && (

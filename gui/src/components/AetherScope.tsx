@@ -395,12 +395,10 @@ export default function AetherScope({
       : chronological.findIndex((c) => c.hash === selected);
   return (
     <section className="instrument board-panel">
-      <div className="panel-heading">
+      <div className="panel-heading board-toolbar">
         <span>
-          <Layers size={16} /> Board
+          <i className="fig">II.</i> Board
         </span>
-      </div>
-      <div className="board-toolbar">
         <div className="view-tabs">
           <button
             className={view === "2d" ? "active" : ""}

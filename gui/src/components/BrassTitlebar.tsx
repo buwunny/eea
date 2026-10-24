@@ -1,4 +1,4 @@
-import { Cog, Minus, Square, X } from "lucide-react";
+import { Minus, Square, X } from "lucide-react";
 async function windowAction(action: string) {
   if (!("__TAURI_INTERNALS__" in window)) return;
   try {
@@ -15,8 +15,12 @@ export default function BrassTitlebar() {
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region>
-        <Cog size={29} />
-        <span>EEA</span>
+        <span className="maker-plate" data-tauri-drag-region>
+          EEA
+        </span>
+        <span className="maker-line" data-tauri-drag-region>
+          Electrical Engineer Anything
+        </span>
       </div>
       <div className="window-controls">
         <button

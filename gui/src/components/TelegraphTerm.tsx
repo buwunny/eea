@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { Copy, TerminalSquare } from "lucide-react";
+import { Copy } from "lucide-react";
 import { wsUrl } from "../api";
 const prompts = [
   [
@@ -25,17 +25,32 @@ export default function TelegraphTerm() {
     const frame = requestAnimationFrame(() => {
       if (!host.current) return;
       const terminal = new Terminal({
-        fontFamily: '"SFMono-Regular", Consolas, monospace',
-        fontSize: 15,
+        fontFamily: "monospace",
+        fontSize: 14,
+        lineHeight: 1.15,
         cursorBlink: true,
-        theme: {
-          background: "#101722",
-          foreground: "#e0e7ef",
-          cursor: "#ff9912",
-          selectionBackground: "#6b512b",
-          black: "#101722",
-          green: "#b3c881",
-          yellow: "#ffbb4e",
+                theme: {
+          background: "#0e0b09",
+          foreground: "#e6dcc8",
+          cursor: "#cfa95f",
+          cursorAccent: "#0e0b09",
+          selectionBackground: "#4a3e31",
+          black: "#1a110b",
+          red: "#e0654f",
+          green: "#a9c46c",
+          yellow: "#ffb84a",
+          blue: "#8fa9c9",
+          magenta: "#c98fa0",
+          cyan: "#86c2a8",
+          white: "#ecd9b0",
+          brightBlack: "#7a6447",
+          brightRed: "#ff8a6e",
+          brightGreen: "#c8e08a",
+          brightYellow: "#ffd27a",
+          brightBlue: "#b0c6e0",
+          brightMagenta: "#e2adbd",
+          brightCyan: "#a8dcc3",
+          brightWhite: "#fff3d2",
         },
         scrollback: 3000,
       });
@@ -43,6 +58,23 @@ export default function TelegraphTerm() {
       terminal.loadAddon(fit);
       terminal.open(host.current);
       fit.fit();
+      // IBM Plex Mono is bundled but loads asynchronously; swap it in once ready so xterm measures the right cell size.
+      void document.fonts
+        .load('14px "IBM Plex Mono"')
+        .then(() => {
+          if (disposed) return;
+          terminal.options.fontFamily = '"IBM Plex Mono", monospace';
+          fit.fit();
+          if (socket?.readyState === WebSocket.OPEN)
+            socket.send(
+              JSON.stringify({
+                type: "resize",
+                cols: terminal.cols,
+                rows: terminal.rows,
+              }),
+            );
+        })
+        .catch(() => {});
       let socket: WebSocket | undefined;
       let timer: ReturnType<typeof setTimeout>;
       let disposed = false;
@@ -112,7 +144,7 @@ export default function TelegraphTerm() {
     <section className="instrument terminal-panel">
       <div className="panel-heading">
         <span>
-          <TerminalSquare size={16} /> Terminal
+          <i className="fig">I.</i> Terminal
         </span>
         <span className={`status-dot ${connected ? "online" : ""}`} />
       </div>

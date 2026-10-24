@@ -9,6 +9,19 @@ import {
   Tooltip,
 } from "recharts";
 import { Simulation } from "../types";
+const tickStyle = {
+  fill: "#6f8566",
+  fontSize: 10,
+  fontFamily: "IBM Plex Mono, monospace",
+};
+/** Short axis labels: 264.5894406 -> 265, 0.0123 -> 0.012 */
+function tidy(v: number) {
+  if (!Number.isFinite(v)) return "";
+  const a = Math.abs(v);
+  if (a >= 100) return Math.round(v).toString();
+  if (a >= 10) return (Math.round(v * 10) / 10).toString();
+  return Number(v.toPrecision(2)).toString();
+}
 function CathodeRay({
   simulation,
   passed,
@@ -32,7 +45,9 @@ function CathodeRay({
   return (
     <section className="instrument scope">
       <div className="panel-heading">
-        <span>Simulation</span>
+        <span>
+          <i className="fig">III.</i> Simulation
+        </span>
         <span className="tiny">
           {simulation?.analysis_type.toUpperCase() ?? "TRANSIENT"}
         </span>
@@ -45,22 +60,34 @@ function CathodeRay({
                 data={data}
                 margin={{ top: 12, right: 12, left: -14, bottom: 0 }}
               >
-                <CartesianGrid stroke="#25432c" strokeDasharray="2 4" />
+                <CartesianGrid stroke="#3f5c33" strokeOpacity={0.35} />
                 <XAxis
                   dataKey="x"
-                  tick={{ fill: "#7d9774", fontSize: 12 }}
+                  type="number"
+                  domain={["dataMin", "dataMax"]}
+                  tick={tickStyle}
+                  tickFormatter={tidy}
                   tickLine={false}
+                  axisLine={false}
                   minTickGap={35}
                 />
                 <YAxis
-                  tick={{ fill: "#7d9774", fontSize: 12 }}
+                  tick={tickStyle}
+                  tickFormatter={tidy}
                   tickLine={false}
+                  axisLine={false}
+                  width={44}
                 />
                 <Tooltip
+                  formatter={(v) => tidy(Number(v))}
+                  labelFormatter={(v) => tidy(Number(v))}
                   contentStyle={{
-                    background: "#101a10",
-                    border: "1px solid #6a8752",
-                    fontSize: 11,
+                    background: "#241e18",
+                    border: "1px solid #4a3e31",
+                    borderRadius: 6,
+                    color: "#ece2cf",
+                    fontFamily: "IBM Plex Mono, monospace",
+                    fontSize: 12,
                   }}
                 />
                 {Object.keys(simulation!.signals).map((name, i) => (
@@ -70,7 +97,7 @@ function CathodeRay({
                     type={i === 0 ? "stepAfter" : "monotone"}
                     dataKey={name}
                     dot={false}
-                    stroke={i === 0 ? "#8fe66b" : "#d8aa48"}
+                    stroke={i === 0 ? "#8fe079" : "#f0c27a"}
                     strokeWidth={1.6}
                     isAnimationActive={false}
                   />
