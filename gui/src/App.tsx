@@ -152,7 +152,10 @@ export default function App() {
     function connect() {
       socket = new WebSocket(wsUrl("/ws/telemetry"));
       socket.onopen = () => {
-        if (disposed) return;
+        if (disposed) {
+          socket.close();
+          return;
+        }
         setConnected(true);
         void refreshHistory();
       };
@@ -216,11 +219,14 @@ export default function App() {
       };
       socket.onerror = () => socket.close();
     }
-    connect();
+    // Avoid opening and immediately aborting a socket during StrictMode's probe.
+    const frame = requestAnimationFrame(connect);
     return () => {
       disposed = true;
+      cancelAnimationFrame(frame);
       clearTimeout(timer);
-      socket?.close();
+      // A connecting socket closes in onopen, allowing a clean WS handshake.
+      if (socket?.readyState === WebSocket.OPEN) socket.close();
     };
   }, []);
   useEffect(() => () => clearInterval(demoTimer.current), []);

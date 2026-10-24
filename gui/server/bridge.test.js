@@ -166,6 +166,12 @@ test("live bridge streams filesystem state and restores build history without mo
       "version two",
     );
     assert.equal(await git("rev-parse", "HEAD"), latest);
+    // WebViews can reset TCP on reload instead of completing a WS close handshake.
+    await new Promise((resolve) => {
+      terminal.once("close", resolve);
+      terminal._socket.resetAndDestroy();
+    });
+    assert.equal((await fetch(`${base}/api/git/log`)).status, 200);
   } finally {
     socket?.terminate();
     terminal?.terminate();

@@ -389,9 +389,15 @@ export async function startBridge({
           ? telemetrySockets
           : null;
     if (!handler) return socket.destroy();
-    handler.handleUpgrade(req, socket, head, (connection) =>
-      handler.emit("connection", connection, req),
-    );
+    handler.handleUpgrade(req, socket, head, (connection) => {
+      // A closing WebView may reset its socket instead of sending a close frame.
+      // Handle it on the connection so it cannot crash the bridge process.
+      connection.on("error", (error) => {
+        if (error.code !== "ECONNRESET")
+          console.warn(`WebSocket ${endpoint}: ${error.message}`);
+      });
+      handler.emit("connection", connection, req);
+    });
   });
   terminalSockets.on("connection", (socket) => {
     if (!pty) {

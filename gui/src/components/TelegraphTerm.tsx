@@ -85,6 +85,10 @@ export default function TelegraphTerm({
       function connect() {
         socket = new WebSocket(wsUrl("/ws/terminal"));
         socket.onopen = () => {
+          if (disposed) {
+            socket?.close();
+            return;
+          }
           socket?.send(
             JSON.stringify({
               type: "resize",
@@ -133,7 +137,7 @@ export default function TelegraphTerm({
       cleanup = () => {
         disposed = true;
         clearTimeout(timer);
-        socket?.close();
+        if (socket?.readyState === WebSocket.OPEN) socket.close();
         observer.disconnect();
         input.dispose();
         terminal.dispose();
