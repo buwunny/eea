@@ -1,0 +1,205 @@
+# Electrical Engineer Anything
+
+An AI-driven hardware / EDA workbench dressed as a **Victorian steampunk brass & vacuum-tube automaton**. The user runs an AI CLI of their choice (Claude Code, Gemini CLI, Codex, …) inside the GUI's embedded telegraph terminal and asks it to design a circuit. The CLI drives a Python **MCP server** that:
+
+- synthesizes netlists with **SKiDL**,
+- simulates with **PySpice / Ngspice**,
+- builds a self-contained **`.kicad_pcb`**, autoroutes it with **Freerouting**,
+- verifies and exports with **kicad-cli** (DRC, 3D, Gerbers, drill, pick-and-place).
+
+A **Vite + React + Tailwind** GUI, served with a small **Node bridge** (`node-pty` + `chokidar` + `ws`), watches `workspace/` and hot-reloads the board, waveforms, gauges and BOM. It runs in a browser at `http://localhost:5173` and inside a frameless **Tauri v2** window.
+
+---
+
+## 1. Core rules (critical)
+
+1. **Filesystem is the single source of truth.** The MCP server and the GUI are separate processes that never talk directly. The server writes files and `workspace/telemetry.json`; the GUI watches `workspace/`.
+2. **Deterministic templates over raw LLM code.** The LLM never writes raw SKiDL, PySpice, `.kicad_sch` or `.kicad_pcb` content. It passes structured JSON to MCP tools, which render pre-validated Jinja2 templates and S-expression generators.
+3. **Self-contained `.kicad_pcb`.** Footprint S-expressions are embedded from `mcp-server/catalog/curated_parts.json` straight into `workspace/build/board.kicad_pcb`, so KiCanvas and kicad-cli never depend on OS library paths.
+4. **Skip `.kicad_sch`.** SKiDL produces a netlist, not a drawn schematic; we go straight to a placed `.kicad_pcb`.
+5. **TOS-compliant terminal.** The GUI never invokes an AI CLI programmatically. It hosts an `xterm.js` + `node-pty` shell where the human runs the CLI interactively.
+6. **CLI-agnostic.** Nothing assumes a specific AI CLI. MCP config is provided for each supported CLI (`.mcp.json`, `.gemini/settings.json`); other CLIs use the generic stdio command in the README.
+7. **Never break the demo.** Every external tool (pcbnew, Freerouting/Java, kicad-cli, ngspice) has a pure-Python fallback or a clean, reported degradation.
+
+---
+
+## 2. Repository layout
+
+```text
+eea/
+├── AGENTS.md                    # this blueprint (CLAUDE.md / GEMINI.md import it)
+├── package.json                 # npm workspaces: dev (bridge + vite), tauri
+├── .mcp.json                    # Claude Code MCP config
+├── .gemini/settings.json        # Gemini CLI MCP config
+├── mcp-server/                  # Python FastMCP server + EDA engine
+│   ├── pyproject.toml           # fastmcp, skidl, pyspice, jinja2, numpy
+│   ├── server.py                # 6 FastMCP tools
+│   ├── catalog/curated_parts.json
+│   ├── templates/
+│   │   ├── skidl_pcb.py.j2      # SKiDL netlist -> board.net
+│   │   └── pyspice_sim.py.j2    # Ngspice transient/DC -> sim_results.json
+│   ├── utils/
+│   │   ├── pcb_builder.py       # deterministic .kicad_pcb S-expression writer
+│   │   ├── kicad_runner.py      # kicad-cli drc / 3D / gerbers / drill / pos
+│   │   ├── freerouting_runner.py# DSN -> freerouting.jar -> SES, with Python fallback router
+│   │   └── telemetry.py         # atomic telemetry.json updater + auto git commit
+│   ├── vendor/freerouting.jar   # downloaded, gitignored
+│   └── tests/test_mcp_flow.py   # end-to-end 555 smoke test
+├── gui/
+│   ├── index.html               # KiCanvas script + Google Fonts
+│   ├── server/bridge.js         # :3001 node-pty terminal, chokidar watcher, artifacts, git API
+│   ├── src/
+│   │   ├── App.tsx              # 3-pane brass workbench
+│   │   ├── components/
+│   │   │   ├── BrassTitlebar.tsx  # Tauri drag region + pressure-valve window controls
+│   │   │   ├── TelegraphTerm.tsx  # xterm.js, amber on ebony
+│   │   │   ├── AetherScope.tsx    # KiCanvas 2D + Three.js 3D + git time-travel slider
+│   │   │   ├── CathodeRay.tsx     # SPICE oscilloscope in a brass porthole
+│   │   │   ├── NixieStepper.tsx   # vacuum-tube pipeline stepper
+│   │   │   ├── PressureGauge.tsx  # analog DRC / unconnected gauges
+│   │   │   └── LedgerBOM.tsx      # parchment BOM + Gerber download
+│   │   └── styles/steampunk.css
+│   └── src-tauri/               # Tauri v2 (devUrl :5173, decorations: false)
+└── workspace/                   # nested git repo, watched by the bridge (root-gitignored)
+    ├── .mcp.json, .gemini/settings.json
+    ├── project_spec.md
+    ├── telemetry.json
+    ├── src/design.py, src/testbench.py
+    ├── build/board.net, board.kicad_pcb, board_3d.wrl|glb, sim_results.json, drc_report.json
+    └── manufacturing/gerbers.zip, bom.csv, cpl.csv
+```
+
+---
+
+## 3. Data contracts
+
+### 3.1 `workspace/telemetry.json`
+Written atomically (temp file + `os.replace`) by every MCP tool; broadcast to the GUI by the bridge on change.
+
+```json
+{
+  "project_name": "USB-C 555 Pulse Generator",
+  "last_updated": "2026-10-23T21:55:00Z",
+  "pipeline_stage": "SIMULATION",
+  "stages": {
+    "ARCHITECTURE": "completed",
+    "SCHEMATIC_PCB": "completed",
+    "SIMULATION": "in_progress",
+    "AUTOROUTING": "pending",
+    "DRC_VERIFICATION": "pending",
+    "MANUFACTURING": "pending"
+  },
+  "metrics": {
+    "component_count": 8,
+    "net_count": 6,
+    "drc_errors": 0,
+    "unconnected_items": 0,
+    "estimated_cost_usd": 4.15,
+    "sim_passed": true,
+    "sim_summary": "Oscillation verified at 2.04 Hz (Target: 2.0 Hz)"
+  },
+  "bom": [
+    { "ref": "U1", "value": "NE555", "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm", "lcsc": "C7593", "price_usd": 0.18 }
+  ],
+  "git_commits": [
+    { "hash": "a1b2c3d", "message": "MCP [synthesize_pcb]: Placed 8 components", "timestamp": "21:54:10" }
+  ]
+}
+```
+
+Stage values: `pending | in_progress | completed | failed`.
+
+### 3.2 `workspace/build/sim_results.json`
+
+```json
+{
+  "analysis_type": "transient",
+  "x_axis_label": "Time (ms)",
+  "x_data": [0.0, 0.5, 1.0, 1.5, 2.0],
+  "signals": {
+    "V(OUT)": [0.0, 4.98, 4.98, 0.02, 0.02],
+    "V(THR)": [0.0, 1.65, 3.32, 2.10, 1.66]
+  },
+  "measurements": { "frequency_hz": 2.04, "vpp": 4.96, "duty_cycle_pct": 54.2 }
+}
+```
+
+### 3.3 `mcp-server/catalog/curated_parts.json`
+Prevents footprint and SPICE-model hallucinations. Each part has: pins (number + name), SPICE model and pin mapping, the full embedded footprint S-expression, LCSC id, unit price. Minimum set:
+
+| part_id | Footprint |
+|---|---|
+| `R` | `Resistor_SMD:R_0805_2012Metric` |
+| `C` | `Capacitor_SMD:C_0805_2012Metric` |
+| `LED` | `LED_SMD:LED_0805_2012Metric` |
+| `NE555` | `Package_SO:SOIC-8_3.9x4.9mm_P1.27mm` + behavioral SPICE subckt |
+| `USB_C_Receptacle_PowerOnly` | `Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12` |
+| `AMS1117_3V3` | `Package_TO_SOT_SMD:SOT-223-3_TabPin2` |
+| `PinHeader_1x04` | `Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical` |
+
+Plus a few extras (e.g. `2N7002`, `1N4148`).
+
+### 3.4 Tool input shapes
+- `components`: `[{"ref": "U1", "part_id": "NE555", "value": "NE555", "x_mm": 25.0, "y_mm": 20.0, "rotation_deg": 0}]`
+- `nets`: `[{"name": "GND", "connections": ["U1.1", "C1.2", "J1.GND"]}]` (pin number or pin name)
+- `sim_config`: `{"step_time_ms": 0.5, "end_time_ms": 1000, "probe_nets": ["OUT", "THR"], "target_freq_hz": 2.0}`
+
+---
+
+## 4. MCP server (`mcp-server/server.py`)
+
+`FastMCP("ee-anything")`. Every tool must:
+1. do its hardware / simulation work,
+2. update `workspace/telemetry.json`,
+3. run `git add -A && git commit -m "MCP [<tool_name>]: <summary>"` inside `workspace/`,
+4. return a short structured report the LLM can use to self-correct.
+
+| Tool | What it does |
+|---|---|
+| `list_curated_parts(category_filter=None)` | Returns catalog parts with exact pin names/numbers, footprints and SPICE pin maps. |
+| `synthesize_pcb(components, nets, board_width_mm=50, board_height_mm=40)` | Renders `skidl_pcb.py.j2` → `workspace/src/design.py`, runs it → `build/board.net`; `pcb_builder` places embedded footprints, draws the `Edge.Cuts` outline, assigns pad nets → `build/board.kicad_pcb`; exports 3D (`kicad-cli pcb export vrml`/`glb`); returns placement confirmation and missing pin/net warnings. |
+| `run_spice_simulation(components, nets, sim_config)` | Renders `pyspice_sim.py.j2` → `workspace/src/testbench.py`, runs it (ngspice); computes Vpp, frequency, duty cycle, DC average → `build/sim_results.json`; returns numbers so the LLM can tune R/C values. Fallback: raw `.cir` + `ngspice -b`. |
+| `autoroute_pcb(trace_width_mm=0.25, clearance_mm=0.2)` | `pcbnew.ExportSpecctraDSN` → `java -jar freerouting.jar -de board.dsn -do board.ses -mp 20` → `ImportSpecctraSession`; GND pour on `B.Cu`; re-export 3D. Fallback: Python grid A* router. |
+| `run_drc_verification()` | `kicad-cli pcb drc --format json --output build/drc_report.json build/board.kicad_pcb`; parses `violations` and `unconnected_items`; returns errors with coordinates and nets. |
+| `export_manufacturing_files()` | `kicad-cli pcb export gerbers`, `drill`, `pos` into `workspace/manufacturing/`; JLCPCB-format `bom.csv`; zips Gerbers into `gerbers.zip`. |
+
+---
+
+## 5. GUI (`gui/`)
+
+### 5.1 Theme — Victorian steampunk ("The Aether-Forge")
+Every element should look like a 19th-century brass-and-mahogany laboratory instrument crossed with early vacuum-tube gear.
+
+- **Backgrounds:** Deep Mahogany `#1A110B`, Burnished Leather `#261810`, Smoked Brass Panel `#2E2216`.
+- **Accents & borders:** Tarnished Brass `#C59B27`, Polished Copper `#D47441`, Antique Gold `#E6C259`, Riveted Iron `#3D3A36`.
+- **Glows:** Amber Filament `#FF9912`, Phosphor Green `#39FF14` (scope traces), Crimson Warning `#D92B2B`.
+- **Type:** headers/gauges in `Cinzel`, `Playfair Display` or `IM Fell English SC`; terminal/telemetry in `Courier Prime`, `Share Tech Mono` or `VT323`.
+- **Ornament:** CSS double borders, corner rivets (`radial-gradient`), recessed bevels (`inset` box-shadow).
+- **Titlebar (Tauri):** engraved brass beam with pressure-valve minimize / maximize / close.
+- **Pipeline stepper:** Nixie bulbs / vacuum tubes — warm amber when active, emerald pulse when verified.
+- **Oscilloscope:** inside a brass porthole bezel with an amber/green graticule.
+- **ERC/DRC:** analog brass pressure gauges (0 PSI = 0 errors, redline = violations).
+
+### 5.2 Bridge (`gui/server/bridge.js`, port 3001)
+- **`/ws/terminal`:** `node-pty` spawns `$SHELL` in `workspace/`; bidirectional keystrokes, ANSI output and resize.
+- **`/ws/telemetry`:** `chokidar` watches `telemetry.json`, `build/board.kicad_pcb`, `build/sim_results.json`, `build/board_3d.*`; broadcasts `{ "type": "FILE_UPDATED", "file", "payload" }` (JSON inline, binaries as `?t=` URLs).
+- **Static:** `workspace/build/` and `workspace/manufacturing/` at `/artifacts/*`, no-cache, cache-busting `?t=` so KiCanvas and Three.js reload immediately.
+- **Git API:** `/api/git/log`; `/api/git/checkout/:hash` runs `git checkout <hash> -- build/` (and restores HEAD for "latest").
+
+### 5.3 Layout (`gui/src/App.tsx`)
+1. **Left 30% — TelegraphTerm:** header with active dir and MCP connection badge; full-height xterm + fit addon; quick-copy prompt chips ("555 LED Flasher", "USB-C 3.3 V LDO Board").
+2. **Center 45% — AetherScope:** toggle `[2D KiCanvas PCB] | [3D Interactive Spin]`.
+   - 2D: React wrapper around `<kicanvas-embed src={pcbUrl} controls="full">`, remounted with a new `?t=` key on every board update.
+   - 3D: `@react-three/fiber` + `@react-three/drei` (`OrbitControls`, `Stage`, auto-rotate) for the exported VRML/GLB, or a procedural extrusion of outline, traces and packages if 3D export is missing.
+   - Bottom: git commit time-travel slider so viewers can watch the board evolve.
+3. **Right 25% — HUD:** NixieStepper (6 stages); CathodeRay (Recharts `V(OUT)`, `V(THR)` + Freq / Vpp / Pass readouts); PressureGauges for DRC violations and unconnected nets with history (`4 → 1 → 0 PASSED`); LedgerBOM with total price and "Download JLCPCB Gerbers (.zip)" → `/artifacts/gerbers.zip`.
+4. **"Simulate Demo Flow"** debug button replays the 555 self-healing sequence (unrouted → failed SPICE → fixed resistor → routed → 0 DRC) without the backend.
+
+---
+
+## 6. Environment
+
+- Arch Linux: `sudo pacman -S kicad ngspice` (optional `kicad-library` for 3D models, `webkit2gtk-4.1` for Tauri).
+- `mcp-server` uses a `uv venv --system-site-packages` so the system `pcbnew` module is importable; pcbnew is detected at runtime.
+- `freerouting.jar` lives in `mcp-server/vendor/` and runs on the system Java.
+- `npm run dev` starts the bridge and Vite; `npm run tauri` opens the desktop window.
