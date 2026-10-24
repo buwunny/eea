@@ -463,12 +463,17 @@ export async function startBridge({
       } catch {}
     });
   });
+  // Latest read per file; an older read that finishes late must not overwrite a newer one.
+  const readSequence = new Map();
   async function update(
     file,
     socket,
     root = workspace,
     projectId = project.id,
+    attempt = 0,
   ) {
+    const sequence = (readSequence.get(file) ?? 0) + 1;
+    readSequence.set(file, sequence);
     try {
       const absolute = path.join(root, file);
       const stat = await fs.stat(absolute);
@@ -476,10 +481,19 @@ export async function startBridge({
         ? JSON.parse(await fs.readFile(absolute, "utf8"))
         : `/artifacts/${file}?project=${encodeURIComponent(projectId)}&t=${stat.mtimeMs}`;
       if (projectId !== project.id) return;
+      if (!socket && readSequence.get(file) !== sequence) return;
       const value = { type: "FILE_UPDATED", projectId, file, payload };
       if (socket) send(socket, value);
       else telemetrySockets.clients.forEach((client) => send(client, value));
     } catch (error) {
+      // A JSON file caught mid-write: read it again shortly instead of dropping the update.
+      if (error instanceof SyntaxError && attempt < 5) {
+        setTimeout(() => {
+          if (socket || readSequence.get(file) === sequence)
+            void update(file, socket, root, projectId, attempt + 1);
+        }, 100);
+        return;
+      }
       if (error.code === "ENOENT" && projectId === project.id) {
         const value = { type: "FILE_UPDATED", projectId, file, payload: null };
         if (socket) send(socket, value);
@@ -494,26 +508,35 @@ export async function startBridge({
     });
   });
   async function watchWorkspace(root, projectId) {
-    const nextWatcher = chokidar.watch(
-      trackedFiles.map((file) => path.join(root, file)),
-      {
-        ignoreInitial: true,
-        awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 50 },
+    // Watch the folders, not the files: tools save by writing a temp file and renaming it
+    // over the old one, and a watch on the file itself stops firing after that swap.
+    const tracked = new Set(trackedFiles);
+    const watchedDirs = new Set(["build", "manufacturing"]);
+    const relative = (absolute) =>
+      path.relative(root, absolute).split(path.sep).join("/");
+    const nextWatcher = chokidar.watch(root, {
+      ignoreInitial: true,
+      depth: 1,
+      ignored: (absolute) => {
+        const file = relative(absolute);
+        return !(file === "" || watchedDirs.has(file) || tracked.has(file));
       },
-    );
+      awaitWriteFinish: { stabilityThreshold: 80, pollInterval: 20 },
+    });
     nextWatcher.on("add", (absolute) => {
-      void update(path.relative(root, absolute), undefined, root, projectId);
+      void update(relative(absolute), undefined, root, projectId);
     });
     nextWatcher.on("change", (absolute) => {
-      void update(path.relative(root, absolute), undefined, root, projectId);
+      void update(relative(absolute), undefined, root, projectId);
     });
     nextWatcher.on("unlink", (absolute) => {
+      if (!tracked.has(relative(absolute))) return;
       if (projectId === project.id)
         telemetrySockets.clients.forEach((client) =>
           send(client, {
             type: "FILE_UPDATED",
             projectId,
-            file: path.relative(root, absolute),
+            file: relative(absolute),
             payload: null,
           }),
         );

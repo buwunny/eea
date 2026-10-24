@@ -202,3 +202,49 @@ test("artifact lookup rejects traversal, hidden files and escaped symlinks", asy
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test("telemetry saved by temp-file rename keeps streaming, including into a new build folder", async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "eea-bridge-atomic-"));
+  let bridge;
+  let socket;
+  try {
+    const save = async (file, value) => {
+      const target = path.join(root, file);
+      await fs.writeFile(`${target}.tmp`, JSON.stringify(value));
+      await fs.rename(`${target}.tmp`, target);
+    };
+    await save("telemetry.json", { project_name: "Atomic", step: 0 });
+    bridge = await startBridge({ workspace: root, port: 0 });
+    socket = new WebSocket(
+      `ws://127.0.0.1:${bridge.server.address().port}/ws/telemetry`,
+      { origin: "http://localhost:5173" },
+    );
+    const seen = [];
+    let simulation;
+    socket.on("message", (raw) => {
+      const message = JSON.parse(raw.toString());
+      if (message.file === "telemetry.json" && message.payload)
+        seen.push(message.payload.step);
+      if (message.file === "build/sim_results.json" && message.payload)
+        simulation = message.payload;
+    });
+    await new Promise((resolve) => socket.once("open", resolve));
+    for (let step = 1; step <= 8; step++) {
+      await save("telemetry.json", { project_name: "Atomic", step });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    await fs.mkdir(path.join(root, "build"));
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    await save("build/sim_results.json", { measurements: { frequency_hz: 2 } });
+    const deadline = Date.now() + 5000;
+    while ((seen.at(-1) !== 8 || !simulation) && Date.now() < deadline)
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.equal(seen.at(-1), 8);
+    assert.deepEqual(seen, [...seen].sort((a, b) => a - b));
+    assert.equal(simulation?.measurements.frequency_hz, 2);
+  } finally {
+    socket?.terminate();
+    if (bridge) await bridge.close();
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});
