@@ -1,0 +1,23 @@
+{
+  "name": "electrical-engineer-anything",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": ["gui"],
+  "scripts": {
+    "setup": "python3 scripts/init_workspace.py",
+    "dev": "npm run setup && concurrently -k -n bridge,forge \"node gui/server/bridge.js\" \"npm run dev --workspace gui\"",
+    "build": "npm run build --workspace gui",
+    "test": "python3 -m unittest discover -s mcp-server/tests -v && node --test gui/server/*.test.js",
+    "tauri": "npm run setup && cd gui && tauri dev"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "node-pty": "^1.1.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "concurrently": "^9.1.0"
+  }
+}

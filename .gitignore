@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+workspace/
+mcp-server/vendor/*.jar
+gui/src-tauri/target/
+gui/src-tauri/gen/
+*.tsbuildinfo

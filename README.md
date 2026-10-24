@@ -1,0 +1,67 @@
+# The Aether-Forge
+
+A Victorian brass and vacuum-tube workbench for circuit design. Run your preferred AI CLI interactively in the embedded terminal; its MCP tools validate structured designs, write board and simulation artifacts, and update the instruments through the filesystem.
+
+## Start
+
+Requires Node.js 20.19+ (or 22.12+), npm, Python 3.11+, Git, and [uv](https://docs.astral.sh/uv/).
+
+```sh
+npm install
+uv venv --system-site-packages mcp-server/.venv
+uv sync --project mcp-server
+npm run dev
+```
+
+Open http://localhost:5173. The bridge listens on loopback port 3001. `npm run setup` creates `workspace/` as an independent Git repository and preserves existing project files. Set `EEA_WORKSPACE` to an absolute directory to select another workspace for both processes. Generated workspaces, installed dependencies, and build outputs are ignored by the parent repository.
+
+The **Simulate Demo Flow** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
+
+## Connect an AI CLI
+
+The application opens an ordinary shell. Start your chosen CLI yourself in that shell. Claude Code reads `.mcp.json`; Gemini CLI reads `.gemini/settings.json`. Both configurations are provided in the repository and generated workspace. Other MCP clients can register this generic stdio command, replacing the paths:
+
+```sh
+uv run --project /absolute/path/eea/mcp-server python /absolute/path/eea/mcp-server/server.py
+```
+
+Set `EEA_WORKSPACE=/absolute/path/to/workspace` in the client's server environment if needed. MCP configuration uses stdio; there is no GUI-to-MCP network channel. The GUI never starts an AI CLI.
+
+Begin by asking the CLI to call `list_curated_parts` and read `project_spec.md`. Then ask it to design using the exact catalog pins, synthesize, simulate, route, verify, and export. Each MCP operation records telemetry and commits the workspace so you can inspect the board's history.
+
+## EDA dependencies
+
+On Arch Linux:
+
+```sh
+sudo pacman -S kicad ngspice
+```
+
+Optional KiCad 3D models require `kicad-library`. `pcbnew` comes from the system KiCad install, which is why the Python environment uses `--system-site-packages`. A Java runtime and a separately obtained Freerouting JAR at `mcp-server/vendor/freerouting.jar` enable the external autorouter. No JAR is downloaded automatically.
+
+The curated catalog embeds footprint geometry in the generated `.kicad_pcb`; rendering does not require machine-specific KiCad footprint libraries. These are curated generator geometries and must be reviewed against the chosen physical part before fabrication.
+
+Missing native tools degrade explicitly. Python generation remains available, an analytical 555 fallback can illustrate timing, and a Python router can attempt routing. Estimated simulation is not a SPICE verification. Missing KiCad DRC cannot certify electrical or physical correctness, and unavailable exporters do not produce purported fabrication files. Review warnings and backend provenance in returned reports and generated JSON.
+
+## Desktop window
+
+Install Rust and the [Tauri v2 platform prerequisites](https://v2.tauri.app/start/prerequisites/), including `webkit2gtk-4.1` on Arch, then run:
+
+```sh
+npm run tauri
+```
+
+This starts the same bridge and Vite application in a frameless desktop window. Desktop compilation requires native libraries beyond the browser application's dependencies.
+
+## Development and validation
+
+```sh
+npm run build
+python3 -m unittest discover -s scripts -p 'test_*.py' -v
+python3 -m unittest discover -s mcp-server/tests -v
+node --test gui/server/*.test.js
+```
+
+Backend tests use temporary workspaces and cover validation and operation with optional EDA executables absent. The native KiCad, Ngspice, Freerouting and Tauri paths require their respective tools for integration verification.
+
+`gui/src/` contains the React workbench, `gui/server/` the terminal/artifact bridge, and `mcp-server/` the deterministic EDA engine. `AGENTS.md` defines the architecture and data contracts.
