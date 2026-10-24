@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from .telemetry import progress
+from .telemetry import progress, atomic_json
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -160,6 +160,20 @@ def pad_positions(design):
 def q(value):
     return json.dumps(str(value), ensure_ascii=False)
 
+def _atomic_bytes(destination, payload):
+    destination = Path(destination)
+    temp = None
+    try:
+        with tempfile.NamedTemporaryFile('wb', dir=destination.parent, prefix='.' + destination.name, delete=False) as stream:
+            temp = Path(stream.name)
+            stream.write(payload)
+        os.replace(temp, destination)
+    except BaseException:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
+        raise
+
+
 def write_board(design, destination, segments=None, zones=''):
     catalog = load_catalog()
     codes = {n['name']:i+1 for i,n in enumerate(design['nets'])}
@@ -191,7 +205,7 @@ def write_board(design, destination, segments=None, zones=''):
     for s in segments or []:
         lines.append(f' (segment (start {s["start"][0]:g} {s["start"][1]:g}) (end {s["end"][0]:g} {s["end"][1]:g}) (width {s["width"]:g}) (layer {q(s.get("layer","F.Cu"))}) (net {codes[s["net"]]}))')
     lines.extend([zones, ')'])
-    Path(destination).write_text('\n'.join(lines)+'\n')
+    _atomic_bytes(destination, ('\n'.join(lines)+'\n').encode('utf-8'))
 
 def write_netlist(design, path):
     root = ET.Element('export', version='D')
@@ -208,7 +222,7 @@ def write_netlist(design, path):
             ref,pin = conn.split('.',1)
             ET.SubElement(node,'node',ref=ref,pin=pin)
     ET.indent(root)
-    ET.ElementTree(root).write(path,encoding='utf-8',xml_declaration=True)
+    _atomic_bytes(path, ET.tostring(root, encoding='utf-8', xml_declaration=True))
 
 def render_template(name, **values):
     source = (ROOT/'templates'/name).read_text()
@@ -227,7 +241,7 @@ def build_board(design, build_dir):
     auto_placed = list(design.get('auto_placed') or [])
     design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'])
     design['auto_placed'] = auto_placed or design['auto_placed']
-    (build/'design.json').write_text(json.dumps(design,indent=2)+'\n')
+    atomic_json(build/'design.json', design)
     write_board(design,build/'board.kicad_pcb')
     write_netlist(design,build/'board.net')
     progress(build.parent, 'Generating netlist with SKiDL')

@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils.pcb_builder import normalize_design, build_board, load_catalog
+from utils.pcb_builder import normalize_design, build_board, load_catalog, write_board, write_netlist
 
 
 class ElectricalTests(unittest.TestCase):
@@ -98,6 +98,65 @@ class ElectricalTests(unittest.TestCase):
             self.assertEqual(saved['components'][0]['nc_pins'], ['5'])
             self.assertEqual(saved['power_budget'], report['power_budget'])
             self.assertEqual(saved['electrical_checks'], report['electrical_checks'])
+
+    def test_regulator_output_is_relative_to_known_ground(self):
+        d = self.design([{'ref': 'U1', 'part_id': 'AMS1117_3V3'}], [
+            {'name': '5V', 'connections': ['U1.1']},
+            {'name': '12V', 'connections': ['U1.3']},
+            {'name': 'VOUT', 'connections': ['U1.2']}])
+        output = next(r for r in d['power_budget']['rails'] if r['net'] == 'VOUT')
+        self.assertAlmostEqual(output['voltage_v'], 8.3)
+        self.assertFalse(any(i['code'] == 'regulator_rail_conflict' for i in d['electrical_checks']['issues']))
+
+    def test_regulator_unknown_ground_does_not_invent_absolute_voltage(self):
+        d = self.design([{'ref': 'U1', 'part_id': 'AMS1117_3V3'}], [
+            {'name': 'REFERENCE', 'connections': ['U1.1']},
+            {'name': 'VIN', 'connections': ['U1.3']},
+            {'name': 'VOUT', 'connections': ['U1.2']}])
+        self.assertFalse(any(r['net'] == 'VOUT' for r in d['power_budget']['rails']))
+        self.assertFalse(any(i['code'] == 'regulator_rail_conflict' for i in d['electrical_checks']['issues']))
+
+    def test_grounded_regulator_still_infers_three_point_three(self):
+        d = self.design([{'ref': 'U1', 'part_id': 'AMS1117_3V3'}], [
+            {'name': 'GND', 'connections': ['U1.1']},
+            {'name': '5V', 'connections': ['U1.3']},
+            {'name': 'VOUT', 'connections': ['U1.2']}])
+        self.assertEqual(next(r for r in d['power_budget']['rails'] if r['net'] == 'VOUT')['voltage_v'], 3.3)
+
+    def test_resistor_declared_draw_is_not_added_to_calculated_current(self):
+        d = self.design([{'ref': 'R1', 'part_id': 'R', 'value': '1k', 'current_draw_ma': 100}], [
+            {'name': '5V', 'connections': ['R1.1']},
+            {'name': 'GND', 'connections': ['R1.2']}])
+        rail = next(r for r in d['power_budget']['rails'] if r['net'] == '5V')
+        self.assertEqual(rail['known_current_ma'], 5)
+        self.assertEqual(len(rail['loads']), 1)
+        self.assertEqual(rail['loads'][0]['provenance'], 'ohms_law_known_rails')
+
+    def test_shared_led_resistor_advice_does_not_claim_resistor_is_absent(self):
+        d = self.design([{'ref': 'D1', 'part_id': 'LED'}, {'ref': 'D2', 'part_id': 'LED'},
+                         {'ref': 'R1', 'part_id': 'R', 'value': '330'}], [
+            {'name': 'LEDA', 'connections': ['D1.A', 'D2.A', 'R1.2']},
+            {'name': '5V', 'connections': ['R1.1']},
+            {'name': 'GND', 'connections': ['D1.K', 'D2.K']}])
+        advice = [i['message'] for i in d['electrical_checks']['issues'] if i['code'] == 'led_current_limit_missing']
+        self.assertEqual(len(advice), 2)
+        self.assertTrue(all('no simple series resistor detected' in message for message in advice))
+
+    def test_failed_board_or_netlist_publish_preserves_previous_artifact(self):
+        d = self.design([{'ref': 'R1', 'part_id': 'R', 'value': '1k'}], [])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for writer, name in ((write_board, 'board.kicad_pcb'), (write_netlist, 'board.net')):
+                with self.subTest(artifact=name):
+                    target = root / name
+                    target.write_bytes(b'previous complete artifact')
+                    with patch('utils.pcb_builder.os.replace', side_effect=OSError('publish failed')):
+                        with self.assertRaises(OSError):
+                            writer(d, target)
+                    self.assertEqual(target.read_bytes(), b'previous complete artifact')
+                    self.assertFalse(list(root.glob('.' + name + '*')))
+                    writer(d, target)
+                    self.assertNotEqual(target.read_bytes(), b'previous complete artifact')
 
     def test_catalog_review_status_does_not_claim_approval(self):
         for pid, part in load_catalog().items():

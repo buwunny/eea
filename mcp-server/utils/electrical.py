@@ -50,13 +50,23 @@ def inspect_electrical(design, catalog):
         voltage = net.get('voltage_v', named_voltage(net['name']))
         if voltage is not None:
             rails[net['name']] = {'voltage_v': voltage, 'provenance': 'declared' if 'voltage_v' in net else 'net_name_hint'}
-    for c in components:
-        if c['part_id'] == 'AMS1117_3V3' and pin(c, '2'):
-            net = pin(c, '2')
-            if net in rails and abs(rails[net]['voltage_v'] - 3.3) > .1:
-                issue('regulator_rail_conflict', c['ref'], net, f"{c['ref']} 3.3 V output is connected to a rail identified as {rails[net]['voltage_v']:g} V")
-            elif net not in rails:
-                rails[net] = {'voltage_v': 3.3, 'provenance': 'fixed_regulator_nominal'}
+    regulators = [c for c in components if c['part_id'] == 'AMS1117_3V3' and pin(c, '2')]
+    # Fixed output voltage is relative to the regulator's reference pin. Resolve
+    # chains to a fixed point so component ordering cannot change the estimate.
+    for _ in regulators:
+        changed = False
+        for c in regulators:
+            net, ground = pin(c, '2'), rails.get(pin(c, '1'))
+            if net not in rails and ground is not None:
+                rails[net] = {'voltage_v': ground['voltage_v'] + 3.3, 'provenance': 'fixed_regulator_nominal'}
+                changed = True
+        if not changed:
+            break
+    for c in regulators:
+        net, ground = pin(c, '2'), rails.get(pin(c, '1'))
+        if ground is not None and net in rails and abs(rails[net]['voltage_v'] - ground['voltage_v'] - 3.3) > .1:
+            delta = rails[net]['voltage_v'] - ground['voltage_v']
+            issue('regulator_rail_conflict', c['ref'], net, f"{c['ref']} 3.3 V output is connected to a rail identified as {delta:g} V relative to its ground pin")
     def voltage(net):
         return rails.get(net, {}).get('voltage_v')
     for net in nets:
@@ -85,7 +95,7 @@ def inspect_electrical(design, catalog):
             # A resistor touching either terminal is a hint only, not proof of current limiting.
             candidates = [k['ref'] for k in components if k['part_id'] == 'R' and any(n in {pin(k, '1'), pin(k, '2')} and len(by_name[n]['connections']) == 2 for n in led_nets)]
             if not candidates:
-                issue('led_current_limit_missing', ref, pin(c, '2'), f'{ref} has no resistor on either terminal net; verify a current-limited driver')
+                issue('led_current_limit_missing', ref, pin(c, '2'), f'{ref}: no simple series resistor detected; verify a current-limited driver')
         if pid == 'Capacitor_Electrolytic':
             positive, negative = voltage(pin(c, '1')), voltage(pin(c, '2'))
             if positive is not None and negative is not None:
@@ -121,6 +131,9 @@ def inspect_electrical(design, catalog):
                 if None not in (va, vb, ohms) and name == (a if va > vb else b):
                     current = abs(va - vb) / ohms * 1000
                     watts = (va - vb) ** 2 / ohms
+                    # Prefer the calculable branch current to a declared draw;
+                    # they describe the same resistor, not two separate loads.
+                    loads[:] = [load for load in loads if load['component'] != ref]
                     loads.append({'component': ref, 'current_ma': current, 'provenance': 'ohms_law_known_rails'})
                     passive_power.append({'component': ref, 'power_w': watts, 'provenance': 'ohms_law_known_rails'})
                     rating = catalog[pid].get('max_ratings', {}).get('power_w')
