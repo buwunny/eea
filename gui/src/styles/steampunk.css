@@ -405,6 +405,7 @@ h1 {
 
 /* ---------- Board ---------- */
 .center-column {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -663,11 +664,21 @@ h1 {
 .wheel {
   display: inline;
 }
+/* Floats over the board so showing or clearing a message never resizes the panels. */
 .bench-note {
-  flex: none;
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: calc(100% - 32px);
   font: italic 500 15px var(--serif);
-  padding: 4px 6px;
+  padding: 6px 12px;
   color: var(--bad);
+  background: var(--raised);
+  border: 1px solid var(--bad);
+  border-radius: 4px;
+  pointer-events: none;
 }
 
 /* ---------- Right column ---------- */

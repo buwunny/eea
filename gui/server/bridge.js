@@ -304,37 +304,64 @@ export async function startBridge({
             }),
         });
       }
+      // History is read-only: snapshots are served from git objects and never written
+      // into workspace/, so browsing old revisions cannot disturb the live build files.
       if (
-        req.method === "POST" &&
-        url.pathname.startsWith("/api/git/checkout/")
+        req.method === "GET" &&
+        url.pathname.startsWith("/api/git/snapshot/")
       ) {
-        const hash = url.pathname.slice("/api/git/checkout/".length);
-        if (hash !== "latest" && !/^[a-f0-9]{7,40}$/i.test(hash))
+        const hash = url.pathname.slice("/api/git/snapshot/".length);
+        if (!/^[a-f0-9]{7,40}$/i.test(hash))
           return response(res, 400, { error: "Invalid commit hash" });
-        const operation = checkoutQueue.then(async () => {
-          const revision = hash === "latest" ? "HEAD" : hash;
-          await git("rev-parse", "--verify", `${revision}^{commit}`);
-          const current = await git("ls-files", "--", "build/");
-          const historical = await git(
-            "ls-tree",
-            "-r",
-            "--name-only",
-            revision,
-            "--",
-            "build/",
-          );
-          if (current.trim() || historical.trim())
-            await git(
-              "restore",
-              `--source=${revision}`,
-              "--worktree",
-              "--",
-              "build/",
-            );
+        let listing;
+        try {
+          listing = await git("ls-tree", "-r", "--name-only", `${hash}^{commit}`, "--", "build/");
+        } catch {
+          return response(res, 404, { error: "Revision not found" });
+        }
+        return response(res, 200, {
+          projectId: requestProjectId,
+          hash,
+          files: listing.split("\n").filter(Boolean),
         });
-        checkoutQueue = operation.catch(() => {});
-        await operation;
-        return response(res, 200, { ok: true });
+      }
+      if (
+        req.method === "GET" &&
+        url.pathname.startsWith("/artifacts/") &&
+        url.searchParams.has("rev")
+      ) {
+        const rev = url.searchParams.get("rev");
+        let relative = decodeURIComponent(url.pathname.slice("/artifacts/".length));
+        if (!relative.startsWith("build/")) relative = `build/${relative}`;
+        if (
+          !/^[a-f0-9]{7,40}$/i.test(rev) ||
+          relative.includes("\0") ||
+          relative.includes("\\") ||
+          relative.split("/").some((part) => part === ".." || part.startsWith("."))
+        )
+          return response(res, 400, { error: "Invalid revision artifact" });
+        let content;
+        try {
+          content = (
+            await exec("git", ["show", `${rev}:${relative}`], {
+              cwd: workspace,
+              timeout: 15000,
+              encoding: "buffer",
+              maxBuffer: 64 * 1024 * 1024,
+            })
+          ).stdout;
+        } catch {
+          return response(res, 404, { error: "Artifact not in this revision" });
+        }
+        res.writeHead(200, {
+          "Content-Type":
+            contentTypes[path.extname(relative)] || "application/octet-stream",
+          // A full commit hash names immutable content, so scrubbing back and forth is instant.
+          "Cache-Control":
+            rev.length === 40 ? "private, max-age=31536000, immutable" : "no-store",
+          "X-Content-Type-Options": "nosniff",
+        });
+        return res.end(content);
       }
       if (req.method === "GET" && url.pathname.startsWith("/artifacts/")) {
         const target = await artifactPath(
@@ -463,7 +490,9 @@ export async function startBridge({
       } catch {}
     });
   });
-  // Latest read per file; an older read that finishes late must not overwrite a newer one.
+  // Latest broadcast read per file; an older read that finishes late (including one that
+  // saw the file briefly missing) must not overwrite a newer one. Reads for one newly
+  // connected socket are separate and must not cancel broadcasts to other windows.
   const readSequence = new Map();
   async function update(
     file,
@@ -472,8 +501,9 @@ export async function startBridge({
     projectId = project.id,
     attempt = 0,
   ) {
-    const sequence = (readSequence.get(file) ?? 0) + 1;
-    readSequence.set(file, sequence);
+    const sequence = socket ? 0 : (readSequence.get(file) ?? 0) + 1;
+    if (!socket) readSequence.set(file, sequence);
+    const current = () => socket || readSequence.get(file) === sequence;
     try {
       const absolute = path.join(root, file);
       const stat = await fs.stat(absolute);
@@ -481,7 +511,7 @@ export async function startBridge({
         ? JSON.parse(await fs.readFile(absolute, "utf8"))
         : `/artifacts/${file}?project=${encodeURIComponent(projectId)}&t=${stat.mtimeMs}`;
       if (projectId !== project.id) return;
-      if (!socket && readSequence.get(file) !== sequence) return;
+      if (!current()) return;
       const value = { type: "FILE_UPDATED", projectId, file, payload };
       if (socket) send(socket, value);
       else telemetrySockets.clients.forEach((client) => send(client, value));
@@ -489,12 +519,11 @@ export async function startBridge({
       // A JSON file caught mid-write: read it again shortly instead of dropping the update.
       if (error instanceof SyntaxError && attempt < 5) {
         setTimeout(() => {
-          if (socket || readSequence.get(file) === sequence)
-            void update(file, socket, root, projectId, attempt + 1);
+          if (current()) void update(file, socket, root, projectId, attempt + 1);
         }, 100);
         return;
       }
-      if (error.code === "ENOENT" && projectId === project.id) {
+      if (error.code === "ENOENT" && projectId === project.id && current()) {
         const value = { type: "FILE_UPDATED", projectId, file, payload: null };
         if (socket) send(socket, value);
         else telemetrySockets.clients.forEach((client) => send(client, value));
@@ -530,16 +559,11 @@ export async function startBridge({
       void update(relative(absolute), undefined, root, projectId);
     });
     nextWatcher.on("unlink", (absolute) => {
-      if (!tracked.has(relative(absolute))) return;
-      if (projectId === project.id)
-        telemetrySockets.clients.forEach((client) =>
-          send(client, {
-            type: "FILE_UPDATED",
-            projectId,
-            file: relative(absolute),
-            payload: null,
-          }),
-        );
+      const file = relative(absolute);
+      if (!tracked.has(file)) return;
+      // Savers often delete and recreate a file; re-check before announcing it is gone.
+      // Going through update() also makes this the newest read, cancelling stale ones.
+      setTimeout(() => void update(file, undefined, root, projectId), 150);
     });
     await new Promise((resolve, reject) => {
       nextWatcher.once("ready", resolve);

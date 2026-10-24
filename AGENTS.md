@@ -189,7 +189,7 @@ Every element should look like a 19th-century brass-and-mahogany laboratory inst
 - **`/ws/terminal`:** `node-pty` spawns `$SHELL` in `workspace/`; bidirectional keystrokes, ANSI output and resize.
 - **`/ws/telemetry`:** `chokidar` watches `telemetry.json`, `build/board.kicad_pcb`, `build/sim_results.json`, `build/board_3d.*`; broadcasts `{ "type": "FILE_UPDATED", "file", "payload" }` (JSON inline, binaries as `?t=` URLs).
 - **Static:** `workspace/build/` and `workspace/manufacturing/` at `/artifacts/*`, no-cache, cache-busting `?t=` so KiCanvas and Three.js reload immediately.
-- **Git API:** `/api/git/log`; `/api/git/checkout/:hash` runs `git checkout <hash> -- build/` (and restores HEAD for "latest").
+- **Git API (read-only history):** `/api/git/log`; `/api/git/snapshot/:hash` lists that revision's `build/` files, and `/artifacts/build/<file>?rev=<hash>` serves them with `git show`. Browsing history never writes to `workspace/`, so MCP tools always see the live build; the GUI returns to the live board when a new tool run starts.
 
 ### 5.3 Layout (`gui/src/App.tsx`)
 1. **Left 30% — TelegraphTerm:** header with active dir and MCP connection badge; full-height xterm + fit addon; quick-copy prompt chips ("555 LED Flasher", "USB-C 3.3 V LDO Board").

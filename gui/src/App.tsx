@@ -34,6 +34,14 @@ function Counter({ text }: { text: string }) {
   );
 }
 
+/** One revision's build files, read straight from git; viewing it never touches workspace/. */
+interface Snapshot {
+  hash: string;
+  pcb: string | null;
+  simulation: Simulation | null;
+  model: string | null;
+}
+
 export default function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const projectRef = useRef<ProjectInfo | null>(null);
@@ -71,9 +79,11 @@ export default function App() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [selected, setSelected] = useState("latest");
   const [busy, setBusy] = useState(false);
-  const pendingCheckout = useRef<{ hash: string; projectId?: string } | null>(null);
-  const activeCheckout = useRef<{ hash: string; projectId?: string } | null>(null);
-  const checkoutRunning = useRef(false);
+  // Live board state keeps updating underneath while a past revision is on screen.
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
+  const snapshotRequest = useRef(0);
+  const selectedRef = useRef("latest");
+  const lastRun = useRef<string>();
   const [error, setError] = useState("");
   const [demoStep, setDemoStep] = useState<number | null>(null);
   const [demoRunning, setDemoRunning] = useState(false);
@@ -83,6 +93,9 @@ export default function App() {
   const lastGitHead = useRef<string>();
   const isDemo = demoStep !== null;
   const telemetry = isDemo ? demoTelemetry(demoStep) : live;
+  const viewing = selected !== "latest" && snapshot?.hash === selected ? snapshot : null;
+  const shownPcb = viewing ? viewing.pcb : pcb;
+  const shownModel = viewing ? viewing.model : model;
   const sim = isDemo
     ? demoStep >= 2
       ? {
@@ -93,9 +106,11 @@ export default function App() {
           },
         }
       : null
-    : live.stages.SIMULATION === "pending"
-      ? null
-      : simulation;
+    : viewing
+      ? viewing.simulation
+      : live.stages.SIMULATION === "pending"
+        ? null
+        : simulation;
   const refreshHistory = async () => {
     try {
       const response = await fetch(api("/api/git/log"));
@@ -132,7 +147,10 @@ export default function App() {
     setModels({ glb: null, wrl: null });
     setCommits([]);
     setSelected("latest");
-    pendingCheckout.current = null;
+    selectedRef.current = "latest";
+    snapshotRequest.current++;
+    setSnapshot(null);
+    setBusy(false);
     setDrcHistory([]);
     setUnconnectedHistory([]);
     setError("");
@@ -192,6 +210,19 @@ export default function App() {
                   ? h
                   : [...h, payload.metrics.unconnected_items].slice(-8),
               );
+            // A new tool run means the user wants to watch it: leave history for the live board.
+            // Keyed on start time, since a fast tool may only ever be seen already finished.
+            const run = payload.activity?.started_at
+              ? `${payload.activity.tool}@${payload.activity.started_at}`
+              : undefined;
+            if (
+              run &&
+              lastRun.current !== undefined &&
+              run !== lastRun.current &&
+              selectedRef.current !== "latest"
+            )
+              viewLatest();
+            if (run) lastRun.current = run;
             if (payload.git_head !== lastGitHead.current) {
               lastGitHead.current = payload.git_head;
               void refreshHistory();
@@ -230,6 +261,11 @@ export default function App() {
     };
   }, []);
   useEffect(() => () => clearInterval(demoTimer.current), []);
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(""), 6000);
+    return () => clearTimeout(timer);
+  }, [error]);
   function startDemo() {
     clearInterval(demoTimer.current);
     setDemoStep(0);
@@ -249,54 +285,51 @@ export default function App() {
     setDemoStep(null);
     setDemoRunning(false);
   }
+  function viewLatest() {
+    snapshotRequest.current++;
+    selectedRef.current = "latest";
+    setSelected("latest");
+    setSnapshot(null);
+    setBusy(false);
+    setError("");
+  }
   async function checkout(hash: string) {
+    if (hash === "latest") return viewLatest();
     const projectId = projectRef.current?.id;
-    // Keep one active restore and only the newest requested position.
-    if (
-      !pendingCheckout.current &&
-      activeCheckout.current?.hash === hash &&
-      activeCheckout.current.projectId === projectId
-    )
-      return;
-    pendingCheckout.current = { hash, projectId };
-    if (checkoutRunning.current) return;
-    checkoutRunning.current = true;
+    // Only the newest request may land, however fast the slider moves.
+    const request = ++snapshotRequest.current;
+    const stale = () =>
+      request !== snapshotRequest.current || projectId !== projectRef.current?.id;
     setBusy(true);
     setError("");
     try {
-      let restored: string | undefined;
-      while (pendingCheckout.current) {
-        const request = pendingCheckout.current;
-        pendingCheckout.current = null;
-        if (request.projectId !== projectRef.current?.id) continue;
-        if (request.hash === restored) continue;
-        activeCheckout.current = request;
-        const started = performance.now();
-        try {
-          const response = await fetch(api(`/api/git/checkout/${request.hash}`), {
-            method: "POST",
-          });
-          const result = await response.json();
-          if (!response.ok)
-            throw new Error(result.error ?? "Revision could not be restored");
-          if (request.projectId === projectRef.current?.id) {
-            restored = request.hash;
-            setSelected(request.hash);
-            setError("");
-          }
-        } catch (e) {
-          if (request.projectId === projectRef.current?.id)
-            setError(e instanceof Error ? e.message : "Revision unavailable");
-        }
-        // Give the file watcher and viewer time to display intermediate boards.
-        const remaining = 150 - (performance.now() - started);
-        if (remaining > 0)
-          await new Promise((resolve) => setTimeout(resolve, remaining));
-      }
+      const response = await fetch(api(`/api/git/snapshot/${hash}`));
+      const info = await response.json();
+      if (!response.ok) throw new Error(info.error ?? "Revision unavailable");
+      const files = new Set<string>(info.files ?? []);
+      const url = (file: string) =>
+        files.has(file)
+          ? `/artifacts/${file}?project=${encodeURIComponent(projectId ?? "")}&rev=${hash}`
+          : null;
+      const simUrl = url("build/sim_results.json");
+      const simulation: Simulation | null = simUrl
+        ? await fetch(api(simUrl))
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        : null;
+      if (stale()) return;
+      selectedRef.current = hash;
+      setSnapshot({
+        hash,
+        pcb: url("build/board.kicad_pcb"),
+        simulation,
+        model: url("build/board_3d.glb") ?? url("build/board_3d.wrl"),
+      });
+      setSelected(hash);
+    } catch (e) {
+      if (!stale()) setError(e instanceof Error ? e.message : "Revision unavailable");
     } finally {
-      activeCheckout.current = null;
-      checkoutRunning.current = false;
-      setBusy(false);
+      if (!stale()) setBusy(false);
     }
   }
   const drcReady = isDemo
@@ -364,8 +397,8 @@ export default function App() {
             />
             <div className="center-column">
               <AetherScope
-                pcbUrl={pcb}
-                modelUrl={model}
+                pcbUrl={shownPcb}
+                modelUrl={shownModel}
                 demo={isDemo}
                 commits={commits}
                 selected={selected}

@@ -16,7 +16,7 @@ test("reject remote origins while accepting the local workbench", () => {
   assert.equal(allowedOrigin("null"), false);
 });
 
-test("live bridge streams filesystem state and restores build history without moving HEAD", async () => {
+test("live bridge streams filesystem state and serves build history read-only", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "eea-bridge-"));
   const exec = promisify(execFile);
   const git = async (...args) =>
@@ -62,7 +62,11 @@ test("live bridge streams filesystem state and restores build history without mo
       403,
     );
     assert.equal(
-      (await fetch(`${base}/api/git/checkout/invalid`, { method: "POST" }))
+      (await fetch(`${base}/api/git/snapshot/invalid`)).status,
+      400,
+    );
+    assert.equal(
+      (await fetch(`${base}/artifacts/board.kicad_pcb?rev=${first}`.replace(first, "zz")))
         .status,
       400,
     );
@@ -138,29 +142,33 @@ test("live bridge streams filesystem state and restores build history without mo
       });
       terminal.once("error", reject);
     });
+    // History is served from git objects; the live file is never rewritten.
+    const live = path.join(root, "build/board.kicad_pcb");
+    const liveStat = await fs.stat(live);
+    const listing = await (await fetch(`${base}/api/git/snapshot/${first}`)).json();
+    assert.deepEqual(listing.files, ["build/board.kicad_pcb"]);
     assert.equal(
-      (await fetch(`${base}/api/git/checkout/${first}`, { method: "POST" }))
-        .status,
-      200,
-    );
-    assert.equal(
-      await (await fetch(`${base}/artifacts/board.kicad_pcb`)).text(),
+      await (await fetch(`${base}/artifacts/build/board.kicad_pcb?rev=${first}`)).text(),
       "version one",
     );
     assert.equal(
-      (await fetch(`${base}/api/git/checkout/${initial}`, { method: "POST" }))
-        .status,
-      200,
+      await (await fetch(`${base}/artifacts/board.kicad_pcb?rev=${first}`)).text(),
+      "version one",
+    );
+    assert.deepEqual(
+      (await (await fetch(`${base}/api/git/snapshot/${initial}`)).json()).files,
+      [],
     );
     assert.equal(
-      (await fetch(`${base}/artifacts/board.kicad_pcb`)).status,
+      (await fetch(`${base}/artifacts/build/board.kicad_pcb?rev=${initial}`)).status,
       404,
     );
     assert.equal(
-      (await fetch(`${base}/api/git/checkout/latest`, { method: "POST" }))
-        .status,
-      200,
+      (await fetch(`${base}/api/git/snapshot/${"0".repeat(40)}`)).status,
+      404,
     );
+    assert.equal(await fs.readFile(live, "utf8"), "version two");
+    assert.equal((await fs.stat(live)).mtimeMs, liveStat.mtimeMs);
     assert.equal(
       await (await fetch(`${base}/artifacts/board.kicad_pcb`)).text(),
       "version two",

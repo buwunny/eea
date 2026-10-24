@@ -22,7 +22,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Commit } from "../types";
-import { artifact, api } from "../api";
+import { artifact } from "../api";
 import KiCanvasBoard, { BoardControls } from "./KiCanvasBoard";
 
 declare global {
@@ -377,8 +377,9 @@ export default function AetherScope({
   useEffect(() => {
     let active = true;
     setDesign(null);
+    // Same revision as the board (a ?rev= snapshot, or live).
     if (pcbUrl)
-      void fetch(api(`/artifacts/build/design.json?t=${Date.now()}`))
+      void fetch(artifact(pcbUrl.replace("board.kicad_pcb", "design.json")))
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (active && d?.board_width_mm && Array.isArray(d.components))
