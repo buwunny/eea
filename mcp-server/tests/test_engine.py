@@ -81,6 +81,20 @@ class EngineTests(unittest.TestCase):
                 self.assertFalse(report['verified'])
                 self.assertIsNone(report['drc_errors'])
 
+    def test_skidl_failure_restores_deterministic_netlist(self):
+        with tempfile.TemporaryDirectory() as directory:
+            build=Path(directory)/'build'
+            def partial_write(*args,**kwargs):
+                (build/'board.net').write_text('truncated native output')
+                class Failed:
+                    returncode=1
+                    stdout=''
+                return Failed()
+            with patch('utils.pcb_builder.subprocess.run',side_effect=partial_write):
+                report=build_board(normalize_design(*astable()),build)
+            self.assertEqual(report['backend'],'deterministic-xml')
+            self.assertIn('<export version="D">',(build/'board.net').read_text())
+
     def test_rebuild_invalidates_verification_and_manufacturing(self):
         with tempfile.TemporaryDirectory() as directory:
             workspace=Path(directory); (workspace/'build').mkdir(); (workspace/'manufacturing').mkdir()

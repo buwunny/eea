@@ -194,4 +194,6 @@ def build_board(design, build_dir):
             warnings.append('SKiDL unavailable or unable to generate netlist; deterministic XML netlist used')
     except (OSError,subprocess.TimeoutExpired):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
+    if backend!='skidl':
+        write_netlist(design,build/'board.net')
     return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'warnings':warnings,'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}

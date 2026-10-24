@@ -3,11 +3,12 @@ from pathlib import Path
 import json
 CIRCUIT = {{ circuit_literal }}
 if __name__ == '__main__':
-    from PySpice.Spice.Parser import SpiceParser
+    from PySpice.Spice.Netlist import Circuit
     from PySpice.Unit import u_s
     # Remove only the generated batch control section before passing the same validated circuit to PySpice.
-    source = CIRCUIT.split('.control')[0] + '.end\n'
-    circuit = SpiceParser(source=source).build_circuit()
+    source = '\n'.join(CIRCUIT.split('.control')[0].splitlines()[1:])
+    circuit = Circuit('EEA validated circuit')
+    circuit.raw_spice = source
     control = CIRCUIT.split('.control')[1]
     transient = next(line.split() for line in control.splitlines() if line.startswith('tran '))
     probes = next(line.split()[2:] for line in control.splitlines() if line.startswith('wrdata '))
