@@ -19,7 +19,11 @@ Drag the dividers to resize columns and instrument panels; arrow keys work when 
 
 The **Run demo** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
 
-KiCanvas is served locally from `gui/public/vendor/kicanvas/`, with its license and a record of local changes. Its native panels are disabled; EEA provides fit, flip, and download controls. The viewer and PCB files require no requests to kicanvas.org or Google Fonts.
+KiCanvas is served locally from `gui/public/vendor/kicanvas/`, with its license and a record of local changes. Its native sidebar provides layer visibility and presets, object display settings, footprint and net browsing, selection properties, board information and help. Click **Layers** in the viewer's sidebar to toggle individual layers. EEA also provides fit, flip, and download controls. The viewer and PCB files require no requests to kicanvas.org or Google Fonts.
+
+The custom KiCanvas interface theme lives in `gui/src/styles/kicanvas.css`. It uses the viewer's native CSS variables for brass highlights, mahogany panels, control states and typography.
+
+For the PCB rendering itself, open the viewer's gear icon → **Preferences → Theme → Steampunk**. This palette uses copper front traces, patina-teal back traces, brass pads and board edges, and an ebony background. KiCanvas remembers the selection. The palette is defined in `gui/public/vendor/kicanvas/aether-forge-theme.js`.
 
 ## Projects and exports
 

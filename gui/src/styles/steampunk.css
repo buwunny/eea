@@ -1230,47 +1230,6 @@ aside > .split-view {
   gap: 8px;
 }
 
-.board-viewport kicanvas-embed {
-  --font-size: 13px;
-  --bg: #0c0a08;
-  --fg: #ece2cf;
-  --button-bg: #241e18;
-  --button-fg: #ece2cf;
-  --button-hover-bg: #352c23;
-  --button-hover-fg: #fff6e4;
-  --button-toolbar-bg: #241e18;
-  --button-toolbar-fg: #ece2cf;
-  --button-toolbar-hover-bg: #352c23;
-  --button-toolbar-hover-fg: #fff6e4;
-  --button-toolbar-disabled-bg: #1b1713;
-  --button-toolbar-disabled-fg: #75685a;
-  --button-toolbar-alt-bg: #241e18;
-  --button-toolbar-alt-fg: #ece2cf;
-  --button-toolbar-alt-hover-bg: #352c23;
-  --button-toolbar-alt-hover-fg: #fff6e4;
-  --panel-bg: #1b1713;
-  --panel-fg: #ece2cf;
-  --panel-border: 1px solid #352c23;
-  --panel-title-bg: #241e18;
-  --panel-title-fg: #ece2cf;
-  --panel-subtitle-bg: #1b1713;
-  --panel-subtitle-fg: #a8977c;
-  --activity-bar-bg: #1b1713;
-  --activity-bar-fg: #ece2cf;
-  --activity-bar-active-bg: #352c23;
-  --activity-bar-active-fg: #cfa95f;
-  --dropdown-bg: #241e18;
-  --dropdown-fg: #ece2cf;
-  --dropdown-hover-bg: #352c23;
-  --dropdown-hover-fg: #fff6e4;
-  --tooltip-bg: #241e18;
-  --tooltip-fg: #ece2cf;
-  --tooltip-border: 1px solid #4a3e31;
-  --input-bg: #0e0b09;
-  --input-fg: #ece2cf;
-  --input-accent: #cfa95f;
-  --input-border: 1px solid #4a3e31;
-}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1049px) {
@@ -1421,3 +1380,11 @@ aside > .split-view {
 .power-inspector li { margin: 8px 0; }
 .power-inspector summary { cursor: pointer; }
 @media (max-width: 650px) { .project-action { font-size: 11px; padding: 5px; } .project-actions { gap: 4px; } }
+/* The native KiCanvas controls use Material Symbols ligatures inside shadow roots. */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("/vendor/kicanvas/material-symbols-outlined.ttf") format("truetype");
+}

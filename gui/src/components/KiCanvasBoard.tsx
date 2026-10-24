@@ -52,16 +52,6 @@ function BoardFrame({
         const app = embed.current?.shadowRoot?.querySelector(
           "kc-board-app",
         ) as (HTMLElement & { viewer?: Viewer }) | undefined;
-        if (
-          app?.shadowRoot &&
-          !app.shadowRoot.querySelector("#eea-viewer-style")
-        ) {
-          const style = document.createElement("style");
-          style.id = "eea-viewer-style";
-          style.textContent =
-            "kc-viewer-bottom-toolbar { display:none !important; }";
-          app.shadowRoot.append(style);
-        }
         if (app?.viewer?.document && app.viewer.loaded?.isOpen) {
           const readyViewer = app.viewer;
           readyViewer.page_opacity = 0;
@@ -92,8 +82,8 @@ function BoardFrame({
       src={src}
       style={{ visibility: visible ? "visible" : "hidden" }}
       aria-hidden={!visible}
-      controls="basic"
-      controlslist="nooverlay nodownload noflipview nofullscreen"
+      controls="full"
+      controlslist="nooverlay nodownload noflipview"
     />
   );
 }
