@@ -19,7 +19,7 @@ Drag the dividers to resize columns and instrument panels; arrow keys work when 
 
 The **Run demo** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
 
-The current GUI downloads its KiCanvas JavaScript module from kicanvas.org. PCB files are served by the local bridge. The application does not upload board files to KiCanvas; without the hosted module, it offers a local PCB download and the demo/procedural views remain available.
+KiCanvas is served locally from `gui/public/vendor/kicanvas/`, with its license and a record of local changes. Its native panels are disabled; EEA provides fit, flip, and download controls. The viewer and PCB files require no requests to kicanvas.org or Google Fonts.
 
 ## Connect an AI CLI
 
@@ -32,6 +32,10 @@ uv run --project /absolute/path/eea/mcp-server python /absolute/path/eea/mcp-ser
 Set `EEA_WORKSPACE=/absolute/path/to/workspace` in the client's server environment if needed. MCP configuration uses stdio; there is no GUI-to-MCP network channel. The GUI never starts an AI CLI.
 
 Begin by asking the CLI to call `list_curated_parts` and read `project_spec.md`. Then ask it to design using the exact catalog pins, synthesize, simulate, route, verify, and export. Each MCP operation records telemetry and commits the workspace so you can inspect the board's history.
+
+The activity strip reports MCP tool calls, substeps, elapsed time, and heartbeat interruptions. “Bridge connected” describes the local GUI connection; it does not imply that an AI client has connected to MCP. CLI reasoning and source inspection between tool calls are not visible to the GUI. Failed and incomplete attempts remain visible with their warnings instead of reverting to pending.
+
+`npm run setup` creates workspace `AGENTS.md` and CLI instruction files when absent, including bounded retry guidance. Existing instruction files are preserved. After a server update, reload `ee-anything` in your CLI's MCP manager; restart the CLI session to read new workspace instructions. The Python fallback router has a 30-second budget and reports its remaining connections; unchanged placement and routing settings should not be retried indefinitely.
 
 ## EDA dependencies
 

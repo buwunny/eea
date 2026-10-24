@@ -21,7 +21,7 @@ class TelemetryTests(unittest.TestCase):
             message = subprocess.check_output(['git', 'log', '-1', '--format=%s'], cwd=directory, text=True)
             self.assertIn('MCP [test]: first write', message)
             record('test', 'second write')
-            self.assertEqual(len(json.loads((Path(directory) / 'telemetry.json').read_text())['git_commits']), 1)
+            self.assertEqual(len(json.loads((Path(directory) / 'telemetry.json').read_text())['git_commits']), 2)
 
     def test_invalid_json_does_not_replace_existing_state(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -48,6 +48,8 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(result.is_error)
                 self.assertEqual(result.data['status'], 'success')
                 self.assertIn('NE555', {part['part_id'] for part in result.data['parts']})
+                self.assertLess(len(json.dumps(result.data)), 12000)
+                self.assertTrue(all('footprint_sexpr' not in part for part in result.data['parts']))
             message = subprocess.check_output(['git', 'log', '-1', '--format=%s'], cwd=directory, text=True)
             self.assertIn('MCP [list_curated_parts]', message)
 
@@ -62,13 +64,49 @@ class FlowTests(unittest.TestCase):
                 'unconnected_items': None, 'warnings': ['KiCad not installed'],
             })
             telemetry = json.loads((Path(directory) / 'telemetry.json').read_text())
-            self.assertEqual(telemetry['stages']['DRC_VERIFICATION'], 'pending')
+            self.assertEqual(telemetry['stages']['DRC_VERIFICATION'], 'failed')
             self.assertIsNone(telemetry['metrics']['drc_errors'])
             server.execute('run_spice_simulation', 'SIMULATION', lambda: {
                 'status': 'success', 'sim_passed': False,
             })
             telemetry = json.loads((Path(directory) / 'telemetry.json').read_text())
             self.assertEqual(telemetry['stages']['SIMULATION'], 'failed')
+
+    def test_long_operation_heartbeats_then_reports_partial_routing_as_failed(self):
+        import time
+        from unittest.mock import patch
+        from utils.telemetry import progress
+        import server
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'EEA_WORKSPACE': directory}):
+            workspace = Path(directory)
+            def operation():
+                first = json.loads((workspace / 'telemetry.json').read_text())
+                self.assertEqual(first['stages']['AUTOROUTING'], 'in_progress')
+                self.assertEqual(first['activity']['tool'], 'autoroute_pcb')
+                progress(workspace, 'Routing test net')
+                time.sleep(1.2)
+                live = json.loads((workspace / 'telemetry.json').read_text())
+                self.assertGreater(live['activity']['elapsed_seconds'], 0)
+                self.assertNotEqual(live['activity']['updated_at'], first['activity']['updated_at'])
+                self.assertEqual(live['activity']['message'], 'Routing test net')
+                return {'status': 'degraded', 'backend': 'python-grid-astar', 'unconnected_items': 2, 'warnings': ['Two links remain']}
+            real_record = server.record
+            def delayed_record(*args, **kwargs):
+                saving = json.loads((workspace / 'telemetry.json').read_text())
+                self.assertEqual(saving['activity']['status'], 'running')
+                self.assertEqual(saving['activity']['message'], 'Saving workspace history')
+                time.sleep(1.1)
+                return real_record(*args, **kwargs)
+            with patch('server.record', side_effect=delayed_record):
+                report = server.execute('autoroute_pcb', 'AUTOROUTING', operation)
+            final = json.loads((workspace / 'telemetry.json').read_text())
+            self.assertEqual(final['stages']['AUTOROUTING'], 'failed')
+            self.assertEqual(final['activity']['status'], 'failed')
+            self.assertEqual(final['warnings'], ['Two links remain'])
+            self.assertEqual(final['metrics']['unconnected_items'], 2)
+            self.assertFalse(report['retryable_unchanged'])
+            head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=directory, text=True).strip()
+            self.assertEqual(final['git_head'], head)
 
     def test_new_board_invalidates_previous_verification(self):
         from unittest.mock import patch

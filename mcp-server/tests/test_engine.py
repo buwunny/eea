@@ -18,6 +18,16 @@ def astable():
 
 
 class EngineTests(unittest.TestCase):
+    def test_python_router_obeys_deadline_and_reports_unrouted_links(self):
+        with tempfile.TemporaryDirectory() as directory, patch('shutil.which', return_value=None), patch('utils.freerouting_runner.ROUTE_TIME_BUDGET_SECONDS', 0):
+            workspace = Path(directory)
+            cs, ns = astable()
+            build_board(normalize_design(cs, ns), workspace / 'build')
+            report = autoroute(workspace)
+            self.assertGreater(report['unconnected_items'], 0)
+            self.assertFalse(report['retryable_unchanged'])
+            self.assertTrue(any('time limit' in warning for warning in report['warnings']))
+
     def test_validation_rejects_conflicting_pins_unknown_parts_and_nonfinite_coordinates(self):
         cs,ns=astable()
         with self.assertRaises(ValueError): normalize_design(cs,ns+[{'name':'SHORT','connections':['U1.GND']}])

@@ -22,6 +22,7 @@ class WorkspaceTests(unittest.TestCase):
             antigravity.write_text(json.dumps(custom))
             project = workspace / "project_spec.md"
             project.write_text("User design requirements")
+            (workspace / 'GEMINI.md').write_text('Custom CLI instructions')
             initializer.initialize(workspace)
             merged = json.loads(antigravity.read_text())
             self.assertEqual(merged["mcpServers"]["other"], custom["mcpServers"]["other"])
@@ -30,6 +31,8 @@ class WorkspaceTests(unittest.TestCase):
             initializer.initialize(workspace)
             self.assertEqual(json.loads(antigravity.read_text()), merged)
             self.assertEqual(project.read_text(), "User design requirements")
+            self.assertEqual((workspace / 'GEMINI.md').read_text(), 'Custom CLI instructions')
+            self.assertIn('retryable_unchanged', (workspace / 'AGENTS.md').read_text())
             top = subprocess.check_output(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"], text=True).strip()
             self.assertEqual(top, str(workspace))
             self.assertEqual(len(json.loads((workspace / "telemetry.json").read_text())["stages"]), 6)

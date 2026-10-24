@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
+from .telemetry import progress
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -180,9 +181,10 @@ def build_board(design, build_dir):
     (build/'design.json').write_text(json.dumps(design,indent=2)+'\n')
     write_board(design,build/'board.kicad_pcb')
     write_netlist(design,build/'board.net')
+    progress(build.parent, 'Generating netlist with SKiDL')
     script = render_template('skidl_pcb.py.j2', design_literal=repr(design), catalog_literal=repr(load_catalog()))
     (src/'design.py').write_text(script)
-    for stale in ('routes.json','drc_report.json','board_3d.wrl','board_3d.glb'):
+    for stale in ('sim_results.json','routes.json','drc_report.json','board_3d.wrl','board_3d.glb'):
         (build/stale).unlink(missing_ok=True)
     (build.parent/'manufacturing/gerbers.zip').unlink(missing_ok=True)
     warnings = list(design['warnings'])

@@ -7,12 +7,14 @@ from pathlib import Path
 import shutil
 import subprocess
 import zipfile
+from .telemetry import progress
 from .pcb_builder import pad_positions
 
 
 def _run(args, workspace, timeout=90):
     executable=shutil.which('kicad-cli')
     if not executable: raise RuntimeError('kicad-cli is not installed')
+    progress(Path(workspace), 'KiCad: ' + ' '.join(args[:3]))
     result=subprocess.run([executable]+args,cwd=workspace,capture_output=True,text=True,timeout=timeout)
     if result.returncode: raise RuntimeError(result.stderr.strip()[-1000:] or f'kicad-cli exited {result.returncode}')
 

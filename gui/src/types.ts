@@ -22,6 +22,16 @@ export interface Commit {
 export interface Telemetry {
   project_name: string;
   last_updated?: string;
+  git_head?: string;
+  warnings?: string[];
+  activity?: {
+    tool: string;
+    status: "running" | "completed" | "warning" | "failed";
+    message: string;
+    started_at: string;
+    updated_at: string;
+    elapsed_seconds: number;
+  };
   pipeline_stage: Stage;
   stages: Partial<
     Record<Stage, "pending" | "in_progress" | "completed" | "failed">
@@ -58,10 +68,10 @@ export const emptyTelemetry: Telemetry = {
   metrics: {
     component_count: 0,
     net_count: 0,
-    drc_errors: 0,
-    unconnected_items: 0,
+    drc_errors: null,
+    unconnected_items: null,
     estimated_cost_usd: 0,
-    sim_passed: false,
+    sim_passed: null,
   },
   bom: [],
   git_commits: [],

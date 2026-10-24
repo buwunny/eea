@@ -23,6 +23,18 @@ def initialize(workspace=None):
         "project_spec.md": "# Untitled circuit\n\nDescribe the circuit, power supply, constraints, and acceptance criteria here.\n",
         "telemetry.json": json.dumps({"project_name": "EEA", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
         ".gitignore": "__pycache__/\n*.pyc\n",
+        "AGENTS.md": """# EEA circuit workspace
+
+Use the ee-anything MCP tools for circuit design. First call list_curated_parts; use its exact part IDs and pins. Do not inspect application source or execute generated design scripts as a substitute for MCP calls. If the tools are unavailable, stop and report the connection error.
+
+Follow synthesize_pcb -> run_spice_simulation -> autoroute_pcb -> run_drc_verification. Export manufacturing files only after native DRC passes with zero unconnected items. Check each structured tool report, including backend, warnings, next_action and retryable_unchanged.
+
+Avoid indefinite retries. Do not repeat an unchanged call when retryable_unchanged is false. After a failed check, make at most two targeted design corrections, then summarize the remaining problem and missing dependencies. The provisional Python router may leave connections unrouted; repeated identical calls cannot repair that. Report the limitation instead of looping.
+
+The UI watches tool-generated files. Do not write telemetry.json or fabricate progress/results manually. CLI reasoning between tool calls is not visible to the UI.
+""",
+        "GEMINI.md": "@AGENTS.md\n",
+        "CLAUDE.md": "@AGENTS.md\n",
     }
     for relative, content in files.items():
         path = workspace / relative

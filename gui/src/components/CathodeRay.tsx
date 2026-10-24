@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import {
   Line,
   LineChart,
@@ -8,23 +9,26 @@ import {
   Tooltip,
 } from "recharts";
 import { Simulation } from "../types";
-export default function CathodeRay({
+function CathodeRay({
   simulation,
   passed,
 }: {
   simulation: Simulation | null;
   passed: boolean | null;
 }) {
-  const data =
-    simulation?.x_data.map((x, i) =>
-      Object.fromEntries([
-        ["x", x],
-        ...Object.entries(simulation.signals).map(([key, values]) => [
-          key,
-          values[i],
+  const data = useMemo(
+    () =>
+      simulation?.x_data.map((x, i) =>
+        Object.fromEntries([
+          ["x", x],
+          ...Object.entries(simulation.signals).map(([key, values]) => [
+            key,
+            values[i],
+          ]),
         ]),
-      ]),
-    ) ?? [];
+      ) ?? [],
+    [simulation],
+  );
   return (
     <section className="instrument scope">
       <div className="panel-heading">
@@ -115,3 +119,5 @@ export default function CathodeRay({
     </section>
   );
 }
+
+export default memo(CathodeRay);

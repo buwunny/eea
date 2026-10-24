@@ -1,12 +1,27 @@
-import { Component, ReactNode, Suspense, useEffect, useState } from "react";
+import {
+  Component,
+  ReactNode,
+  Suspense,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
 import { Canvas, useLoader } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Html } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLLoader } from "three/examples/jsm/loaders/VRMLLoader.js";
 import { Box3, Vector3, Object3D } from "three";
-import { Box, Layers, RotateCw, History, Maximize2 } from "lucide-react";
+import {
+  Box,
+  Layers,
+  History,
+  Maximize2,
+  FlipHorizontal2,
+  Download,
+} from "lucide-react";
 import { Commit } from "../types";
 import { artifact, api } from "../api";
+import KiCanvasBoard, { BoardControls } from "./KiCanvasBoard";
 
 declare global {
   namespace JSX {
@@ -372,19 +387,7 @@ export default function AetherScope({
       active = false;
     };
   }, [pcbUrl]);
-  const [rotate, setRotate] = useState(true);
-  const [embedReady, setEmbedReady] = useState(
-    Boolean(customElements.get("kicanvas-embed")),
-  );
-  useEffect(() => {
-    let active = true;
-    void customElements.whenDefined("kicanvas-embed").then(() => {
-      if (active) setEmbedReady(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const boardControls = useRef<BoardControls>(null);
   const chronological = [...commits].reverse();
   const index =
     selected === "latest"
@@ -412,16 +415,37 @@ export default function AetherScope({
             <Box size={13} /> 3D
           </button>
         </div>
-        <button
-          className="icon-button"
-          aria-label={
-            rotate ? "Pause automatic rotation" : "Start automatic rotation"
-          }
-          onClick={() => setRotate(!rotate)}
-          disabled={view !== "3d"}
-        >
-          <RotateCw size={15} />
-        </button>
+        <div className="board-actions">
+          {view === "2d" && pcbUrl && !demo && (
+            <>
+              <button
+                className="icon-button"
+                aria-label="Fit board"
+                title="Fit board"
+                onClick={() => boardControls.current?.fit()}
+              >
+                <Maximize2 size={15} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Flip board"
+                title="Flip board"
+                onClick={() => boardControls.current?.flip()}
+              >
+                <FlipHorizontal2 size={15} />
+              </button>
+              <a
+                className="icon-button"
+                aria-label="Download PCB"
+                title="Download PCB"
+                href={artifact(pcbUrl)}
+                download
+              >
+                <Download size={15} />
+              </a>
+            </>
+          )}
+        </div>
       </div>
       <div className="board-viewport">
         <div className="viewport-crosshair top-left" />
@@ -430,22 +454,7 @@ export default function AetherScope({
           demo ? (
             <DemoPlan />
           ) : pcbUrl ? (
-            <>
-              <kicanvas-embed
-                key={pcbUrl}
-                src={artifact(pcbUrl)}
-                controls="full"
-                controlslist="nooverlay"
-              />
-              {!embedReady && (
-                <div className="embed-notice">
-                  Loading viewer…
-                  <a href={artifact(pcbUrl)} download>
-                    Download PCB
-                  </a>
-                </div>
-              )}
-            </>
+            <KiCanvasBoard ref={boardControls} src={artifact(pcbUrl)} />
           ) : (
             <div className="bench-empty">
               <div className="reticle">
@@ -476,12 +485,7 @@ export default function AetherScope({
                 blur={2}
               />
             </Suspense>
-            <OrbitControls
-              autoRotate={rotate}
-              autoRotateSpeed={0.6}
-              enablePan
-              enableZoom
-            />
+            <OrbitControls enablePan enableZoom />
           </Canvas>
         ) : (
           <div className="bench-empty">

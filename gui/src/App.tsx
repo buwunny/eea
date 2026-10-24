@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical, Radio, Square } from "lucide-react";
 import SplitView from "./components/SplitView";
+import ToolActivity from "./components/ToolActivity";
 import BrassTitlebar from "./components/BrassTitlebar";
 import TelegraphTerm from "./components/TelegraphTerm";
 import AetherScope from "./components/AetherScope";
@@ -35,7 +36,11 @@ export default function App() {
   const [live, setLive] = useState<Telemetry>(emptyTelemetry);
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [pcb, setPcb] = useState<string | null>(null);
-  const [model, setModel] = useState<string | null>(null);
+  const [models, setModels] = useState<{
+    glb: string | null;
+    wrl: string | null;
+  }>({ glb: null, wrl: null });
+  const model = models.glb ?? models.wrl;
   const [connected, setConnected] = useState(false);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [selected, setSelected] = useState("latest");
@@ -46,6 +51,7 @@ export default function App() {
   const [drcHistory, setDrcHistory] = useState<number[]>([]);
   const [unconnectedHistory, setUnconnectedHistory] = useState<number[]>([]);
   const demoTimer = useRef<ReturnType<typeof setInterval>>();
+  const lastGitHead = useRef<string>();
   const isDemo = demoStep !== null;
   const telemetry = isDemo ? demoTelemetry(demoStep) : live;
   const sim = isDemo
@@ -58,7 +64,9 @@ export default function App() {
           },
         }
       : null
-    : simulation;
+    : live.stages.SIMULATION === "pending"
+      ? null
+      : simulation;
   const refreshHistory = async () => {
     try {
       const response = await fetch(api("/api/git/log"));
@@ -77,10 +85,12 @@ export default function App() {
     function connect() {
       socket = new WebSocket(wsUrl("/ws/telemetry"));
       socket.onopen = () => {
+        if (disposed) return;
         setConnected(true);
         void refreshHistory();
       };
       socket.onmessage = (e) => {
+        if (disposed) return;
         try {
           const message = JSON.parse(e.data);
           if (message.type !== "FILE_UPDATED") return;
@@ -96,23 +106,33 @@ export default function App() {
             });
             if (typeof payload.metrics?.drc_errors === "number")
               setDrcHistory((h) =>
-                [...h, payload.metrics.drc_errors].slice(-8),
+                h.at(-1) === payload.metrics.drc_errors
+                  ? h
+                  : [...h, payload.metrics.drc_errors].slice(-8),
               );
             if (typeof payload.metrics?.unconnected_items === "number")
               setUnconnectedHistory((h) =>
-                [...h, payload.metrics.unconnected_items].slice(-8),
+                h.at(-1) === payload.metrics.unconnected_items
+                  ? h
+                  : [...h, payload.metrics.unconnected_items].slice(-8),
               );
-            void refreshHistory();
+            if (payload.git_head !== lastGitHead.current) {
+              lastGitHead.current = payload.git_head;
+              void refreshHistory();
+            }
           }
           if (file === "build/board.kicad_pcb") setPcb(payload);
           if (file === "build/sim_results.json") setSimulation(payload);
-          if (file === "build/board_3d.glb" || file === "build/board_3d.wrl")
-            setModel(payload);
+          if (file === "build/board_3d.glb")
+            setModels((current) => ({ ...current, glb: payload }));
+          if (file === "build/board_3d.wrl")
+            setModels((current) => ({ ...current, wrl: payload }));
         } catch {
           /* Ignore incomplete files; next atomic update replaces them. */
         }
       };
       socket.onclose = () => {
+        if (disposed) return;
         setConnected(false);
         if (!disposed) timer = setTimeout(connect, 2500);
       };
@@ -181,10 +201,15 @@ export default function App() {
           <div className="connection">
             <Radio size={14} />
             <span className={connected ? "green" : ""}>
-              {connected ? "Connected" : "Disconnected"}
+              {connected ? "Bridge connected" : "Bridge disconnected"}
             </span>
           </div>
         </div>
+        <ToolActivity
+          telemetry={telemetry}
+          connected={connected}
+          demo={isDemo}
+        />
         <nav className="pane-tabs" aria-label="Workspace panels">
           {["Terminal", "Board", "Instruments"].map((label, i) => (
             <button
@@ -317,7 +342,12 @@ export default function App() {
                               ? [12, ...(demoStep >= 4 ? [0] : [])]
                               : unconnectedHistory
                           }
-                          ready={drcReady}
+                          ready={
+                            isDemo
+                              ? drcReady
+                              : typeof live.metrics.unconnected_items ===
+                                "number"
+                          }
                         />
                       </div>
                     </section>

@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from .telemetry import progress
 from .pcb_builder import normalize_design, load_catalog, finite, render_template
 
 
@@ -132,6 +133,7 @@ def simulate(components, nets, sim_config, workspace):
     if shutil.which('ngspice'): native_commands.append(('ngspice', ['ngspice','-b','build/circuit.cir']))
     for native_backend, command in native_commands:
         try:
+            progress(workspace, f'Simulating with {native_backend}')
             result=subprocess.run(command,cwd=workspace,capture_output=True,text=True,timeout=30)
             rows=[]
             if result.returncode==0 and data_file.exists():
@@ -153,6 +155,7 @@ def simulate(components, nets, sim_config, workspace):
         (build/'sim_results.json').write_text(json.dumps(report,indent=2)+'\n')
         return {k:v for k,v in report.items() if k not in ('x_data','signals')}
     if not verified:
+        progress(workspace, 'Estimating 555 timing; native simulation unavailable')
         xs,signals,metrics=analytic_555(design,config)
         warnings.append('Analytical 555 timing estimate only; not a SPICE-verified waveform')
     frequency=metrics.get('frequency_hz'); target=config.get('target_freq_hz')

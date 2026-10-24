@@ -58,6 +58,7 @@ export default function TelegraphTerm() {
           );
         };
         socket.onmessage = (e) => {
+          if (disposed) return;
           try {
             const m = JSON.parse(e.data);
             if (m.type === "output") terminal.write(m.data);
@@ -70,6 +71,7 @@ export default function TelegraphTerm() {
           }
         };
         socket.onclose = () => {
+          if (disposed) return;
           setConnected(false);
           if (!disposed) timer = setTimeout(connect, 3000);
         };
