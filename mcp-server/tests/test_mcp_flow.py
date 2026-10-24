@@ -135,6 +135,7 @@ class FlowTests(unittest.TestCase):
             self.assertIn('invalid pin', message)
 
     def test_555_fallback_smoke(self):
+        from unittest.mock import patch
         from utils.pcb_builder import normalize_design, build_board
         from utils.simulation import simulate
         from utils.freerouting_runner import autoroute
@@ -161,7 +162,8 @@ class FlowTests(unittest.TestCase):
             simulation = simulate(components, nets, {'step_time_ms': 0.5, 'end_time_ms': 2000, 'probe_nets': ['OUT', 'THR'], 'target_freq_hz': 2}, workspace)
             self.assertIn(simulation['status'], ['success', 'degraded', 'error'])
             self.assertTrue((workspace / 'build/sim_results.json').is_file())
-            routing = autoroute(workspace)
+            with patch('utils.freerouting_runner.ROOT', workspace / 'missing-native-tools'):
+                routing = autoroute(workspace)
             self.assertIn('backend', routing)
             drc = verify_drc(workspace)
             if not drc.get('verified'):

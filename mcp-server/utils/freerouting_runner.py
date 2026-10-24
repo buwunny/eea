@@ -14,6 +14,27 @@ from .pcb_builder import finite, pad_positions, write_board, ROOT
 ROUTE_TIME_BUDGET_SECONDS = 30
 
 
+def enforce_minimum_track_width(board, pcbnew):
+    """Honor KiCad's existing minimum without weakening its DRC constraints."""
+    minimum = board.GetDesignSettings().m_TrackMinWidth
+    changed = 0
+    for track in board.GetTracks():
+        if track.GetClass() in ('PCB_TRACK', 'PCB_ARC') and track.GetWidth() < minimum:
+            track.SetWidth(minimum)
+            changed += 1
+    return changed
+
+
+def configure_native_rules(board, pcbnew, trace_width_mm, clearance_mm):
+    settings = board.GetDesignSettings()
+    width = max(settings.m_TrackMinWidth, pcbnew.FromMM(trace_width_mm))
+    clearance = max(getattr(settings, 'm_MinClearance', 0), pcbnew.FromMM(clearance_mm))
+    for netclass in board.GetAllNetClasses().values():
+        netclass.SetTrackWidth(width)
+        netclass.SetClearance(clearance)
+    return pcbnew.ToMM(width), pcbnew.ToMM(clearance)
+
+
 def _astar(start, goal, blocked, width, height, deadline=None):
     queue=[(0,start)]; previous={}; costs={start:0}; visited=set()
     while queue:
@@ -50,14 +71,20 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
         try:
             import pcbnew
             board=pcbnew.LoadBoard(str(build/'board.kicad_pcb'))
+            effective_width, effective_clearance = configure_native_rules(board, pcbnew, trace_width_mm, clearance_mm)
+            corrected = enforce_minimum_track_width(board, pcbnew)
             if not pcbnew.ExportSpecctraDSN(board,str(build/'board.dsn')): raise RuntimeError('DSN export failed')
             progress(workspace, 'Routing with Freerouting (up to 180 seconds)')
-            result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp','20'],capture_output=True,text=True,timeout=180)
+            (build/'board.ses').unlink(missing_ok=True)
+            result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp','20','--gui.enabled=false','--router.automatic_neckdown=false'],capture_output=True,text=True,timeout=180)
             if result.returncode or not (build/'board.ses').exists(): raise RuntimeError('Freerouting did not produce a session')
             if not pcbnew.ImportSpecctraSES(board,str(build/'board.ses')): raise RuntimeError('SES import failed')
+            # Freerouting's fanout may still create micro-neckdowns even with the option disabled.
+            # Widen those to the unchanged board minimum; native DRC must check clearances afterward.
+            corrected += enforce_minimum_track_width(board, pcbnew)
             zone_warning=[]
             try:
-                ground=next((n for name,n in board.GetNetsByName().items() if name.upper() in ('GND','0')),None)
+                ground=next((n for name,n in board.GetNetsByName().items() if str(name).upper() in ('GND','0')),None)
                 if ground:
                     zone=pcbnew.ZONE(board); zone.SetLayer(pcbnew.B_Cu); zone.SetNetCode(ground.GetNetCode())
                     zone.SetLocalClearance(pcbnew.FromMM(clearance_mm)); zone.SetThermalReliefGap(pcbnew.FromMM(clearance_mm)); zone.SetThermalReliefSpokeWidth(pcbnew.FromMM(trace_width_mm))
@@ -70,8 +97,15 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2):
             except (AttributeError,TypeError,RuntimeError) as error:
                 zone_warning.append(f'GND zone could not be filled: {error}')
             pcbnew.SaveBoard(str(build/'board.kicad_pcb'),board)
-            return {'status':'success','backend':'freerouting','verified':False,'warnings':['Run KiCad DRC to verify routing and clearances; native Freerouting uses the DSN board track rules, trace_width_mm and clearance_mm apply to GND zone only']+zone_warning,'artifacts':['build/board.dsn','build/board.ses','build/board.kicad_pcb']}
-        except (ImportError,OSError,RuntimeError,subprocess.TimeoutExpired) as error: warnings.append(f'Native router unavailable: {error}')
+            report = {'status':'success','backend':'freerouting','verified':False,
+                      'trace_width_mm':effective_width,'clearance_mm':effective_clearance,
+                      'minimum_track_width_mm':pcbnew.ToMM(board.GetDesignSettings().m_TrackMinWidth),
+                      'corrected_narrow_segments':corrected,
+                      'warnings':['Run KiCad DRC to verify routing and clearances']+zone_warning,
+                      'artifacts':['build/board.dsn','build/board.ses','build/board.kicad_pcb']}
+            (build/'routes.json').write_text(json.dumps(report,indent=2)+'\n')
+            return report
+        except (ImportError,OSError,RuntimeError,AttributeError,TypeError,subprocess.TimeoutExpired) as error: warnings.append(f'Native router unavailable: {error}')
     progress(workspace, 'Routing with provisional Python router')
     cell=max(0.25,trace_width_mm+clearance_mm, math.sqrt(design['board_width_mm'] * design['board_height_mm'] / 250000))
     deadline = time.monotonic() + ROUTE_TIME_BUDGET_SECONDS

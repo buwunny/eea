@@ -7,7 +7,7 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from utils.pcb_builder import normalize_design,build_board,load_catalog
 from utils.simulation import simulate
-from utils.freerouting_runner import autoroute
+from utils.freerouting_runner import autoroute, enforce_minimum_track_width, configure_native_rules
 from utils.kicad_runner import verify_drc,export_manufacturing
 
 
@@ -18,6 +18,32 @@ def astable():
 
 
 class EngineTests(unittest.TestCase):
+    def test_native_fanout_cannot_leave_tracks_below_board_minimum(self):
+        from types import SimpleNamespace
+        class Track:
+            def __init__(self, width, kind='PCB_TRACK'): self.width, self.kind = width, kind
+            def GetClass(self): return self.kind
+            def GetWidth(self): return self.width
+            def SetWidth(self, width): self.width = width
+        tracks = [Track(150000), Track(200000), Track(250000), Track(150000, 'PCB_ARC'), Track(100000, 'PCB_VIA')]
+        settings = SimpleNamespace(m_TrackMinWidth=200000)
+        board = SimpleNamespace(GetDesignSettings=lambda: settings, GetTracks=lambda: tracks)
+        self.assertEqual(enforce_minimum_track_width(board, None), 2)
+        self.assertEqual([track.width for track in tracks], [200000, 200000, 250000, 200000, 100000])
+        self.assertEqual(settings.m_TrackMinWidth, 200000)
+
+    def test_native_dsn_rules_honor_requested_width_and_existing_constraints(self):
+        from types import SimpleNamespace
+        from unittest.mock import Mock
+        netclass = Mock()
+        settings = SimpleNamespace(m_TrackMinWidth=200000, m_MinClearance=200000)
+        board = SimpleNamespace(GetDesignSettings=lambda: settings, GetAllNetClasses=lambda: {'Default': netclass})
+        pcbnew = SimpleNamespace(FromMM=lambda value: round(value * 1000000), ToMM=lambda value: value / 1000000)
+        self.assertEqual(configure_native_rules(board, pcbnew, 0.25, 0.15), (0.25, 0.2))
+        netclass.SetTrackWidth.assert_called_with(250000)
+        netclass.SetClearance.assert_called_with(200000)
+        self.assertEqual(configure_native_rules(board, pcbnew, 0.1, 0.2), (0.2, 0.2))
+
     def test_python_router_obeys_deadline_and_reports_unrouted_links(self):
         with tempfile.TemporaryDirectory() as directory, patch('shutil.which', return_value=None), patch('utils.freerouting_runner.ROUTE_TIME_BUDGET_SECONDS', 0):
             workspace = Path(directory)
