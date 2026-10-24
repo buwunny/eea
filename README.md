@@ -23,7 +23,7 @@ The current GUI downloads its KiCanvas JavaScript module from kicanvas.org. PCB 
 
 ## Connect an AI CLI
 
-The application opens an ordinary shell. Start your chosen CLI yourself in that shell. Claude Code reads `.mcp.json`; Gemini CLI reads `.gemini/settings.json`. Both configurations are provided in the repository and generated workspace. Other MCP clients can register this generic stdio command, replacing the paths:
+The application opens an ordinary shell. Start your chosen CLI yourself in that shell. Claude Code reads `.mcp.json`; Gemini CLI reads `.gemini/settings.json`. Both configurations are provided in the repository and generated workspace. `npm run setup` also registers EEA for Antigravity CLI in `workspace/.agents/mcp_config.json`, preserving other servers and existing EEA overrides. Launch `agy` from `workspace/` (the embedded terminal starts there), then use `/mcp` to inspect or reload `ee-anything`. See the [Antigravity MCP documentation](https://antigravity.google/docs/mcp). Other MCP clients can register this generic stdio command, replacing the paths:
 
 ```sh
 uv run --project /absolute/path/eea/mcp-server python /absolute/path/eea/mcp-server/server.py

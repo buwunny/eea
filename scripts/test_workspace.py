@@ -16,9 +16,19 @@ class WorkspaceTests(unittest.TestCase):
             workspace = initializer.initialize(Path(directory) / "circuit with spaces")
             config = json.loads((workspace / ".mcp.json").read_text())
             self.assertEqual(config["mcpServers"]["ee-anything"]["env"]["EEA_WORKSPACE"], str(workspace))
+            antigravity = workspace / ".agents/mcp_config.json"
+            self.assertEqual(json.loads(antigravity.read_text()), config)
+            custom = {"mcpServers": {"other": {"command": "custom-server"}}, "customSetting": True}
+            antigravity.write_text(json.dumps(custom))
             project = workspace / "project_spec.md"
             project.write_text("User design requirements")
             initializer.initialize(workspace)
+            merged = json.loads(antigravity.read_text())
+            self.assertEqual(merged["mcpServers"]["other"], custom["mcpServers"]["other"])
+            self.assertTrue(merged["customSetting"])
+            self.assertEqual(merged["mcpServers"]["ee-anything"], config["mcpServers"]["ee-anything"])
+            initializer.initialize(workspace)
+            self.assertEqual(json.loads(antigravity.read_text()), merged)
             self.assertEqual(project.read_text(), "User design requirements")
             top = subprocess.check_output(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"], text=True).strip()
             self.assertEqual(top, str(workspace))

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def initialize(workspace=None):
     workspace = Path(workspace or os.environ.get("EEA_WORKSPACE", ROOT / "workspace")).resolve()
-    for directory in ("src", "build", "manufacturing", ".gemini"):
+    for directory in ("src", "build", "manufacturing", ".gemini", ".agents"):
         (workspace / directory).mkdir(parents=True, exist_ok=True)
     config = {"mcpServers": {"ee-anything": {
         "command": "uv",
@@ -28,6 +28,16 @@ def initialize(workspace=None):
         path = workspace / relative
         if not path.exists():
             path.write_text(content)
+    antigravity = workspace / ".agents/mcp_config.json"
+    existing = json.loads(antigravity.read_text()) if antigravity.exists() else {}
+    if not isinstance(existing, dict) or not isinstance(existing.get("mcpServers", {}), dict):
+        raise ValueError(f"Expected an object with an mcpServers map in {antigravity}")
+    servers = existing.setdefault("mcpServers", {})
+    if "ee-anything" not in servers:
+        servers["ee-anything"] = config["mcpServers"]["ee-anything"]
+        temporary = antigravity.with_suffix(".json.tmp")
+        temporary.write_text(json.dumps(existing, indent=2) + "\n")
+        os.replace(temporary, antigravity)
     if not (workspace / ".git").exists():
         subprocess.run(["git", "init", "-q", str(workspace)], check=True)
         subprocess.run(["git", "-C", str(workspace), "add", "-A"], check=True)
