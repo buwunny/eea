@@ -14,6 +14,74 @@ from .telemetry import progress, atomic_json
 from .pcb_builder import pad_positions
 
 
+def drc_findings(report):
+    """Normalize all findings, retaining warnings and excluded checks with stable IDs."""
+    findings, seen = [], {}
+    groups = [('violations', report.get('violations', [])),
+              ('unconnected', report.get('unconnected', report.get('unconnected_items', []))),
+              ('exclusions', report.get('exclusions', []))]
+    for category, entries in groups:
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            severity = str(entry.get('severity', 'error')).lower()
+            excluded = category == 'exclusions' or entry.get('excluded') is True or entry.get('is_excluded') is True or severity in ('exclusion', 'excluded', 'ignore')
+            normalized = {**entry, 'severity': 'exclusion' if excluded else severity,
+                          'original_severity': severity,
+                          'category': category, 'excluded': excluded,
+                          'type': entry.get('type', 'unconnected_items' if category == 'unconnected' else 'unknown'),
+                          'description': entry.get('description', ''), 'items': entry.get('items', [])}
+            identity = hashlib.sha256(json.dumps(normalized, sort_keys=True, default=str).encode()).hexdigest()[:16]
+            seen[identity] = seen.get(identity, 0) + 1
+            normalized['id'] = f'{identity}-{seen[identity]}'
+            findings.append(normalized)
+    return findings
+
+
+def inspect_drc_report(workspace, severity='all', offset=0, limit=20):
+    """Inspect persisted DRC findings without rerunning KiCad or changing the report."""
+    if severity not in ('all', 'error', 'warning', 'exclusion', 'unconnected'):
+        raise ValueError('severity must be all, error, warning, exclusion or unconnected')
+    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+        raise ValueError('offset must be a nonnegative integer')
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        raise ValueError('limit must be an integer from 1 to 100')
+    workspace = Path(workspace)
+    path = workspace / 'build/drc_report.json'
+    if not path.exists():
+        return {'status': 'unavailable', 'fresh': False, 'verified': False,
+                'summary': 'No DRC report; run run_drc_verification first.', 'findings': [], 'total': 0,
+                'counts': {'errors': 0, 'warnings': 0, 'exclusions': 0, 'unconnected': 0}}
+    report = json.loads(path.read_text())
+    findings = drc_findings(report)
+    selected = [finding for finding in findings if severity == 'all' or
+                (severity == 'unconnected' and finding['category'] == 'unconnected') or finding['severity'] == severity]
+    board = workspace / 'build/board.kicad_pcb'
+    current_hash = hashlib.sha256(board.read_bytes()).hexdigest() if board.exists() else None
+    fresh = bool(current_hash and report.get('board_sha256') == current_hash)
+    page = []
+    for finding in selected[offset:offset+limit]:
+        compact = dict(finding)
+        compact['description'] = str(compact['description'])[:1200]
+        if isinstance(compact['items'], list) and len(compact['items']) > 8:
+            compact['items_total'] = len(compact['items'])
+            compact['items'] = compact['items'][:8]
+        page.append(compact)
+    return {'status': 'success', 'backend': report.get('backend'), 'fresh': fresh,
+            'verified': report.get('verified') is True and fresh,
+            'board_sha256': report.get('board_sha256'), 'current_board_sha256': current_hash,
+            'counts': {'errors': sum(f['severity'] == 'error' and f['category'] != 'unconnected' for f in findings),
+                       'warnings': sum(f['severity'] == 'warning' for f in findings),
+                       'exclusions': sum(f['severity'] == 'exclusion' for f in findings),
+                       'unconnected': sum(f['category'] == 'unconnected' for f in findings)},
+            'severity': severity, 'offset': offset, 'limit': limit, 'total': len(selected),
+            'next_offset': offset+limit if offset+limit < len(selected) else None,
+            'findings': page,
+            'warnings': report.get('warnings', []) + ([] if fresh else ['DRC report is stale for the current board; rerun verification.'])}
+
+
 def _run(args, workspace, timeout=90):
     executable=shutil.which('kicad-cli')
     if not executable: raise RuntimeError('kicad-cli is not installed')
@@ -45,8 +113,18 @@ def verify_drc(workspace):
             raw=json.loads(output.read_text())
         if not isinstance(raw.get('violations'),list) or not isinstance(raw.get('unconnected_items'),list): raise RuntimeError('KiCad DRC report is missing required violation arrays')
         violations=raw['violations']; unconnected=raw['unconnected_items']
-        errors=sum(v.get('severity','error')=='error' for v in violations)
-        report={'status':'success' if not errors and not unconnected else 'failed','backend':'kicad-cli','verified':True,'drc_errors':errors,'unconnected_items':len(unconnected),'violations':violations,'unconnected':unconnected,'warnings':[]}
+        exclusions = raw.get('exclusions', raw.get('excluded_items', []))
+        if not isinstance(exclusions, list): exclusions = []
+        report={'status':'success','backend':'kicad-cli','verified':True,'unconnected_items':len(unconnected),'violations':violations,'unconnected':unconnected,'exclusions':exclusions,'warnings':[]}
+        findings = drc_findings(report)
+        errors = sum(f['severity'] == 'error' and f['category'] != 'unconnected' for f in findings)
+        warnings = sum(f['severity'] == 'warning' for f in findings)
+        excluded = sum(f['severity'] == 'exclusion' for f in findings)
+        report.update(status='success' if not errors and not unconnected else 'failed',
+                      drc_errors=errors, drc_warnings=warnings, drc_exclusions=excluded,
+                      findings=findings, total_findings=len(findings))
+        if warnings or excluded:
+            report['warnings'].append(f'KiCad DRC has {warnings} warning(s) and {excluded} excluded check(s); inspect all findings before fabrication review.')
     except (OSError,RuntimeError,subprocess.TimeoutExpired,json.JSONDecodeError) as error:
         design=json.loads((build/'design.json').read_text())
         pads=pad_positions(design); conflicts=[]
@@ -58,7 +136,9 @@ def verify_drc(workspace):
                     conflicts.append({'type':'possible_pad_overlap','description':f"Review {a['connection']} and {b['connection']}",'position':{'x':a['x_mm'],'y':a['y_mm']}})
         routes=json.loads((build/'routes.json').read_text()) if (build/'routes.json').exists() else None
         count=routes.get('unconnected_items') if routes else sum(max(0,len(n['connections'])-1) for n in design['nets'])
-        report={'status':'degraded','backend':'python-geometric-precheck','verified':False,'drc_errors':None,'unconnected_items':count,'violations':conflicts,'warnings':[str(error),'Precheck only; track clearance, zones and connectivity are not KiCad-verified']}
+        report={'status':'degraded','backend':'python-geometric-precheck','verified':False,'drc_errors':None,'drc_warnings':None,'drc_exclusions':None,'unconnected_items':count,'violations':conflicts,'warnings':[str(error),'Precheck only; track clearance, zones and connectivity are not KiCad-verified']}
+        report['findings'] = drc_findings(report)
+        report['total_findings'] = len(report['findings'])
     report['board_sha256'] = digest
     if hashlib.sha256(board.read_bytes()).hexdigest() != digest:
         report.update(status='failed', verified=False, drc_errors=None, unconnected_items=None,
@@ -103,7 +183,10 @@ def export_manufacturing(workspace, bom):
     # Invalidate a previous successful archive before attempting a new export.
     (manufacturing / 'gerbers.zip').unlink(missing_ok=True)
     report = {'backend': 'kicad-cli', 'status': 'degraded', 'manufacturing_ready': False,
+              'fabrication_files_ready': False, 'fabrication_review_ready': False, 'assembly_ready': False,
               'verified': False, 'board_sha256': digest, 'artifacts': ['manufacturing/bom.csv']}
+    design_path = workspace / 'build/design.json'
+    report['source_design_sha256'] = hashlib.sha256(design_path.read_bytes()).hexdigest() if design_path.exists() else None
     with (manufacturing / 'bom.csv').open('w', newline='', encoding='utf-8') as stream:
         writer = csv.writer(stream)
         writer.writerow(['Comment', 'Designator', 'Footprint', 'LCSC Part #'])
@@ -134,14 +217,22 @@ def export_manufacturing(workspace, bom):
                     archive.write(gerbers / name, name)
             if hashlib.sha256(board.read_bytes()).hexdigest() != digest:
                 raise RuntimeError('The board changed during export. Generate files again after the tool finishes.')
+            current_design_hash = hashlib.sha256(design_path.read_bytes()).hexdigest() if design_path.exists() else None
+            if current_design_hash != report['source_design_sha256']:
+                raise RuntimeError('The saved design changed during export. Generate files again after the tool finishes.')
             os.replace(staging / 'cpl.csv', manufacturing / 'cpl.csv')
             os.replace(staging / 'gerbers.zip', manufacturing / 'gerbers.zip')
-        report.update(status='success', manufacturing_ready=True, verified=True,
+        report.update(status='success', manufacturing_ready=True, fabrication_files_ready=True, verified=True,
                       summary='Gerbers, drill, BOM and pick-and-place files exported', warnings=[],
                       artifacts=['manufacturing/gerbers.zip', 'manufacturing/bom.csv', 'manufacturing/cpl.csv'])
     except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
         (manufacturing / 'gerbers.zip').unlink(missing_ok=True)
         (manufacturing / 'cpl.csv').unlink(missing_ok=True)
         report.update(summary=str(error), warnings=[str(error), 'BOM only; fabrication files are unavailable'])
+    atomic_json(manufacturing / 'export_report.json', report)
+    from .readiness import update_readiness
+    readiness = update_readiness(workspace)
+    report.update(fabrication_review_ready=readiness['fabrication_review_ready'], assembly_ready=readiness['assembly_ready'])
+    report['review_summary'] = 'Files ready; footprint, placement, functional and sourcing review are separate checks.'
     atomic_json(manufacturing / 'export_report.json', report)
     return report

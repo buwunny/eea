@@ -58,6 +58,22 @@ class ExportTests(unittest.TestCase):
             self.assertFalse(report['manufacturing_ready'])
             self.assertFalse((root / 'manufacturing/gerbers.zip').exists())
 
+    def test_warning_review_does_not_block_clean_drc_fabrication_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.prepare(directory)
+            path = root / 'build/drc_report.json'
+            drc = json.loads(path.read_text())
+            drc.update(drc_warnings=1, violations=[{'type': 'silk_overlap', 'severity': 'warning', 'description': 'Review silkscreen'}])
+            path.write_text(json.dumps(drc))
+            with patch('utils.kicad_runner._run', side_effect=self.fake_export):
+                report = export_manufacturing(root, [])
+            self.assertTrue(report['manufacturing_ready'])
+            self.assertTrue(report['fabrication_files_ready'])
+            self.assertFalse(report['fabrication_review_ready'])
+            self.assertFalse(report['assembly_ready'])
+            readiness = json.loads((root / 'build/readiness.json').read_text())
+            self.assertEqual(readiness['checks']['drc_review']['status'], 'needs_attention')
+
     def test_partial_export_cannot_leave_downloadable_archive(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.prepare(directory)
