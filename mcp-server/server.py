@@ -40,22 +40,25 @@ def list_curated_parts(category_filter: str | None = None) -> dict:
 @mcp.tool()
 def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40,
                      sim_config: dict | None = None, trace_width_mm: float = 0.25, clearance_mm: float = 0.2,
-                     export: bool = False, skip_simulation: bool = False) -> dict:
+                     export: bool = False, skip_simulation: bool = False, requirements: dict | None = None) -> dict:
     """FASTEST PATH: one call runs synthesize -> simulate -> autoroute -> DRC (-> export if export=True and DRC is clean).
     Prefer this over calling the individual tools. Stops at the first hard failure and returns
     {status, stages: {tool: short report}, failed_stage, next_action, summary}; fix the design and call again.
     Use calc_555_astable / calc_led_resistor / calc_voltage_divider first so passive values are right the first time.
     x_mm / y_mm may be omitted on components: the server auto-places them. sim_config is optional
-    (a 555 gets ~5 periods automatically); set skip_simulation=True for circuits with no simulation model."""
+    (a 555 gets ~5 periods automatically); set skip_simulation=True for circuits with no simulation model.
+    Optional requirements persist target_freq_hz, frequency_tolerance_pct, supply_voltage_v,
+    min_supply_voltage_v/max_supply_voltage_v and max_board_width_mm/max_board_height_mm.
+    Component tolerance_pct enables conservative standard-555 RC corner estimates."""
     return pipeline.build_and_verify(components, nets, board_width_mm, board_height_mm, sim_config,
-                                     trace_width_mm, clearance_mm, export, skip_simulation)
+                                     trace_width_mm, clearance_mm, export, skip_simulation, requirements)
 
 
 @mcp.tool()
-def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40) -> dict:
+def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40, requirements: dict | None = None) -> dict:
     """Validate structured connectivity and embed curated footprints in a board. Prefer build_and_verify, which also
     simulates, routes and runs DRC in one call. x_mm / y_mm may be omitted: the server auto-places components."""
-    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm))
+    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm, requirements))
 
 
 @mcp.tool()
@@ -63,6 +66,8 @@ def run_spice_simulation(components: list[dict] | None = None, nets: list[dict] 
     """Run transient or DC simulation and return measured values. Omit components and nets to reuse the design saved by
     synthesize_pcb (build/design.json); omit sim_config for defaults (~5 periods for a 555, else a short transient).
     Compute passive values with the calc_* tools instead of trial-and-error simulation.
+    Persisted design requirements are reused; contradictory sim_config acceptance targets are rejected.
+    Native nominal verification and ideal RC tolerance acceptance are reported independently.
     sim_config.sources optionally defines DC sources, e.g. [{name: VMAIN, kind: voltage,
     positive_net: VIN, negative_net: GND, value: 5}]; current source values are amperes.
     measurement_net selects a probed net; measurement_start_ms/measurement_end_ms trim transient measurements.
@@ -82,6 +87,26 @@ def autoroute_pcb(trace_width_mm: float = 0.25, clearance_mm: float = 0.2, max_p
 def run_drc_verification() -> dict:
     """Run KiCad DRC; missing verification tools never imply a verified board."""
     return execute('run_drc_verification', 'DRC_VERIFICATION', pipeline.drc_op())
+
+
+@mcp.tool()
+def get_design_readiness() -> dict:
+    """Inspect separate current design readiness checks; available files do not certify hardware."""
+    from utils.readiness import update_readiness
+    from utils.telemetry import workspace_path
+    return execute('get_design_readiness', None, lambda: {
+        'status': 'success', 'readiness': update_readiness(workspace_path()),
+        'summary': 'Readiness refreshed: inspect individual checks and unresolved reviews',
+    })
+
+
+@mcp.tool()
+def get_drc_findings(severity: str = 'all', offset: int = 0, limit: int = 20) -> dict:
+    """Inspect saved DRC errors, warnings, exclusions, and coordinates without rerunning DRC.
+    severity is all|warning|error|exclusion; use offset/limit to page through findings."""
+    from utils.kicad_runner import inspect_drc_report
+    from utils.telemetry import workspace_path
+    return execute('get_drc_findings', None, lambda: inspect_drc_report(workspace_path(), severity, offset, limit))
 
 
 @mcp.tool()

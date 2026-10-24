@@ -1,6 +1,7 @@
 """Validated SPICE generation and explicitly unverified analytical timing fallback."""
 from __future__ import annotations
 import json
+import hashlib
 import math
 import re
 import shutil
@@ -9,6 +10,7 @@ import sys
 from pathlib import Path
 from .telemetry import progress, atomic_json
 from .pcb_builder import normalize_design, load_catalog, finite, render_template
+from .requirements import normalize_requirements, apply_requirements, design_signature, evaluate_requirements, tolerance_555, primary_source
 
 
 def engineering(value):
@@ -282,20 +284,36 @@ def default_sim_config(design):
 
 
 def simulate(components, nets, sim_config, workspace):
+    source_design = None
+    source_path = Path(workspace)/'build/design.json'
+    source_digest = None
+    explicit_config = dict(sim_config) if isinstance(sim_config, dict) else {}
     if components is None and nets is None:
         saved = load_saved_design(workspace)
         components, nets = saved['components'], saved['nets']
+        source_design = saved
+        source_digest = hashlib.sha256(source_path.read_bytes()).hexdigest()
     if components is None or nets is None:
         raise ValueError('Provide both components and nets, or neither to reuse the saved design')
     if not isinstance(components,list): raise ValueError('components must be a list')
     simulation_components=[{**{key:value for key,value in c.items() if key not in ('x_mm','y_mm','rotation_deg')},'x_mm':150,'y_mm':150} if isinstance(c,dict) else c for c in components]
     design = normalize_design(simulation_components,nets,300,300)
+    if source_design is None and source_path.exists():
+        saved = load_saved_design(workspace)
+        candidate = {**design, 'requirements': saved.get('requirements', {})}
+        if design_signature(candidate) == design_signature(saved):
+            source_design = saved
+            source_digest = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    source_design = source_design or design
+    requirements = normalize_requirements(source_design.get('requirements'), source_design.get('board_width_mm'), source_design.get('board_height_mm'))
+    design['requirements'] = requirements
+    provenance = {'design_sha256': source_digest, 'design_fingerprint': design_signature(source_design), 'requirements': requirements}
     if sim_config is None:
         sim_config = default_sim_config(design)
     elif isinstance(sim_config, dict) and 'probe_nets' not in sim_config:
         sim_config = {**{k: v for k, v in default_sim_config(design).items() if k == 'probe_nets'}, **sim_config}
     if not isinstance(sim_config,dict): raise ValueError('sim_config must be an object')
-    config = dict(sim_config)
+    config = apply_requirements(sim_config, requirements, explicit_config)
     config['analysis_type']=sim_config.get('analysis_type','transient')
     if config['analysis_type'] not in ('transient','dc'): raise ValueError('analysis_type must be transient or dc')
     if config['analysis_type']=='dc':
@@ -311,8 +329,17 @@ def simulate(components, nets, sim_config, workspace):
     if not isinstance(config['probe_nets'],list) or not 1<=len(config['probe_nets'])<=16 or any(p not in {n['name'] for n in design['nets']} for p in config['probe_nets']): raise ValueError('probe_nets must contain 1 to 16 existing nets')
     config['frequency_tolerance_pct']=finite(config.get('frequency_tolerance_pct',10),'frequency_tolerance_pct',0,100)
     if 'target_freq_hz' in config: config['target_freq_hz']=finite(config['target_freq_hz'],'target_freq_hz',1e-9,1e9)
+    if requirements.get('supply_net') and 'sources' not in config:
+        config['sources'] = [{'name': 'VSUPPLY', 'kind': 'voltage', 'positive_net': requirements['supply_net'],
+                              'negative_net': '0', 'value': config['supply_voltage_v']}]
     sources, warnings = sources_for(design, config)
     config['sources'] = sources
+    if 'supply_voltage_v' in requirements and 'sources' in explicit_config:
+        primary = primary_source(sources, requirements)
+        if primary is None:
+            raise ValueError('Explicit sources require an unambiguous requirements.supply_net for the required supply voltage')
+        if not math.isclose(primary['value'], requirements['supply_voltage_v'], abs_tol=1e-9):
+            raise ValueError('Explicit source voltage conflicts with persisted supply_voltage_v requirement')
     config['sweep_source'] = config.get('sweep_source', 'VSUPPLY')
     if config['analysis_type'] == 'dc' and not any(s['name'] == config['sweep_source'] and s['kind'] == 'voltage' for s in sources):
         raise ValueError('DC sweep_source must name an existing voltage source')
@@ -359,7 +386,7 @@ def simulate(components, nets, sim_config, workspace):
         except (OSError,subprocess.TimeoutExpired,ValueError) as error:
             warnings.append(f'{native_backend} unavailable or failed: {error}')
     if not verified and config['analysis_type']=='dc':
-        report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,**coverage,'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
+        report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,'nominal_verified':False,**coverage,**provenance,'requirements_met':None,'requirements_report':evaluate_requirements(requirements,source_design,sources,None,False),'tolerance_analysis':tolerance_555(design,requirements,sources),'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
         atomic_json(build/'sim_results.json', report)
         return {k:v for k,v in report.items() if k not in ('x_data','signals')}
     if not verified:
@@ -378,8 +405,11 @@ def simulate(components, nets, sim_config, workspace):
     frequency=metrics.get('frequency_hz'); target=config.get('target_freq_hz')
     # No target: a settled (non-oscillating) result is fine, e.g. comparators or regulators.
     target_met=True if target is None else bool(frequency and abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100)
-    passed=verified and (target_met if config['analysis_type']=='transient' else True)
+    requirement_report = evaluate_requirements(requirements, source_design, sources, frequency, verified)
+    tolerance_report = tolerance_555(design, requirements, sources)
+    passed=verified and (target_met if config['analysis_type']=='transient' else True) and requirement_report['requirements_met'] is not False
+    nominal_verified = verified and (target_met if config['analysis_type']=='transient' else True) and coverage['coverage_complete'] and bool(sources)
     summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
-    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),**coverage,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
+    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),'nominal_verified':nominal_verified,**coverage,**provenance,'requirements_met':requirement_report['requirements_met'],'requirements_report':requirement_report,'tolerance_analysis':tolerance_report,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
     atomic_json(build/'sim_results.json', report)
     return {k:v for k,v in report.items() if k not in ('x_data','signals')}

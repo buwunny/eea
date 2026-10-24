@@ -10,13 +10,16 @@ from .tool_runner import execute
 from .workspace_lock import workspace_operation
 from .pcb_builder import normalize_design, build_board
 from .simulation import simulate
+from .requirements import normalize_requirements
 from .freerouting_runner import autoroute
 from .kicad_runner import verify_drc, export_manufacturing, export_3d
 
 
-def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40):
+def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40, requirements=None):
     def operation():
         design = normalize_design(components, nets, board_width_mm, board_height_mm)
+        if requirements is not None:
+            design['requirements'] = normalize_requirements(requirements, board_width_mm, board_height_mm)
         workspace = workspace_path()
         report = build_board(design, workspace / 'build')
         report['bom'] = design['bom']
@@ -49,23 +52,40 @@ def export_op():
     return operation
 
 
-_DROP = {'bom', 'parts', 'x_data', 'signals', 'segments', 'artifacts', 'pads', 'violations', 'items'}
+_DROP = {'bom', 'parts', 'x_data', 'signals', 'segments', 'artifacts', 'pads', 'violations', 'items', 'readiness'}
+
+
+def compact_readiness(report):
+    """Pipeline retains decisions; the inspection tool exposes full supporting detail."""
+    flags = ('manufacturing_ready', 'fabrication_files_ready', 'fabrication_review_ready', 'assembly_ready')
+    out = {key: report[key] for key in flags if key in report}
+    out['checks'] = {}
+    for name, check in report.get('checks', {}).items():
+        decision = {key: value for key, value in check.items()
+                    if not isinstance(value, (dict, list)) and key not in ('limitations',)}
+        if check.get('reasons'):
+            decision['reasons'] = [str(check['reasons'][0])[:180]]
+        for field in ('components', 'issues', 'checks'):
+            if isinstance(check.get(field), list):
+                decision[field + '_count'] = len(check[field])
+        out['checks'][name] = decision
+    return out
 
 
 def compact(report, limit=5):
     """Small, LLM-friendly stage report: scalars kept, big arrays dropped or truncated."""
-    out = {}
-    for key, value in report.items():
-        if key in _DROP:
-            continue
-        if key == 'three_d' and isinstance(value, dict):
-            out[key] = value.get('status') or value.get('summary')
-        elif isinstance(value, list):
-            out[key] = value[:limit] + ([f'... {len(value) - limit} more'] if len(value) > limit else [])
-        elif isinstance(value, dict) and len(json.dumps(value, default=str)) > 600:
-            out[key] = {k: v for k, v in list(value.items())[:8]}
-        else:
-            out[key] = value
+    def shrink(value, depth=0):
+        if isinstance(value, list):
+            cap = min(limit, 2) if depth >= 2 else limit
+            return [shrink(v, depth+1) for v in value[:cap]] + ([f'... {len(value)-cap} more'] if len(value)>cap else [])
+        if isinstance(value, dict):
+            return {key: shrink(v, depth+1) for key, v in value.items() if key not in _DROP}
+        if isinstance(value, str) and len(value) > 1200:
+            return value[:1200] + '...'
+        return value
+    out = shrink(report)
+    if isinstance(report.get('three_d'), dict):
+        out['three_d'] = report['three_d'].get('status') or report['three_d'].get('summary')
     return out
 
 
@@ -87,8 +107,8 @@ def _stage_ok(name, report):
 
 @workspace_operation
 def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, sim_config=None,
-                     trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False):
-    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm))]
+                     trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False, requirements=None):
+    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm, requirements))]
     if not skip_simulation:
         # Reuses build/design.json just written by synthesize.
         steps.append(('run_spice_simulation', 'SIMULATION', simulate_op(None, None, sim_config)))
@@ -128,11 +148,18 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
             next_action += ' Functional behavior remains unverified: simulation was skipped, estimated, or omitted functional components.'
     if not functional_verified and stages.get('run_spice_simulation', {}).get('verified') is True:
         warnings.append('Native simulation does not cover the complete functional design; review simulation coverage and sources')
+    drc = stages.get('run_drc_verification', {})
+    drc_warnings = drc.get('drc_warnings', drc.get('warning_count', 0))
+    if drc_warnings:
+        warnings.append(f'Native DRC reports {drc_warnings} warnings; inspect get_drc_findings before fabrication')
+        next_action += ' Review DRC warnings with get_drc_findings(severity="warning").'
     if skip_simulation:
         warnings.append('Functional simulation was explicitly skipped')
     result = {'status': status, 'stages': stages, 'failed_stage': failed, 'next_action': next_action, 'summary': summary,
               'functional_verified': functional_verified, 'physical_verified': physical_verified,
-              'manufacturing_ready': manufacturing_ready}
+              'manufacturing_ready': manufacturing_ready, 'drc_warnings': drc_warnings}
+    from .readiness import update_readiness
+    result['readiness'] = compact_readiness(update_readiness(workspace_path()))
     if skipped:
         result['skipped'] = skipped
     if warnings:

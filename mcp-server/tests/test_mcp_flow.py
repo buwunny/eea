@@ -44,7 +44,7 @@ class ProtocolTests(unittest.IsolatedAsyncioTestCase):
                     'list_curated_parts', 'synthesize_pcb', 'run_spice_simulation',
                     'autoroute_pcb', 'run_drc_verification', 'export_manufacturing_files',
                     'build_and_verify', 'calc_555_astable', 'calc_led_resistor', 'calc_voltage_divider',
-                    'list_design_blocks', 'list_example_compositions', 'compose_design', 'environment_doctor',
+                    'list_design_blocks', 'list_example_compositions', 'compose_design', 'environment_doctor', 'get_drc_findings', 'get_design_readiness',
                 })
                 result = await client.call_tool('list_curated_parts')
                 self.assertFalse(result.is_error)
