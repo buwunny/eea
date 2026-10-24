@@ -10,6 +10,13 @@ mcp = FastMCP('ee-anything')
 
 
 @mcp.tool()
+def environment_doctor() -> dict:
+    """Inspect installed EDA tools and fallback capabilities without changing project files."""
+    from doctor import inspect_environment
+    return inspect_environment()
+
+
+@mcp.tool()
 def list_curated_parts(category_filter: str | None = None) -> dict:
     """Discover exact supported parts: pins as "number name: function" (connect by number or name),
     footprints, support parts, ratings and whether the part simulates in SPICE."""
@@ -55,7 +62,11 @@ def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: flo
 def run_spice_simulation(components: list[dict] | None = None, nets: list[dict] | None = None, sim_config: dict | None = None) -> dict:
     """Run transient or DC simulation and return measured values. Omit components and nets to reuse the design saved by
     synthesize_pcb (build/design.json); omit sim_config for defaults (~5 periods for a 555, else a short transient).
-    Compute passive values with the calc_* tools instead of trial-and-error simulation."""
+    Compute passive values with the calc_* tools instead of trial-and-error simulation.
+    sim_config.sources optionally defines DC sources, e.g. [{name: VMAIN, kind: voltage,
+    positive_net: VIN, negative_net: GND, value: 5}]; current source values are amperes.
+    measurement_net selects a probed net; measurement_start_ms/measurement_end_ms trim transient measurements.
+    DC analysis can select an explicit voltage sweep_source by name."""
     return execute('run_spice_simulation', 'SIMULATION', pipeline.simulate_op(components, nets, sim_config))
 
 

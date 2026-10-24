@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from .telemetry import workspace_path
 from .tool_runner import execute
+from .workspace_lock import workspace_operation
 from .pcb_builder import normalize_design, build_board
 from .simulation import simulate
 from .freerouting_runner import autoroute
@@ -84,6 +85,7 @@ def _stage_ok(name, report):
     return status in ('success',) or (name == 'synthesize_pcb' and bool(report.get('artifacts')))
 
 
+@workspace_operation
 def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, sim_config=None,
                      trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False):
     steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm))]
@@ -109,14 +111,25 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
             failed, next_action = 'export_manufacturing_files', report.get('next_action') or 'Review export warnings.'
     elif failed is not None and export:
         warnings.append('Export skipped because an earlier stage failed')
+    functional_verified = (stages.get('run_spice_simulation', {}).get('verified') is True
+                           and stages.get('run_spice_simulation', {}).get('sim_passed') is True)
+    physical_verified = (stages.get('run_drc_verification', {}).get('verified') is True
+                         and _stage_ok('run_drc_verification', stages['run_drc_verification']))
+    manufacturing_ready = stages.get('export_manufacturing_files', {}).get('manufacturing_ready') is True
     status = 'failed' if failed else 'success'
     skipped = ['run_spice_simulation'] if skip_simulation else []
     if failed:
         summary = f'Stopped at {failed}: {stages[failed].get("summary", "failed")}'
     else:
         summary = '; '.join(f'{k}: {v.get("summary", v.get("status"))}' for k, v in stages.items())
-        next_action = 'Done.' if export else 'All stages passed. Call export_manufacturing_files (or rerun with export=True) for Gerbers.'
-    result = {'status': status, 'stages': stages, 'failed_stage': failed, 'next_action': next_action, 'summary': summary}
+        next_action = ('Fabrication files exported.' if export else 'Physical checks passed. Call export_manufacturing_files for Gerbers.')
+        if not functional_verified:
+            next_action += ' Functional behavior remains unverified: simulation was skipped or estimated.'
+    if skip_simulation:
+        warnings.append('Functional simulation was explicitly skipped')
+    result = {'status': status, 'stages': stages, 'failed_stage': failed, 'next_action': next_action, 'summary': summary,
+              'functional_verified': functional_verified, 'physical_verified': physical_verified,
+              'manufacturing_ready': manufacturing_ready}
     if skipped:
         result['skipped'] = skipped
     if warnings:

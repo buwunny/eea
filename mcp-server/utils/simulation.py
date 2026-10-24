@@ -35,6 +35,51 @@ def skipped_refs(design):
     return [c['ref'] for c in design['components'] if c['part_id'] not in SPICE_PARTS]
 
 
+SUPPLY_NAMES = ('VBUS', 'VIN', 'VCC', 'VDD', '5V', '+5V')
+
+
+def sources_for(design, config):
+    """Validate explicit DC sources; preserve legacy supply inference deterministically."""
+    nets = {net['name'] for net in design['nets']}
+    supplied = config.get('sources')
+    warnings = []
+    if supplied is None:
+        candidates = sorted((n for n in nets if n.upper() in SUPPLY_NAMES),
+                            key=lambda n: (SUPPLY_NAMES.index(n.upper()), n))
+        if not candidates:
+            return [], ['No supply inferred; specify sim_config.sources for an externally powered circuit']
+        warnings.append(f'Inferred VSUPPLY on {candidates[0]}; specify sim_config.sources to define power explicitly')
+        if len(candidates) > 1:
+            warnings.append('Multiple supply-like nets found: ' + ', '.join(candidates) + '; only the upstream-priority net is driven')
+        supplied = [{'name': 'VSUPPLY', 'kind': 'voltage', 'positive_net': candidates[0],
+                     'negative_net': '0', 'value': config.get('supply_voltage_v', 5)}]
+    if not isinstance(supplied, list) or len(supplied) > 32:
+        raise ValueError('sources must be a list of at most 32 voltage/current sources')
+    out, names = [], set()
+    for source in supplied:
+        if not isinstance(source, dict):
+            raise ValueError('each source must be an object')
+        kind = source.get('kind', 'voltage')
+        if kind not in ('voltage', 'current'):
+            raise ValueError('source kind must be voltage or current')
+        name = source.get('name')
+        prefix = 'V' if kind == 'voltage' else 'I'
+        if not isinstance(name, str) or not re.fullmatch(prefix + r'[A-Za-z0-9_]{1,31}', name, re.I):
+            raise ValueError(f'{kind} source name must start with {prefix} and contain letters, numbers or underscores')
+        if name.upper() in names:
+            raise ValueError(f'duplicate source name {name}')
+        names.add(name.upper())
+        positive, negative = source.get('positive_net'), source.get('negative_net', '0')
+        if not isinstance(positive, str) or not isinstance(negative, str) or positive not in nets or (negative != '0' and negative not in nets):
+            raise ValueError('source terminals must name existing nets (or negative_net "0" for ground)')
+        if positive == negative or (positive.upper() in ('GND', '0') and negative.upper() in ('GND', '0')):
+            raise ValueError('source terminals must be different nets')
+        value = finite(source.get('value'), f'{name}.value', -1000, 1000)
+        out.append({'name': name, 'kind': kind, 'positive_net': positive,
+                    'negative_net': negative, 'value': value})
+    return out, warnings
+
+
 def spice_text(design, config):
     catalog = load_catalog()
     pin_nets = {p:n['name'] for n in design['nets'] for p in n['connections']}
@@ -43,10 +88,11 @@ def spice_text(design, config):
     def pin(c, number):
         return names.get(pin_nets.get(f"{c['ref']}.{number}"), f"NC_{c['ref']}_{number}")
     lines = ['EEA validated circuit', '.options method=gear']
-    supply = config['supply_voltage_v']
-    power = next((n for n in names if n.upper() in ('VCC','VDD','5V','+5V','VIN','VBUS')), None)
-    if power:
-        lines.append(f'VSUPPLY {names[power]} 0 {supply:g}')
+    sources, _ = sources_for(design, config)
+    for source in sources:
+        positive = names[source['positive_net']]
+        negative = '0' if source['negative_net'] == '0' else names[source['negative_net']]
+        lines.append(f"{source['name']} {positive} {negative} {source['value']:g}")
     definitions = set()
     for c in design['components']:
         pid, ref = c['part_id'],c['ref']
@@ -58,8 +104,11 @@ def spice_text(design, config):
             definitions.add(p['spice_model']['subcircuit'])
             lines.append(f"X{ref} {' '.join(pin(c,str(i)) for i in range(1,9))} EEA555")
         elif pid in ('LED','1N4148'):
-            definitions.add('.model EEA_D D(Is=1e-14 N=1.8)')
-            lines.append(f"D{ref} {pin(c,'2' if pid=='LED' else '1')} {pin(c,'1' if pid=='LED' else '2')} EEA_D")
+            model = p['spice_model'].get('model', '.model EEA_LED D(Is=1e-14 N=1.8)')
+            definitions.add(model)
+            model_name = model.split()[1]
+            # Both catalog diode footprints number cathode=1, anode=2. SPICE expects A K.
+            lines.append(f"D{ref} {pin(c,'2')} {pin(c,'1')} {model_name}")
         elif pid == 'AMS1117_3V3':
             lines.append(f"B{ref} {pin(c,'2')} {pin(c,'1')} V = 3.3*u(v({pin(c,'3')},{pin(c,'1')})-4.5)")
         elif pid == '2N7002':
@@ -83,20 +132,51 @@ def spice_text(design, config):
             continue  # no executable model (connectors, MCUs, LEDs strips...): skipped and reported
     lines.extend(sorted(definitions))
     probes = [names[n] for n in config['probe_nets']]
-    analysis_command = f"dc VSUPPLY {config['sweep_start_v']:g} {config['sweep_stop_v']:g} {config['sweep_step_v']:g}" if config['analysis_type']=='dc' else f"tran {config['step_time_ms']/1000:g} {config['end_time_ms']/1000:g} uic"
+    analysis_command = f"dc {config.get('sweep_source', 'VSUPPLY')} {config['sweep_start_v']:g} {config['sweep_stop_v']:g} {config['sweep_step_v']:g}" if config['analysis_type']=='dc' else f"tran {config['step_time_ms']/1000:g} {config['end_time_ms']/1000:g} uic"
     lines.extend(['.control', 'set wr_singlescale', 'set wr_vecnames', analysis_command, 'wrdata build/spice_data.txt '+ ' '.join(f'v({n})' for n in probes), 'quit', '.endc', '.end'])
     return '\n'.join(lines)+'\n'
 
 
-def measurements(x, signals):
-    values = next(iter(signals.values()), [])
+def measurements(x, signals, signal=None, start=None, end=None):
+    """Integrate piecewise-linear samples over time, including interpolated window edges."""
+    values = signals.get(signal, []) if signal else next(iter(signals.values()), [])
     if not values:
         return {}
-    lo, hi = min(values),max(values)
+    if len(x) != len(values) or len(x) < 2 or any(b <= a for a, b in zip(x, x[1:])):
+        raise ValueError('Measurement samples must have matching lengths and increasing coordinates')
+    left = max(x[0], start) if start is not None else x[0]
+    right = min(x[-1], end) if end is not None else x[-1]
+    if right <= left:
+        raise ValueError('Measurement window does not overlap waveform samples')
+    points = []
+    for ta, tb, va, vb in zip(x, x[1:], values, values[1:]):
+        a, b = max(ta, left), min(tb, right)
+        if b <= a:
+            continue
+        ya = va + (vb-va)*(a-ta)/(tb-ta)
+        yb = va + (vb-va)*(b-ta)/(tb-ta)
+        if not points:
+            points.append((a, ya))
+        points.append((b, yb))
+    lo, hi = min(v for _, v in points), max(v for _, v in points)
     mid = (lo+hi)/2
-    edges = [x[i]/1000 for i in range(1,len(values)) if values[i-1] <= mid < values[i]]
+    area, high_time, edges = 0.0, 0.0, []
+    for (a, va), (b, vb) in zip(points, points[1:]):
+        dt = b-a
+        area += dt*(va+vb)/2
+        if va <= mid < vb:
+            crossing = a + dt*(mid-va)/(vb-va)
+            edges.append(crossing/1000)
+            high_time += b-crossing
+        elif vb <= mid < va:
+            crossing = a + dt*(mid-va)/(vb-va)
+            high_time += crossing-a
+        elif va > mid and vb > mid:
+            high_time += dt
+    duration = right-left
     period = (edges[-1]-edges[0])/(len(edges)-1) if len(edges)>1 else None
-    return {'frequency_hz': 1/period if period and period>0 else None, 'vpp':hi-lo, 'duty_cycle_pct':100*sum(v>mid for v in values)/len(values), 'dc_average_v':sum(values)/len(values)}
+    return {'frequency_hz': 1/period if period and period>0 else None, 'vpp':hi-lo,
+            'duty_cycle_pct':100*high_time/duration, 'dc_average_v':area/duration}
 
 
 def analytic_555(design, config):
@@ -181,12 +261,10 @@ def simulate(components, nets, sim_config, workspace):
     config['analysis_type']=sim_config.get('analysis_type','transient')
     if config['analysis_type'] not in ('transient','dc'): raise ValueError('analysis_type must be transient or dc')
     if config['analysis_type']=='dc':
-        if config.get('sweep_source','VSUPPLY')!='VSUPPLY': raise ValueError('Only sweep_source VSUPPLY is supported')
         config['sweep_start_v']=finite(config.get('sweep_start_v',0),'sweep_start_v',0,48)
         config['sweep_stop_v']=finite(config.get('sweep_stop_v',5),'sweep_stop_v',config['sweep_start_v']+0.000001,48)
         config['sweep_step_v']=finite(config.get('sweep_step_v',0.1),'sweep_step_v',0.000001,48)
         if (config['sweep_stop_v']-config['sweep_start_v'])/config['sweep_step_v']>100000: raise ValueError('DC sweep exceeds 100000 sample limit')
-        if not any(n['name'].upper() in ('VCC','VDD','5V','+5V','VIN','VBUS') for n in design['nets']): raise ValueError('DC sweep requires a supply net VCC, VDD, VIN or VBUS')
     config['step_time_ms']=finite(config.get('step_time_ms',0.5),'step_time_ms',0.0001,1e6)
     config['end_time_ms']=finite(config.get('end_time_ms',1000),'end_time_ms',config['step_time_ms'],1e7)
     config['supply_voltage_v']=finite(config.get('supply_voltage_v',5),'supply_voltage_v',0.1,48)
@@ -195,11 +273,24 @@ def simulate(components, nets, sim_config, workspace):
     if not isinstance(config['probe_nets'],list) or not 1<=len(config['probe_nets'])<=16 or any(p not in {n['name'] for n in design['nets']} for p in config['probe_nets']): raise ValueError('probe_nets must contain 1 to 16 existing nets')
     config['frequency_tolerance_pct']=finite(config.get('frequency_tolerance_pct',10),'frequency_tolerance_pct',0,100)
     if 'target_freq_hz' in config: config['target_freq_hz']=finite(config['target_freq_hz'],'target_freq_hz',1e-9,1e9)
+    sources, warnings = sources_for(design, config)
+    config['sources'] = sources
+    config['sweep_source'] = config.get('sweep_source', 'VSUPPLY')
+    if config['analysis_type'] == 'dc' and not any(s['name'] == config['sweep_source'] and s['kind'] == 'voltage' for s in sources):
+        raise ValueError('DC sweep_source must name an existing voltage source')
+    measurement_net = config.get('measurement_net', sorted(config['probe_nets'], key=lambda n: ('OUT' not in n.upper(), n))[0])
+    if measurement_net not in config['probe_nets']:
+        raise ValueError('measurement_net must be included in probe_nets')
+    if config['analysis_type'] == 'dc' and any(k in config for k in ('measurement_start_ms', 'measurement_end_ms')):
+        raise ValueError('Time measurement windows require transient analysis')
+    start = finite(config['measurement_start_ms'], 'measurement_start_ms', 0, config['end_time_ms']) if 'measurement_start_ms' in config else None
+    end = finite(config['measurement_end_ms'], 'measurement_end_ms', 0, config['end_time_ms']) if 'measurement_end_ms' in config else None
+    if end is not None and end <= (start or 0):
+        raise ValueError('measurement_end_ms must be greater than measurement_start_ms')
     workspace=Path(workspace); build=workspace/'build'; build.mkdir(parents=True,exist_ok=True); (workspace/'src').mkdir(exist_ok=True)
     raw=spice_text(design,config)
     (build/'circuit.cir').write_text(raw)
     (workspace/'src/testbench.py').write_text(render_template('pyspice_sim.py.j2', circuit_literal=repr(raw)))
-    warnings=[]
     skipped=skipped_refs(design)
     if skipped: warnings.append('No SPICE model, excluded from simulation: '+', '.join(skipped))
     backend='analytical-555'; verified=False
@@ -218,8 +309,7 @@ def simulate(components, nets, sim_config, workspace):
             if len(rows)<2 or any(len(row)!=len(config['probe_nets'])+1 for row in rows): raise ValueError('Ngspice did not produce usable waveform samples')
             xs=[r[0]*(1000 if config['analysis_type']=='transient' else 1) for r in rows]; signals={f'V({probe})':[r[i+1] for r in rows] for i,probe in enumerate(config['probe_nets'])}
             if any(not math.isfinite(v) for row in rows for v in row): raise ValueError('Nonfinite simulator samples')
-            ordered = dict(sorted(signals.items(), key=lambda item: ('OUT' not in item[0].upper(), item[0])))
-            metrics=measurements(xs,ordered)
+            metrics=measurements(xs,signals,f'V({measurement_net})',start,end)
             if config['analysis_type']=='dc': metrics['frequency_hz']=None
             backend=native_backend; verified=True
             break
@@ -231,13 +321,22 @@ def simulate(components, nets, sim_config, workspace):
         return {k:v for k,v in report.items() if k not in ('x_data','signals')}
     if not verified:
         progress(workspace, 'Estimating 555 timing; native simulation unavailable')
+        timer = next((c for c in design['components'] if c['part_id'] == 'NE555'), {})
+        if sim_config.get('sources') is not None:
+            supply_net = next((n['name'] for n in design['nets'] if f"{timer.get('ref')}.8" in n['connections']), None)
+            if len(sources) != 1 or sources[0]['kind'] != 'voltage' or sources[0]['positive_net'] != supply_net or sources[0]['negative_net'].upper() not in ('0', 'GND') or sources[0]['value'] <= 0.3:
+                raise ValueError('Analytical 555 fallback supports one positive supply on the timer VCC only; install ngspice for explicit multi-source circuits')
+            config['supply_voltage_v'] = sources[0]['value']
         xs,signals,metrics=analytic_555(design,config)
+        output_net = next((n['name'] for n in design['nets'] if f"{timer.get('ref')}.3" in n['connections']), None)
+        if measurement_net != output_net or start is not None or end is not None:
+            metrics = measurements(xs, signals, f'V({measurement_net})', start, end)
         warnings.append('Analytical 555 timing estimate only; not a SPICE-verified waveform')
     frequency=metrics.get('frequency_hz'); target=config.get('target_freq_hz')
     # No target: a settled (non-oscillating) result is fine, e.g. comparators or regulators.
     target_met=True if target is None else bool(frequency and abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100)
     passed=verified and (target_met if config['analysis_type']=='transient' else True)
     summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
-    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'target_met':target_met,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
+    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
     (build/'sim_results.json').write_text(json.dumps(report,indent=2,allow_nan=False)+'\n')
     return {k:v for k,v in report.items() if k not in ('x_data','signals')}
