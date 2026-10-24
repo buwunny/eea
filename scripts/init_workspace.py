@@ -30,6 +30,10 @@ Use the ee-anything MCP tools for circuit design. Fastest path: call list_design
 
 Prefer build_and_verify, which runs synthesize_pcb -> run_spice_simulation -> autoroute_pcb -> run_drc_verification in one call (export=true also exports when DRC passes). Use the individual tools only to repeat a single stage after a targeted fix; run_spice_simulation reuses the last synthesized design when components and nets are omitted. Export manufacturing files only after native DRC passes with zero unconnected items. Check each structured tool report, including backend, warnings, next_action and retryable_unchanged.
 
+Record acceptance criteria with the structured requirements input before synthesis. A capacitor connected across power is not automatically well placed: use bypasses to identify the IC it decouples and check placement_constraints. Read get_design_readiness before calling the result build-ready. Nominal simulation, tolerance estimates, placement, footprint review and assembly sourcing are separate checks. Exported Gerbers do not imply reviewed footprints or a complete assembly BOM.
+
+After native DRC, inspect drc_warnings and drc_exclusions as well as drc_errors. Call get_drc_findings(severity="warning") to inspect warning details, affected items and coordinates; use offset/limit to page through findings. Address relevant warnings or report their remaining impact. Never describe a board as warning-free just because drc_errors is zero.
+
 Avoid indefinite retries. Do not repeat an unchanged call when retryable_unchanged is false. After a failed check, make at most two targeted design corrections, then summarize the remaining problem and missing dependencies. The provisional Python router may leave connections unrouted; repeated identical calls cannot repair that. Report the limitation instead of looping.
 
 The UI watches tool-generated files. Do not write telemetry.json or fabricate progress/results manually. CLI reasoning between tool calls is not visible to the UI.

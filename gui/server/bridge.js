@@ -37,6 +37,7 @@ const trackedFiles = [
   "build/board_3d.glb",
   "build/drc_report.json",
   "build/design.json",
+  "build/readiness.json",
   "manufacturing/export_report.json",
   "manufacturing/gerbers.zip",
 ];
@@ -45,6 +46,7 @@ const jsonFiles = new Set([
   "build/sim_results.json",
   "build/drc_report.json",
   "build/design.json",
+  "build/readiness.json",
   "manufacturing/export_report.json",
 ]);
 const contentTypes = {

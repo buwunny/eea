@@ -13,6 +13,8 @@ def execute(name, stage, operation):
             'autoroute_pcb': 'Routing board',
             'run_drc_verification': 'Checking design rules',
             'export_manufacturing_files': 'Exporting manufacturing files',
+            'get_drc_findings': 'Inspecting saved DRC findings',
+            'get_design_readiness': 'Reviewing design readiness',
             'build_and_verify': 'Building and verifying board',
         }.get(name, name))
         try:
@@ -35,6 +37,20 @@ def execute(name, stage, operation):
                         metrics.update(drc_errors=None, unconnected_items=None)
                     atomic_json(workspace_path() / 'telemetry.json', telemetry)
             report = operation()
+            if stage:
+                if stage in ('AUTOROUTING', 'DRC_VERIFICATION', 'MANUFACTURING'):
+                    from .routing_review import review_routed_bypasses
+                    routed = review_routed_bypasses(workspace_path())
+                    report['routed_placement_checks'] = routed
+                    if routed.get('status') == 'needs_attention':
+                        report.setdefault('warnings', []).append('Bypass placement or routed supply path exceeds its limit; inspect routed_placement_checks.')
+                from .readiness import update_readiness
+                readiness = update_readiness(workspace_path())
+                report['readiness'] = readiness
+                with ACTIVITY_LOCK:
+                    telemetry = read_telemetry(workspace_path())
+                    telemetry['readiness'] = readiness
+                    atomic_json(workspace_path() / 'telemetry.json', telemetry)
             status = report.get('status', 'success')
             failed = status in ('error', 'failed') or report.get('sim_passed') is False
             state = 'failed' if failed else 'completed'
@@ -50,7 +66,7 @@ def execute(name, stage, operation):
                 elif stage == 'DRC_VERIFICATION' and (report.get('drc_errors', 0) or report.get('unconnected_items', 0)):
                     state = 'failed' 
             metrics = dict(report.get('metrics', {}))
-            for key in ('drc_errors', 'unconnected_items', 'sim_passed', 'sim_summary', 'component_count', 'net_count', 'estimated_cost_usd'):
+            for key in ('drc_errors', 'drc_warnings', 'drc_exclusions', 'unconnected_items', 'sim_passed', 'sim_summary', 'component_count', 'net_count', 'estimated_cost_usd'):
                 if key in report:
                     metrics[key] = report[key]
             if name == 'synthesize_pcb' and not failed:
@@ -61,7 +77,7 @@ def execute(name, stage, operation):
             summary = report.get('summary') or report.get('sim_summary') or {
                 'synthesize_pcb': f"Board built: {report.get('component_count', 0)} components",
                 'autoroute_pcb': f"{report.get('unconnected_items', 'Unknown')} unrouted connections ({report.get('backend', 'router')})",
-                'run_drc_verification': f"DRC: {report.get('drc_errors')} errors, {report.get('unconnected_items')} unconnected",
+                'run_drc_verification': f"DRC: {report.get('drc_errors')} errors, {report.get('drc_warnings', 0)} warnings, {report.get('unconnected_items')} unconnected",
             }.get(name, f"{status} via {report.get('backend', 'catalog')}")
             if state == 'failed' or status != 'success':
                 report.setdefault('next_action', 'Review warnings and change the design or install the missing native tool. Do not repeat the same call unchanged.')

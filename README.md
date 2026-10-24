@@ -109,6 +109,38 @@ Source values use volts or amperes; current flows from `positive_net` to `negati
 
 `build_and_verify` reports `functional_verified`, `physical_verified` and `manufacturing_ready` separately. Skipped or estimated simulation cannot establish functional verification. Workspace writers share an interprocess lock across an entire pipeline or export operation. A competing operation returns `status: "busy"` without changing telemetry; retry after the current operation finishes. The persistent lock file is ignored by workspace Git history and is released automatically when its process exits.
 
+## Placement constraints, acceptance and readiness
+
+Synthesis checks bypass placement as well as connectivity. A uniquely identifiable small ceramic supply capacitor is assigned to its IC automatically. On shared rails, name the owner explicitly, for example:
+
+```json
+{"ref":"C3","part_id":"C","value":"100n","bypasses":"U1","max_distance_mm":5,"max_routed_length_mm":10}
+```
+
+These distances are configurable design policies, not universal manufacturer limits. Automatic placement prioritizes the supply and ground pads of that IC. Explicit coordinates are preserved and reported when they violate the limit. The placement report records the supply-pad distance and ground-pad distance separately. After routing or DRC, a native check measures explicit supply tracks/vias on the actual PCB. Unresolved zone connections and ground-loop impedance stay unverified; unavailable pcbnew gives an incomplete result rather than a pass.
+
+Pass structured `requirements` to `synthesize_pcb` or `build_and_verify`:
+
+```json
+{"target_freq_hz":1,"frequency_tolerance_pct":5,"supply_voltage_v":5,"max_board_width_mm":35,"max_board_height_mm":30}
+```
+
+Requirements are saved with the design and reused by simulation. A conflicting simulation target is rejected. Supply bounds (`min_supply_voltage_v`, `max_supply_voltage_v`) check the declared test supply; they do not run supply corners. `supply_net` selects an explicit rail when needed. Component `tolerance_pct` on each timing resistor/capacitor enables worst-case ideal RC frequency bounds for a standard 555 astable. Missing tolerances remain incomplete. The estimate excludes IC threshold error, temperature, bias and parasitics; a nominal simulation pass is separate from requirements and tolerance acceptance.
+
+Call `get_design_readiness()` for independent results covering connectivity/clearance, nominal simulation, requirements, placement, footprint review, sourcing, and applicable timing tolerance. The UI displays these under **Checks** and in **Export**. `fabrication_files_ready` means current files exist after native DRC; `fabrication_review_ready` and `assembly_ready` require further review. Exporting files never promotes unreviewed footprints or declared supplier matches to reviewed hardware. Readiness is bound to the current board and saved design; edited sourcing metadata invalidates an old assembly inventory.
+
+DRC returns `drc_errors`, `drc_warnings`, `drc_exclusions` and structured findings. Zero errors does not mean zero warnings. To inspect existing findings without rerunning KiCad, call:
+
+```text
+get_drc_findings(severity="warning", offset=0, limit=20)
+```
+
+Use `all`, `error`, `warning`, `exclusion` or `unconnected` and follow `next_offset`. Findings include stable IDs, descriptions, affected items, native coordinates, and report freshness. Full native reports remain in `build/drc_report.json`. The **Checks** inspector can filter warnings and exclusions too.
+
+Optional component `sourcing` records accept `manufacturer`, `mpn`, `supplier`, `supplier_part_number`, `value`, `footprint`, `datasheet_url`, `tolerance_pct`, `power_rating_w` and `voltage_rating_v`. Mismatched design value/package/tolerance is rejected. Passive assembly codes are emitted only when the applicable declaration is complete; sourcing remains **declared, unverified**, with no claim about supplier stock or physical suitability. Review manufacturer drawings and exact orderable parts before assembly.
+
+Reload the MCP server in your CLI after updating to expose the new input fields and inspection tools. Existing workspace instruction files are preserved; newly created projects include guidance to inspect DRC warnings and separate readiness checks.
+
 ## Desktop window
 
 Install Rust and the [Tauri v2 platform prerequisites](https://v2.tauri.app/start/prerequisites/), including `webkit2gtk-4.1` on Arch, then run:

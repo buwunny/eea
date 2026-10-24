@@ -3,6 +3,7 @@ import type { DesignAdvice } from "../types";
 export default function PowerInspector({ design }: { design: DesignAdvice | null }) {
   const budget = design?.power_budget;
   const issues = design?.electrical_checks?.issues ?? [];
+  const placementIssues = design?.placement_checks?.issues ?? [];
   return <section className="instrument power-inspector">
     <p className="tiny">Design estimates · incomplete · unverified</p>
     {!budget ? <p>Synthesize a design to inspect power and electrical advice.</p> : <>
@@ -17,6 +18,7 @@ export default function PowerInspector({ design }: { design: DesignAdvice | null
       {budget.unknown_loads.length > 0 && <p className="tiny">Unknown consumption: {budget.unknown_loads.join(", ")}. Known loads exclude unsolved dynamic and regulator input currents.</p>}
     </>}
     {!!issues.length && <details open><summary>Electrical advice ({issues.length})</summary><ul>{issues.map((issue, i) => <li key={i}><b>{issue.component || issue.net || "Design"}</b> · {issue.message}</li>)}</ul></details>}
+    {!!placementIssues.length && <details open><summary>Placement findings ({placementIssues.length})</summary><ul>{placementIssues.map((issue, i) => <li key={i}>{issue.message}</li>)}</ul></details>}
     {!!design?.footprint_reviews?.length && <p className="tiny">Footprint geometry requires review against the manufacturer drawing before fabrication.</p>}
   </section>;
 }

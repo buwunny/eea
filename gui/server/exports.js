@@ -18,9 +18,12 @@ export async function exportInfo(workspace, projectId) {
     path.join(workspace, "manufacturing/export_report.json"),
   );
   const drc = await readJson(path.join(workspace, "build/drc_report.json"));
+  const readiness = await readJson(path.join(workspace, "build/readiness.json"));
   const digest = board
     ? createHash("sha256").update(board).digest("hex")
     : null;
+  const design = await fs.readFile(path.join(workspace, "build/design.json")).catch(() => null);
+  const designDigest = design ? createHash("sha256").update(design).digest("hex") : null;
   const files = [];
   for (const [name, label] of [
     ["gerbers.zip", "Gerbers (.zip)"],
@@ -42,6 +45,7 @@ export async function exportInfo(workspace, projectId) {
     !!board &&
     report?.manufacturing_ready === true &&
     report.board_sha256 === digest &&
+    (!Object.hasOwn(report, "source_design_sha256") || report.source_design_sha256 === designDigest) &&
     drc?.verified === true &&
     drc.board_sha256 === digest &&
     drc.drc_errors === 0 &&
@@ -53,6 +57,7 @@ export async function exportInfo(workspace, projectId) {
     ready,
     files: ready ? files : [],
     report,
+    readiness: readiness?.board_sha256 === digest && readiness?.design_sha256 === designDigest ? readiness : null,
   };
 }
 export async function generateExports(workspace) {

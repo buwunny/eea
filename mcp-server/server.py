@@ -94,16 +94,19 @@ def get_design_readiness() -> dict:
     """Inspect separate current design readiness checks; available files do not certify hardware."""
     from utils.readiness import update_readiness
     from utils.telemetry import workspace_path
-    return execute('get_design_readiness', None, lambda: {
-        'status': 'success', 'readiness': update_readiness(workspace_path()),
-        'summary': 'Readiness refreshed: inspect individual checks and unresolved reviews',
-    })
+    def operation():
+        readiness = update_readiness(workspace_path())
+        warnings = [f"{name}: {'; '.join(check.get('reasons', []))}" for name, check in readiness['checks'].items()
+                    if check['status'] != 'passed']
+        return {'status': 'success', 'readiness': readiness, 'warnings': warnings,
+                'summary': 'Readiness refreshed: inspect individual checks and unresolved reviews'}
+    return execute('get_design_readiness', None, operation)
 
 
 @mcp.tool()
 def get_drc_findings(severity: str = 'all', offset: int = 0, limit: int = 20) -> dict:
     """Inspect saved DRC errors, warnings, exclusions, and coordinates without rerunning DRC.
-    severity is all|warning|error|exclusion; use offset/limit to page through findings."""
+    severity is all|warning|error|exclusion|unconnected; use offset/limit to page through findings."""
     from utils.kicad_runner import inspect_drc_report
     from utils.telemetry import workspace_path
     return execute('get_drc_findings', None, lambda: inspect_drc_report(workspace_path(), severity, offset, limit))

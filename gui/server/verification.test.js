@@ -28,3 +28,10 @@ test('simulation readout respects historical results and incomplete model covera
   assert.equal(simulationResult({ verified: true, sim_passed: false }, true), 'REVISE');
   assert.equal(simulationResult({ verified: true, sim_passed: true, functional_verified: true }, false), 'PASS');
 });
+
+test('DRC warnings and exclusions stay visible when the error count is zero', () => {
+  const findings = drcFindings({ drc_errors: 0, violations: [{ severity: 'warning', type: 'silk_over_copper', description: 'Silkscreen clipped' }], exclusions: [{ description: 'Excluded clearance finding' }] });
+  assert.equal(findings.length, 2);
+  assert.equal(findings[0].severity, 'warning');
+  assert.equal(findings[1].severity, 'exclusion');
+});

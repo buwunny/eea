@@ -24,6 +24,7 @@ export interface Telemetry {
   last_updated?: string;
   git_head?: string;
   warnings?: string[];
+  readiness?: DesignReadiness;
   activity?: {
     tool: string;
     status: "running" | "completed" | "warning" | "failed";
@@ -40,6 +41,8 @@ export interface Telemetry {
     component_count: number;
     net_count: number;
     drc_errors: number | null;
+    drc_warnings?: number | null;
+    drc_exclusions?: number | null;
     unconnected_items: number | null;
     estimated_cost_usd: number;
     sim_passed: boolean | null;
@@ -76,12 +79,16 @@ export interface DrcReport {
   backend?: string;
   board_sha256?: string;
   drc_errors?: number | null;
+  drc_warnings?: number | null;
+  drc_exclusions?: number | null;
   unconnected_items?: number | null;
   violations?: BoardFinding[];
   unconnected?: BoardFinding[];
+  exclusions?: BoardFinding[];
 }
 export interface BoardFocus { x: number; y: number; label: string; request: number }
 export interface DesignAdvice {
+  placement_checks?: { status: string; issues: { message: string; component?: string; capacitor?: string }[] };
   electrical_checks?: { issues: { code: string; component: string | null; net: string | null; message: string; severity: string }[] };
   power_budget?: {
     rails: { net: string; voltage_v: number; provenance: string; known_current_ma: number; max_current_ma: number | null; unknown_loads: string[] }[];
@@ -90,6 +97,14 @@ export interface DesignAdvice {
     unknown_loads: string[];
   };
   footprint_reviews?: { component: string; status: string }[];
+}
+export interface DesignReadiness {
+  board_sha256?: string;
+  design_sha256?: string;
+  fabrication_files_ready: boolean;
+  fabrication_review_ready: boolean;
+  assembly_ready: boolean;
+  checks: Record<string, { status: "passed" | "needs_attention" | "incomplete"; reasons: string[] }>;
 }
 export const emptyTelemetry: Telemetry = {
   project_name: "Untitled project",

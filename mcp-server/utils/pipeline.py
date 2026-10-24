@@ -84,6 +84,25 @@ def compact(report, limit=5):
             return value[:1200] + '...'
         return value
     out = shrink(report)
+    if isinstance(report.get('power_budget'), dict):
+        power = report['power_budget']
+        out['power_budget'] = {'verified': power.get('verified', False), 'complete': power.get('complete', False),
+                               'rail_count': len(power.get('rails', [])), 'unknown_load_count': len(power.get('unknown_loads', []))}
+    if isinstance(report.get('footprint_reviews'), list):
+        reviews = report['footprint_reviews']
+        out['footprint_reviews'] = {'total': len(reviews), 'unreviewed': sum(item.get('status') != 'reviewed' for item in reviews)}
+    if isinstance(report.get('electrical_checks'), dict):
+        check = report['electrical_checks']
+        out['electrical_checks'] = {key: check[key] for key in ('verified', 'error_count', 'warning_count') if key in check}
+        out['electrical_checks']['issues'] = [str(issue.get('message', ''))[:220] for issue in check.get('issues', [])[:2]]
+    for field in ('placement_checks', 'routed_placement_checks'):
+        if isinstance(report.get(field), dict):
+            check = report[field]
+            out[field] = {'status': check.get('status'), 'verified': check.get('verified', False),
+                          'check_count': len(check.get('checks', [])), 'issue_count': len(check.get('issues', []))}
+            messages = [issue.get('message', '') for issue in check.get('issues', [])]
+            messages += [str(check['reason'])] if check.get('reason') else []
+            out[field]['messages'] = [str(message)[:220] for message in messages[:2]]
     if isinstance(report.get('three_d'), dict):
         out['three_d'] = report['three_d'].get('status') or report['three_d'].get('summary')
     return out
@@ -160,6 +179,13 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
               'manufacturing_ready': manufacturing_ready, 'drc_warnings': drc_warnings}
     from .readiness import update_readiness
     result['readiness'] = compact_readiness(update_readiness(workspace_path()))
+    drc_exclusions = drc.get('drc_exclusions') or 0
+    result['drc_exclusions'] = drc_exclusions
+    if drc_exclusions:
+        warnings.append(f'Native DRC has {drc_exclusions} excluded findings; review get_drc_findings(severity="exclusion")')
+    result['design_review_complete'] = all(check['status'] == 'passed' for check in result['readiness']['checks'].values())
+    if failed is None and not result['design_review_complete']:
+        result['next_action'] += ' Design review remains incomplete; inspect get_design_readiness and resolve its findings before calling this build-ready.'
     if skipped:
         result['skipped'] = skipped
     if warnings:

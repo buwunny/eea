@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { Download, FileArchive, X } from "lucide-react";
 import { api } from "../api";
 import { ProjectInfo } from "./ProjectControls";
+import type { DesignReadiness } from "../types";
+import ReadinessChecklist from "./ReadinessChecklist";
 interface ExportInfo {
   projectId: string;
   hasBoard: boolean;
   ready: boolean;
   files: { name: string; label: string; url: string; size: number }[];
   report?: { summary?: string; warnings?: string[] };
+  readiness?: DesignReadiness | null;
 }
 export default function ExportDialog({
   project,
@@ -124,6 +127,7 @@ export default function ExportDialog({
                     ? "Generate Gerbers, drill, BOM and JLCPCB placement files. Native DRC must pass first."
                     : "Create a board before exporting."}
             </p>
+            <ReadinessChecklist readiness={info?.readiness ?? null} />
             {info?.ready && (
               <div className="export-files">
                 {info.files.map((file) => (

@@ -64,6 +64,18 @@ class ReadinessTests(unittest.TestCase):
             design.write_text(design.read_text() + '\n')
             self.assertEqual(update_readiness(root)['checks']['nominal_simulation']['status'], 'incomplete')
 
+    def test_nominal_pass_does_not_hide_failed_acceptance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture(directory)
+            path = root / 'build/design.json'
+            design = json.loads(path.read_text()); design['requirements'] = {'target_freq_hz': 1, 'frequency_tolerance_pct': 1}
+            path.write_text(json.dumps(design))
+            (root / 'build/sim_results.json').write_text(json.dumps({'nominal_verified': True, 'requirements_met': False,
+                'design_sha256': hashlib.sha256(path.read_bytes()).hexdigest()}))
+            checks = update_readiness(root)['checks']
+            self.assertEqual(checks['nominal_simulation']['status'], 'passed')
+            self.assertEqual(checks['requirements']['status'], 'needs_attention')
+
     def test_exported_supplier_inventory_becomes_stale_after_design_metadata_changes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture(directory)
@@ -87,7 +99,22 @@ class ReadinessTests(unittest.TestCase):
             self.assertEqual(check['status'], 'incomplete')
             self.assertFalse(check['routed_length_checked'])
 
-    def test_nonlibrary_warning_requires_review_and_library_warning_remains_visible(self):
+    def test_legacy_saved_design_gets_current_bypass_rules_without_resynthesis(self):
+        from utils.pcb_builder import normalize_design
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.fixture(directory)
+            design = normalize_design([{'ref': 'U1', 'part_id': 'NE555', 'x_mm': 25, 'y_mm': 20},
+                                       {'ref': 'C1', 'part_id': 'C', 'value': '100n', 'x_mm': 8, 'y_mm': 8}],
+                                      [{'name': '5V', 'connections': ['U1.8', 'C1.1']}, {'name': 'GND', 'connections': ['U1.1', 'C1.2']}])
+            design.pop('placement_checks')
+            path = root / 'build/design.json'; path.write_text(json.dumps(design))
+            before = path.read_bytes()
+            check = update_readiness(root)['checks']['placement_constraints']
+            self.assertEqual(check['status'], 'needs_attention')
+            self.assertEqual(check['issues'][0]['code'], 'bypass_too_far')
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_all_warnings_require_review_including_library_warnings(self):
         with tempfile.TemporaryDirectory() as directory:
             root = self.fixture(directory)
             path = root / 'build/drc_report.json'
@@ -96,7 +123,7 @@ class ReadinessTests(unittest.TestCase):
             path.write_text(json.dumps(report))
             result = update_readiness(root)
             self.assertEqual(result['checks']['drc_review']['status'], 'needs_attention')
-            self.assertEqual(result['checks']['drc_review']['count'], 1)
+            self.assertEqual(result['checks']['drc_review']['count'], 2)
             self.assertTrue(result['fabrication_files_ready'])
 
 

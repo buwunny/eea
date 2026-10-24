@@ -2,13 +2,14 @@
 export function drcFindings(report) {
   const violations = Array.isArray(report?.violations) ? report.violations : [];
   const unconnected = Array.isArray(report?.unconnected) ? report.unconnected : [];
-  return [...violations, ...unconnected].filter(item => item && typeof item === 'object').map(item => {
+  const exclusions = Array.isArray(report?.exclusions) ? report.exclusions.map(item => ({ ...item, severity: 'exclusion' })) : [];
+  return [...violations, ...unconnected, ...exclusions].filter(item => item && typeof item === 'object').map(item => {
     const descriptions = (Array.isArray(item.items) ? item.items : []).map(part => part?.description).filter(text => typeof text === 'string');
     const positions = [item.position, ...(Array.isArray(item.items) ? item.items.map(part => part?.pos) : [])];
     const position = positions.find(point => point && Number.isFinite(point.x) && Number.isFinite(point.y));
     return {
       title: typeof item.description === 'string' ? item.description : typeof item.type === 'string' ? item.type.replaceAll('_', ' ') : 'Unconnected items',
-      severity: item.severity || 'error', details: descriptions.join('; '), position: position || null,
+      severity: item.excluded || item.is_excluded || ['excluded', 'ignore'].includes(item.severity) ? 'exclusion' : item.severity || 'error', details: descriptions.join('; '), position: position || null,
     };
   });
 }

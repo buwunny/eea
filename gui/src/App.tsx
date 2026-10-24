@@ -9,7 +9,7 @@ import CathodeRay from "./components/CathodeRay";
 import NixieStepper from "./components/NixieStepper";
 import PressureGauge from "./components/PressureGauge";
 import LedgerBOM from "./components/LedgerBOM";
-import { BoardFocus, Commit, DesignAdvice, DrcReport, emptyTelemetry, Simulation, Telemetry } from "./types";
+import { BoardFocus, Commit, DesignAdvice, DesignReadiness, DrcReport, emptyTelemetry, Simulation, Telemetry } from "./types";
 import { demoSimulation, demoTelemetry } from "./demo";
 import { api, wsUrl } from "./api";
 import ProjectControls, { ProjectInfo } from "./components/ProjectControls";
@@ -17,6 +17,7 @@ import ExportDialog from "./components/ExportDialog";
 import EnvironmentDoctor from "./components/EnvironmentDoctor";
 import DrcInspector from "./components/DrcInspector";
 import PowerInspector from "./components/PowerInspector";
+import ReadinessChecklist from "./components/ReadinessChecklist";
 
 /** Tally-counter readout: each digit sits in its own number wheel. */
 function Counter({ text }: { text: string }) {
@@ -45,6 +46,7 @@ interface Snapshot {
   model: string | null;
   drc: DrcReport | null;
   design: DesignAdvice | null;
+  readiness: DesignReadiness | null;
 }
 
 export default function App() {
@@ -76,6 +78,7 @@ export default function App() {
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [drc, setDrc] = useState<DrcReport | null>(null);
   const [designAdvice, setDesignAdvice] = useState<DesignAdvice | null>(null);
+  const [readiness, setReadiness] = useState<DesignReadiness | null>(null);
   const [focus, setFocus] = useState<BoardFocus | null>(null);
   const [pcb, setPcb] = useState<string | null>(null);
   const [models, setModels] = useState<{
@@ -153,6 +156,7 @@ export default function App() {
     setSimulation(null);
     setDrc(null);
     setDesignAdvice(null);
+    setReadiness(null);
     setFocus(null);
     setPcb(null);
     setModels({ glb: null, wrl: null });
@@ -249,6 +253,7 @@ export default function App() {
           if (file === "build/sim_results.json") setSimulation(payload);
           if (file === "build/drc_report.json") setDrc(payload);
           if (file === "build/design.json") setDesignAdvice(payload);
+          if (file === "build/readiness.json") setReadiness(payload);
           if (file === "build/board_3d.glb")
             setModels((current) => ({ ...current, glb: payload }));
           if (file === "build/board_3d.wrl")
@@ -340,6 +345,10 @@ export default function App() {
       const design: DesignAdvice | null = designUrl
         ? await fetch(api(designUrl)).then(r => r.ok ? r.json() : null).catch(() => null)
         : null;
+      const readinessUrl = url("build/readiness.json");
+      const readiness: DesignReadiness | null = readinessUrl
+        ? await fetch(api(readinessUrl)).then(r => r.ok ? r.json() : null).catch(() => null)
+        : null;
       if (stale()) return;
       selectedRef.current = hash;
       setSnapshot({
@@ -349,6 +358,7 @@ export default function App() {
         model: url("build/board_3d.glb") ?? url("build/board_3d.wrl"),
         drc,
         design,
+        readiness,
       });
       setFocus(null);
       setSelected(hash);
@@ -554,6 +564,7 @@ export default function App() {
                         />
                       </div>
                       {!isDemo && <DrcInspector report={viewing ? viewing.drc : drc} pcbUrl={shownPcb} onFocus={(point) => { setFocus(point); setActivePane(1); }} />}
+                      {!isDemo && <ReadinessChecklist readiness={viewing ? viewing.readiness : readiness} pcbUrl={shownPcb} design={viewing ? viewing.design : designAdvice} />}
                     </section>
                   ) : inspectorTab === "power" ? (
                     <PowerInspector design={isDemo ? null : viewing ? viewing.design : designAdvice} />

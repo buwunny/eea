@@ -1379,6 +1379,17 @@ aside > .split-view {
 .power-inspector ul { padding-left: 16px; }
 .power-inspector li { margin: 8px 0; }
 .power-inspector summary { cursor: pointer; }
+.readiness-checklist { margin: 8px 12px 12px; font-size: 12px; line-height: 1.45; flex-shrink: 0; }
+.readiness-checklist summary { cursor: pointer; color: var(--brass); }
+.readiness-checklist ul { list-style: none; margin: 6px 0; padding: 0; }
+.readiness-checklist li { padding: 6px 0; border-bottom: 1px solid var(--rule); }
+.readiness-checklist li > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; }
+.readiness-checklist b { font-weight: 400; }
+.readiness-checklist small { display: block; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.readiness-idle { margin: 8px 12px; }
+.export-dialog > .readiness-checklist { overflow: auto; min-height: 0; flex-shrink: 1; margin: 0; }
+.drc-filters { display: flex; gap: 8px; align-items: center; margin: 6px 0; font-size: 11px; }
+.drc-filters select { background: var(--sunken); color: var(--text); border: 1px solid var(--rule-strong); border-radius: 4px; padding: 3px; font: inherit; }
 @media (max-width: 650px) { .project-action { font-size: 11px; padding: 5px; } .project-actions { gap: 4px; } }
 /* The native KiCanvas controls use Material Symbols ligatures inside shadow roots. */
 @font-face {

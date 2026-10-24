@@ -10,10 +10,6 @@ from pathlib import Path
 from .telemetry import atomic_json
 
 
-LIBRARY_WARNING_TYPES = {'lib_footprint_mismatch', 'lib_footprint_issues',
-                         'lib_footprint_missing', 'lib_footprint_not_found'}
-
-
 def _read(path):
     try:
         value = json.loads(path.read_text())
@@ -42,9 +38,12 @@ def update_readiness(workspace):
     design_hash = _digest(design_path)
     design, drc = _read(design_path), _read(build / 'drc_report.json')
     simulation = _read(build / 'sim_results.json')
+    routing_review = _read(build / 'routing_review.json')
     exported = _read(workspace / 'manufacturing/export_report.json')
     drc_fresh = bool(board_hash and drc.get('board_sha256') == board_hash)
     sim_fresh = bool(design_hash and simulation.get('design_sha256') == design_hash)
+    routing_review_fresh = bool(board_hash and design_hash and routing_review.get('board_sha256') == board_hash
+                               and routing_review.get('design_sha256') == design_hash)
     connectivity_ok = (drc_fresh and drc.get('verified') is True
                        and drc.get('drc_errors') == 0 and drc.get('unconnected_items') == 0)
     if not drc_fresh or drc.get('verified') is not True:
@@ -59,13 +58,40 @@ def update_readiness(workspace):
     elif not simulation.get('nominal_verified', simulation.get('functional_verified', False)):
         nominal = _state('needs_attention' if simulation.get('verified') else 'incomplete',
                          'Nominal functional behavior has not been verified with complete model coverage.', fresh=True)
-    elif simulation.get('requirements_met') is not True:
-        nominal = _state('needs_attention' if simulation.get('requirements_met') is False else 'incomplete',
-                         'Explicit design requirements failed or have not been fully evaluated.', fresh=True)
     else:
         nominal = _state('passed', fresh=True)
 
+    requirements = design.get('requirements') or {}
+    if not requirements:
+        criteria = _state('incomplete', 'Record explicit acceptance requirements before calling the design complete.')
+    elif sim_fresh and simulation.get('requirements_met') is not None:
+        criteria = _state('passed' if simulation['requirements_met'] else 'needs_attention',
+                          'See simulation requirements_report for the acceptance evidence.')
+    elif set(requirements) <= {'max_board_width_mm', 'max_board_height_mm'}:
+        from .requirements import evaluate_requirements
+        met = evaluate_requirements(requirements, design, [], None, False)['requirements_met']
+        criteria = _state('passed' if met is True else 'needs_attention', 'Board dimensions checked against saved limits.')
+    else:
+        criteria = _state('incomplete', 'Run simulation to evaluate the saved acceptance requirements.')
+    timing = None
+    if any(component.get('part_id') == 'NE555' for component in design.get('components', [])):
+        estimate = simulation.get('tolerance_analysis') or {}
+        if not sim_fresh or estimate.get('complete') is not True or estimate.get('acceptance_met') is None:
+            timing = _state('incomplete', 'Declare timing-component tolerances and a frequency requirement to evaluate ideal RC bounds.')
+        else:
+            timing = _state('passed' if estimate['acceptance_met'] else 'needs_attention',
+                            'Ideal RC estimate only; IC errors, temperature and capacitor bias are not covered.',
+                            min_frequency_hz=estimate.get('min_frequency_hz'), max_frequency_hz=estimate.get('max_frequency_hz'))
+
     placement = design.get('placement_checks') or {}
+    # Refresh deterministic rules for legacy designs and edited saved coordinates.
+    if design.get('components') and all(all(key in c for key in ('ref', 'part_id', 'x_mm', 'y_mm', 'rotation_deg')) for c in design['components']):
+        try:
+            from .placement_constraints import inspect_placement
+            from .pcb_builder import load_catalog
+            placement = inspect_placement(design['components'], design.get('nets', []), load_catalog())
+        except (ValueError, KeyError, TypeError) as error:
+            placement = {'status': 'incomplete', 'reason': str(error)}
     if placement.get('status') == 'needs_attention':
         placement_state = _state('needs_attention', 'Placement constraints need attention.',
                                  issues=placement.get('issues', []))
@@ -79,7 +105,17 @@ def update_readiness(workspace):
     else:
         placement_state = _state('incomplete', 'Placement constraints have not been evaluated.')
     placement_state['verified'] = False
-    placement_state['limitations'] = ['Placement checks use saved design coordinates; actual PCB pad locations and routed lengths have not been independently checked.']
+    placement_state['limitations'] = ['Pad proximity alone does not verify the routed supply connection or ground-return loop.']
+    if routing_review_fresh and placement.get('status') == 'passed':
+        if routing_review.get('status') == 'needs_attention':
+            placement_state = _state('needs_attention', 'Current PCB bypass supply paths exceed placement or routed-length limits.',
+                                     verified=False, checks=routing_review.get('checks', []))
+        elif routing_review.get('verified') is True:
+            placement_state = _state('passed', 'Current PCB supply-pad proximity and explicit track/via lengths meet their limits.',
+                                     verified=True, routed_length_checked=True, checks=routing_review.get('checks', []))
+        else:
+            placement_state['reasons'].append(routing_review.get('reason', 'Routed supply path could not be fully resolved; inspect routing_review.json.'))
+        placement_state['limitations'] = routing_review.get('limitations', [])
 
     # No per-design or per-component "reviewed" claim can promote these statuses.
     from .pcb_builder import load_catalog
@@ -111,8 +147,7 @@ def update_readiness(workspace):
 
     from .kicad_runner import drc_findings
     findings = drc_findings(drc)
-    review_findings = [f for f in findings if f['severity'] in ('warning', 'exclusion')
-                       and f.get('type') not in LIBRARY_WARNING_TYPES]
+    review_findings = [f for f in findings if f['severity'] in ('warning', 'exclusion')]
     drc_review = (_state('needs_attention', 'Review DRC warnings and excluded checks.', count=len(review_findings))
                   if drc_fresh and review_findings else
                   _state('passed' if connectivity_ok else 'incomplete', count=0))
@@ -127,10 +162,13 @@ def update_readiness(workspace):
     result = {'board_sha256': board_hash, 'design_sha256': design_hash,
               'checks': {'connectivity_clearance': physical, 'nominal_simulation': nominal,
                          'placement_constraints': placement_state, 'footprint_review': footprint_state,
-                         'assembly_sourcing': sourcing_state, 'drc_review': drc_review},
+                         'assembly_sourcing': sourcing_state, 'drc_review': drc_review, 'requirements': criteria},
               'manufacturing_ready': files_ready, 'fabrication_files_ready': files_ready,
               'fabrication_review_ready': reviewed,
-              'assembly_ready': bool(reviewed and sourcing_state['status'] == 'passed' and nominal['status'] == 'passed'),
+              'assembly_ready': bool(reviewed and sourcing_state['status'] == 'passed' and nominal['status'] == 'passed'
+                                     and criteria['status'] == 'passed' and (timing is None or timing['status'] == 'passed')),
               'limitations': ['Readiness describes separate checks; available Gerbers do not establish footprint, sourcing or functional correctness.']}
+    if timing is not None:
+        result['checks']['timing_tolerance'] = timing
     atomic_json(build / 'readiness.json', result)
     return result

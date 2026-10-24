@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from .telemetry import progress, atomic_json
+from .procurement import normalize_sourcing, bom_entry
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -86,6 +87,10 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
             if tolerance == 100:
                 raise ValueError(f'{ref}.tolerance_pct must be less than 100')
             normalized['tolerance_pct'] = tolerance
+        if 'sourcing' in c:
+            normalized['sourcing'] = normalize_sourcing(c['sourcing'], normalized, p)
+            if 'tolerance_pct' not in normalized and 'tolerance_pct' in normalized['sourcing']:
+                normalized['tolerance_pct'] = normalized['sourcing']['tolerance_pct']
         from .placement_constraints import normalize_bypass_metadata
         normalize_bypass_metadata(c, normalized)
         cs.append(normalized); refs[ref] = normalized
@@ -141,9 +146,11 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     bypasses, placement_issues = resolve_bypasses(cs, ns)
     auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
-              'bom':[{'ref':c['ref'],'value':c['value'],'footprint':cat[c['part_id']]['footprint'],'lcsc':('' if c['part_id'] in ('R','C') else cat[c['part_id']]['lcsc']),'price_usd':cat[c['part_id']]['price_usd']} for c in cs]}
-    if any(c['part_id'] in ('R','C') for c in cs):
+              'bom':[bom_entry(c, cat[c['part_id']]) for c in cs]}
+    if any(c['part_id'] in ('R','C') and not item['lcsc'] for c, item in zip(cs, design['bom'])):
         warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')
+    if any(c.get('sourcing') for c in cs):
+        warnings.append('Sourcing details are declarations only; verify supplier availability and exact value, footprint, rating and tolerance before assembly')
     for pad in pad_positions(design):
         if not (0 < pad['x_mm']-pad['radius_mm'] and pad['x_mm']+pad['radius_mm'] < width and 0 < pad['y_mm']-pad['radius_mm'] and pad['y_mm']+pad['radius_mm'] < height):
             raise ValueError(f"{pad['connection']} pad extends beyond the board edge; adjust placement")
