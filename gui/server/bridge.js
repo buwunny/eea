@@ -13,6 +13,7 @@ import {
   rememberProject,
 } from "./projects.js";
 import { exportInfo, generateExports } from "./exports.js";
+import { environmentDoctor } from "./doctor.js";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { createReadStream } from "node:fs";
@@ -35,6 +36,7 @@ const trackedFiles = [
   "build/board_3d.wrl",
   "build/board_3d.glb",
   "build/drc_report.json",
+  "build/design.json",
   "manufacturing/export_report.json",
   "manufacturing/gerbers.zip",
 ];
@@ -42,6 +44,7 @@ const jsonFiles = new Set([
   "telemetry.json",
   "build/sim_results.json",
   "build/drc_report.json",
+  "build/design.json",
   "manufacturing/export_report.json",
 ]);
 const contentTypes = {
@@ -120,6 +123,7 @@ export async function startBridge({
   port: bridgePort = port,
   stateDirectory = defaultStateDirectory,
   exporter = generateExports,
+  doctor = environmentDoctor,
 } = {}) {
   let workspace = path.resolve(bridgeWorkspace);
   const registry = await readRegistry(stateDirectory);
@@ -213,6 +217,8 @@ export async function startBridge({
     try {
       const url = new URL(req.url, "http://127.0.0.1");
       const requestProjectId = project.id;
+      if (req.method === "GET" && url.pathname === "/api/environment")
+        return response(res, 200, await doctor());
       if (
         url.searchParams.has("project") &&
         url.searchParams.get("project") !== project.id

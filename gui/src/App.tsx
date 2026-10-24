@@ -9,11 +9,14 @@ import CathodeRay from "./components/CathodeRay";
 import NixieStepper from "./components/NixieStepper";
 import PressureGauge from "./components/PressureGauge";
 import LedgerBOM from "./components/LedgerBOM";
-import { Commit, emptyTelemetry, Simulation, Telemetry } from "./types";
+import { BoardFocus, Commit, DesignAdvice, DrcReport, emptyTelemetry, Simulation, Telemetry } from "./types";
 import { demoSimulation, demoTelemetry } from "./demo";
 import { api, wsUrl } from "./api";
 import ProjectControls, { ProjectInfo } from "./components/ProjectControls";
 import ExportDialog from "./components/ExportDialog";
+import EnvironmentDoctor from "./components/EnvironmentDoctor";
+import DrcInspector from "./components/DrcInspector";
+import PowerInspector from "./components/PowerInspector";
 
 /** Tally-counter readout: each digit sits in its own number wheel. */
 function Counter({ text }: { text: string }) {
@@ -40,6 +43,8 @@ interface Snapshot {
   pcb: string | null;
   simulation: Simulation | null;
   model: string | null;
+  drc: DrcReport | null;
+  design: DesignAdvice | null;
 }
 
 export default function App() {
@@ -52,7 +57,7 @@ export default function App() {
   const [shortWindow, setShortWindow] = useState(window.innerHeight < 740);
   const [activeInstrument, setActiveInstrument] = useState(0);
   const [activePane, setActivePane] = useState(1);
-  const [inspectorTab, setInspectorTab] = useState<"checks" | "parts">(
+  const [inspectorTab, setInspectorTab] = useState<"checks" | "parts" | "power">(
     "checks",
   );
   useEffect(() => {
@@ -69,6 +74,9 @@ export default function App() {
   }, []);
   const [live, setLive] = useState<Telemetry>(emptyTelemetry);
   const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [drc, setDrc] = useState<DrcReport | null>(null);
+  const [designAdvice, setDesignAdvice] = useState<DesignAdvice | null>(null);
+  const [focus, setFocus] = useState<BoardFocus | null>(null);
   const [pcb, setPcb] = useState<string | null>(null);
   const [models, setModels] = useState<{
     glb: string | null;
@@ -143,6 +151,9 @@ export default function App() {
     setProject(next);
     setLive(emptyTelemetry);
     setSimulation(null);
+    setDrc(null);
+    setDesignAdvice(null);
+    setFocus(null);
     setPcb(null);
     setModels({ glb: null, wrl: null });
     setCommits([]);
@@ -229,12 +240,15 @@ export default function App() {
             }
           }
           if (file === "build/board.kicad_pcb") {
+            setFocus(null);
             setPcb(payload);
             setExportReady(false);
             void refreshExports();
           }
           if (file.startsWith("manufacturing/")) void refreshExports();
           if (file === "build/sim_results.json") setSimulation(payload);
+          if (file === "build/drc_report.json") setDrc(payload);
+          if (file === "build/design.json") setDesignAdvice(payload);
           if (file === "build/board_3d.glb")
             setModels((current) => ({ ...current, glb: payload }));
           if (file === "build/board_3d.wrl")
@@ -286,6 +300,7 @@ export default function App() {
     setDemoRunning(false);
   }
   function viewLatest() {
+    setFocus(null);
     snapshotRequest.current++;
     selectedRef.current = "latest";
     setSelected("latest");
@@ -317,6 +332,14 @@ export default function App() {
             .then((r) => (r.ok ? r.json() : null))
             .catch(() => null)
         : null;
+      const drcUrl = url("build/drc_report.json");
+      const drc: DrcReport | null = drcUrl
+        ? await fetch(api(drcUrl)).then(r => r.ok ? r.json() : null).catch(() => null)
+        : null;
+      const designUrl = url("build/design.json");
+      const design: DesignAdvice | null = designUrl
+        ? await fetch(api(designUrl)).then(r => r.ok ? r.json() : null).catch(() => null)
+        : null;
       if (stale()) return;
       selectedRef.current = hash;
       setSnapshot({
@@ -324,7 +347,10 @@ export default function App() {
         pcb: url("build/board.kicad_pcb"),
         simulation,
         model: url("build/board_3d.glb") ?? url("build/board_3d.wrl"),
+        drc,
+        design,
       });
+      setFocus(null);
       setSelected(hash);
     } catch (e) {
       if (!stale()) setError(e instanceof Error ? e.message : "Revision unavailable");
@@ -336,6 +362,8 @@ export default function App() {
     ? demoStep >= 1
     : typeof live.metrics.drc_errors === "number" &&
       ["completed", "failed"].includes(live.stages.DRC_VERIFICATION ?? "");
+  const gaugeDrc = viewing ? viewing.drc?.drc_errors ?? null : telemetry.metrics.drc_errors;
+  const gaugeUnconnected = viewing ? viewing.drc?.unconnected_items ?? null : telemetry.metrics.unconnected_items;
   return (
     <div className="forge">
       <BrassTitlebar />
@@ -349,6 +377,7 @@ export default function App() {
             </h1>
           </div>
           <div className="project-actions">
+            <EnvironmentDoctor />
             <ProjectControls
               project={project}
               onSelected={selectProject}
@@ -403,6 +432,8 @@ export default function App() {
                 commits={commits}
                 selected={selected}
                 busy={busy}
+                focus={focus}
+                onClearFocus={() => setFocus(null)}
                 onCheckout={(hash) => void checkout(hash)}
               />
               <div className="board-metrics">
@@ -439,21 +470,21 @@ export default function App() {
               <NixieStepper telemetry={telemetry} />
               {shortWindow && (
                 <nav className="instrument-nav" aria-label="Instruments">
-                  {["Simulation", "Checks", "Parts"].map((label, i) => (
+                  {["Simulation", "Checks", "Parts", "Power"].map((label, i) => (
                     <button
                       key={label}
                       className={
                         (
                           activeInstrument === 0
                             ? i === 0
-                            : i === (inspectorTab === "checks" ? 1 : 2)
+                            : i === (inspectorTab === "checks" ? 1 : inspectorTab === "parts" ? 2 : 3)
                         )
                           ? "active"
                           : ""
                       }
                       onClick={() => {
                         setActiveInstrument(i === 0 ? 0 : 1);
-                        if (i) setInspectorTab(i === 1 ? "checks" : "parts");
+                        if (i) setInspectorTab(i === 1 ? "checks" : i === 2 ? "parts" : "power");
                       }}
                     >
                       {label}
@@ -491,37 +522,41 @@ export default function App() {
                     >
                       Parts ({telemetry.bom.length})
                     </button>
+                    <button role="tab" aria-selected={inspectorTab === "power"} onClick={() => setInspectorTab("power")}>Power</button>
                   </div>
                   {inspectorTab === "checks" ? (
                     <section className="instrument verification">
                       <div className="gauges">
                         <PressureGauge
                           label="DRC errors"
-                          value={telemetry.metrics.drc_errors}
+                          value={gaugeDrc}
                           history={
                             isDemo
                               ? [4, 1, ...(demoStep >= 5 ? [0] : [])]
-                              : drcHistory
+                              : viewing ? [] : drcHistory
                           }
-                          ready={drcReady}
+                          ready={viewing ? viewing.drc?.verified === true : drcReady}
                         />
                         <PressureGauge
                           label="Unconnected"
-                          value={telemetry.metrics.unconnected_items}
+                          value={gaugeUnconnected}
                           history={
                             isDemo
                               ? [12, ...(demoStep >= 4 ? [0] : [])]
-                              : unconnectedHistory
+                              : viewing ? [] : unconnectedHistory
                           }
                           ready={
-                            isDemo
+                            viewing ? viewing.drc?.verified === true : isDemo
                               ? drcReady
                               : typeof live.metrics.unconnected_items ===
                                 "number"
                           }
                         />
                       </div>
+                      {!isDemo && <DrcInspector report={viewing ? viewing.drc : drc} pcbUrl={shownPcb} onFocus={(point) => { setFocus(point); setActivePane(1); }} />}
                     </section>
+                  ) : inspectorTab === "power" ? (
+                    <PowerInspector design={isDemo ? null : viewing ? viewing.design : designAdvice} />
                   ) : (
                     <LedgerBOM
                       parts={telemetry.bom}

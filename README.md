@@ -61,6 +61,50 @@ Resistor and capacitor BOM order codes remain blank until value, voltage/power r
 
 Missing native tools degrade explicitly. Python generation remains available, an analytical 555 fallback can illustrate timing, and a Python router can attempt routing. Estimated simulation is not a SPICE verification. Missing KiCad DRC cannot certify electrical or physical correctness, and unavailable exporters do not produce purported fabrication files. Review warnings and backend provenance in returned reports and generated JSON.
 
+## Engineering checks and diagnostics
+
+Use **Tools** to inspect installed KiCad, Ngspice, Java, Git, Python modules and the Freerouting JAR. This read-only check reports availability and fallbacks; it does not install anything or verify a circuit. MCP clients can call `environment_doctor` for the same report. For diagnostics before installing Python dependencies, run `python3 mcp-server/doctor.py`.
+
+The **Checks** inspector lists DRC violations and unconnected items. Click a finding to switch to 2D, zoom to its reported coordinates and highlight that location. The inspector checks the report's board digest first, so stale findings cannot target a changed board. Historical findings and gauges use the selected revision. Geometric fallback findings remain explicitly unverified.
+
+The **Power** tab shows shared electrical advice, nominal rails, known current consumption, resistor dissipation and regulator dissipation from known loads. These are incomplete estimates: unknown load consumption stays unknown. Voltage hints from net names are labeled separately from declared values. Every synthesis runs these advisory checks, including directly supplied designs. Footprint review metadata starts unreviewed; no geometry is certified by these checks.
+
+Structured design inputs can include:
+
+```json
+{
+  "components": [
+    {"ref": "U1", "part_id": "NE555", "nc_pins": ["CTRL"], "current_draw_ma": 5}
+  ],
+  "nets": [
+    {"name": "5V", "voltage_v": 5, "max_current_ma": 100, "connections": ["U1.VCC", "U1.RESET"]}
+  ]
+}
+```
+
+`nc_pins` explicitly marks intentionally unused pins and rejects pins also assigned to a net. `current_draw_ma` declares an operating estimate, not a device maximum. Net `voltage_v` and `max_current_ma` inform the advisory checks; simulation sources are configured separately.
+
+Simulation accepts explicit independent sources and a measurement window:
+
+```json
+{
+  "sources": [
+    {"name": "VMAIN", "kind": "voltage", "positive_net": "VIN", "negative_net": "GND", "value": 5},
+    {"name": "ILOAD", "kind": "current", "positive_net": "OUT", "negative_net": "GND", "value": 0.001}
+  ],
+  "probe_nets": ["OUT"],
+  "measurement_net": "OUT",
+  "step_time_ms": 0.1,
+  "end_time_ms": 100,
+  "measurement_start_ms": 20,
+  "measurement_end_ms": 100
+}
+```
+
+Source values use volts or amperes; current flows from `positive_net` to `negative_net`. Multiple rails are supported. DC analysis can select a named voltage source with `sweep_source`. Legacy source inference remains available with a warning; explicit sources avoid net-name assumptions. Transient averages and duty cycle use elapsed time, with interpolated threshold crossings.
+
+`build_and_verify` reports `functional_verified`, `physical_verified` and `manufacturing_ready` separately. Skipped or estimated simulation cannot establish functional verification. Workspace writers share an interprocess lock across an entire pipeline or export operation. A competing operation returns `status: "busy"` without changing telemetry; retry after the current operation finishes. The persistent lock file is ignored by workspace Git history and is released automatically when its process exits.
+
 ## Desktop window
 
 Install Rust and the [Tauri v2 platform prerequisites](https://v2.tauri.app/start/prerequisites/), including `webkit2gtk-4.1` on Arch, then run:

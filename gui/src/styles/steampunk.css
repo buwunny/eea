@@ -1391,3 +1391,33 @@ aside > .split-view {
     animation: none !important;
   }
 }
+
+.environment-dialog { margin: auto; }
+.environment-dialog::backdrop { background: #0009; }
+.diagnostic-scroll { min-height: 0; overflow: auto; }
+.doctor-checks { list-style: none; margin: 12px 0 0; padding: 0; }
+.doctor-checks li { padding: 9px 0; border-top: 1px solid var(--rule, #514332); }
+.doctor-checks li > div { display: flex; justify-content: space-between; gap: 12px; }
+.doctor-checks small { display: block; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
+.verification { overflow: auto; }
+.verification .gauges { flex: 0 0 160px; }
+.drc-inspector { padding: 0 12px 10px; }
+.drc-inspector > p { margin: 4px 0 8px; line-height: 1.4; }
+.drc-finding { display: flex; width: 100%; text-align: left; align-items: start; gap: 6px; padding: 6px; margin: 4px 0; }
+.drc-finding > svg { flex-shrink: 0; margin-top: 2px; }
+.drc-finding > span { min-width: 0; flex: 1; }
+.drc-finding b { display: block; font: 12px var(--mono); overflow-wrap: anywhere; }
+.drc-finding small { display: block; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 3px; }
+.drc-finding em { font-size: 10px; font-style: normal; color: var(--muted); }
+.finding-pages { display: flex; justify-content: space-between; align-items: center; gap: 5px; font-size: 11px; margin-top: 7px; }
+.finding-pages button { padding: 3px 6px; }
+.power-inspector { padding: 10px 12px; overflow: auto; font-size: 12px; line-height: 1.5; }
+.power-inspector > p { margin: 4px 0 10px; }
+.power-rail { border-top: 1px solid var(--rule, #514332); padding: 8px 0; }
+.power-rail > div { display: flex; justify-content: space-between; }
+.power-rail p { margin: 4px 0; }
+.power-rail small { color: var(--muted); }
+.power-inspector ul { padding-left: 16px; }
+.power-inspector li { margin: 8px 0; }
+.power-inspector summary { cursor: pointer; }
+@media (max-width: 650px) { .project-action { font-size: 11px; padding: 5px; } .project-actions { gap: 4px; } }

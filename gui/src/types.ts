@@ -50,6 +50,9 @@ export interface Telemetry {
 }
 export interface Simulation {
   verified?: boolean;
+  sim_passed?: boolean;
+  functional_verified?: boolean;
+  coverage_complete?: boolean;
   backend?: string;
   analysis_type: string;
   x_axis_label: string;
@@ -60,6 +63,33 @@ export interface Simulation {
     vpp?: number;
     duty_cycle_pct?: number;
   };
+}
+export interface BoardFinding {
+  type?: string;
+  severity?: string;
+  description?: string;
+  position?: { x: number; y: number };
+  items?: { description?: string; pos?: { x: number; y: number } }[];
+}
+export interface DrcReport {
+  verified?: boolean;
+  backend?: string;
+  board_sha256?: string;
+  drc_errors?: number | null;
+  unconnected_items?: number | null;
+  violations?: BoardFinding[];
+  unconnected?: BoardFinding[];
+}
+export interface BoardFocus { x: number; y: number; label: string; request: number }
+export interface DesignAdvice {
+  electrical_checks?: { issues: { code: string; component: string | null; net: string | null; message: string; severity: string }[] };
+  power_budget?: {
+    rails: { net: string; voltage_v: number; provenance: string; known_current_ma: number; max_current_ma: number | null; unknown_loads: string[] }[];
+    resistor_dissipation: { component: string; power_w: number }[];
+    regulators: { component: string; known_load_dissipation_w: number | null }[];
+    unknown_loads: string[];
+  };
+  footprint_reviews?: { component: string; status: string }[];
 }
 export const emptyTelemetry: Telemetry = {
   project_name: "Untitled project",

@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from "recharts";
 import { Simulation } from "../types";
+import { simulationResult } from "../lib/verification";
 const tickStyle = {
   fill: "#6f8566",
   fontSize: 10,
@@ -29,6 +30,7 @@ function CathodeRay({
   simulation: Simulation | null;
   passed: boolean | null;
 }) {
+  const result = simulationResult(simulation, passed);
   const data = useMemo(
     () =>
       simulation?.x_data.map((x, i) =>
@@ -94,7 +96,7 @@ function CathodeRay({
                   <Line
                     key={name}
                     name={name}
-                    type={i === 0 ? "stepAfter" : "monotone"}
+                    type="linear"
                     dataKey={name}
                     dot={false}
                     stroke={i === 0 ? "#8fe079" : "#f0c27a"}
@@ -132,14 +134,8 @@ function CathodeRay({
         </div>
         <div>
           <small>Result</small>
-          <b className={simulation ? (passed ? "green" : "warning") : ""}>
-            {simulation
-              ? simulation.verified === false || passed === null
-                ? "ESTIMATE"
-                : passed
-                  ? "PASS"
-                  : "REVISE"
-              : "—"}
+          <b className={simulation ? (result === "PASS" ? "green" : "warning") : ""} title={result === "PARTIAL" ? "Simulation excludes functional components or has incomplete source coverage" : undefined}>
+            {result}
           </b>
         </div>
       </div>

@@ -6,6 +6,13 @@ import {
   useRef,
   useState,
 } from "react";
+import type { BoardFocus } from "../types";
+
+interface Box {
+  x: number; y: number; w: number; h: number;
+  copy: () => Box;
+  grow: (amount: number) => Box;
+}
 
 interface Viewer {
   document?: unknown;
@@ -14,6 +21,8 @@ interface Viewer {
   zoom_to_board: () => void;
   flip_view: () => void;
   draw: () => void;
+  viewport?: { camera: { bbox: Box } };
+  select?: (box: Box | null) => void;
 }
 export interface BoardControls {
   fit: () => void;
@@ -90,8 +99,8 @@ function BoardFrame({
 }
 
 /** Keep the current board visible while a replacement initializes offscreen. */
-export default forwardRef<BoardControls, { src: string }>(
-  function KiCanvasBoard({ src }, controls) {
+export default forwardRef<BoardControls, { src: string; focus?: BoardFocus | null }>(
+  function KiCanvasBoard({ src, focus }, controls) {
     const requested = useRef(src);
     requested.current = src;
     const viewer = useRef<Viewer>();
@@ -106,10 +115,19 @@ export default forwardRef<BoardControls, { src: string }>(
     const fail = useCallback((failedSrc: string) => {
       if (failedSrc === requested.current) setFailed(failedSrc);
     }, []);
+    useEffect(() => {
+      if (!focus || displayed !== src || !viewer.current?.viewport) return;
+      const box = viewer.current.viewport.camera.bbox.copy();
+      box.x = focus.x - 0.6; box.y = focus.y - 0.6; box.w = 1.2; box.h = 1.2;
+      viewer.current.viewport.camera.bbox = box.grow(4);
+      viewer.current.select?.(box);
+      viewer.current.draw();
+    }, [focus, displayed, src]);
     useImperativeHandle(
       controls,
       () => ({
         fit() {
+          viewer.current?.select?.(null);
           viewer.current?.zoom_to_board();
           viewer.current?.draw();
         },
