@@ -71,6 +71,9 @@ export default function App() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [selected, setSelected] = useState("latest");
   const [busy, setBusy] = useState(false);
+  const pendingCheckout = useRef<{ hash: string; projectId?: string } | null>(null);
+  const activeCheckout = useRef<{ hash: string; projectId?: string } | null>(null);
+  const checkoutRunning = useRef(false);
   const [error, setError] = useState("");
   const [demoStep, setDemoStep] = useState<number | null>(null);
   const [demoRunning, setDemoRunning] = useState(false);
@@ -129,6 +132,7 @@ export default function App() {
     setModels({ glb: null, wrl: null });
     setCommits([]);
     setSelected("latest");
+    pendingCheckout.current = null;
     setDrcHistory([]);
     setUnconnectedHistory([]);
     setError("");
@@ -240,19 +244,52 @@ export default function App() {
     setDemoRunning(false);
   }
   async function checkout(hash: string) {
+    const projectId = projectRef.current?.id;
+    // Keep one active restore and only the newest requested position.
+    if (
+      !pendingCheckout.current &&
+      activeCheckout.current?.hash === hash &&
+      activeCheckout.current.projectId === projectId
+    )
+      return;
+    pendingCheckout.current = { hash, projectId };
+    if (checkoutRunning.current) return;
+    checkoutRunning.current = true;
     setBusy(true);
     setError("");
     try {
-      const response = await fetch(api(`/api/git/checkout/${hash}`), {
-        method: "POST",
-      });
-      const result = await response.json();
-      if (!response.ok)
-        throw new Error(result.error ?? "Revision could not be restored");
-      setSelected(hash);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Revision unavailable");
+      let restored: string | undefined;
+      while (pendingCheckout.current) {
+        const request = pendingCheckout.current;
+        pendingCheckout.current = null;
+        if (request.projectId !== projectRef.current?.id) continue;
+        if (request.hash === restored) continue;
+        activeCheckout.current = request;
+        const started = performance.now();
+        try {
+          const response = await fetch(api(`/api/git/checkout/${request.hash}`), {
+            method: "POST",
+          });
+          const result = await response.json();
+          if (!response.ok)
+            throw new Error(result.error ?? "Revision could not be restored");
+          if (request.projectId === projectRef.current?.id) {
+            restored = request.hash;
+            setSelected(request.hash);
+            setError("");
+          }
+        } catch (e) {
+          if (request.projectId === projectRef.current?.id)
+            setError(e instanceof Error ? e.message : "Revision unavailable");
+        }
+        // Give the file watcher and viewer time to display intermediate boards.
+        const remaining = 150 - (performance.now() - started);
+        if (remaining > 0)
+          await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
     } finally {
+      activeCheckout.current = null;
+      checkoutRunning.current = false;
       setBusy(false);
     }
   }

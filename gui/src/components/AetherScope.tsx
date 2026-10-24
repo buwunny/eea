@@ -18,6 +18,8 @@ import {
   Maximize2,
   FlipHorizontal2,
   Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Commit } from "../types";
 import { artifact, api } from "../api";
@@ -388,11 +390,33 @@ export default function AetherScope({
     };
   }, [pcbUrl]);
   const boardControls = useRef<BoardControls>(null);
+  const revisionSlider = useRef<HTMLInputElement>(null);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
   const chronological = [...commits].reverse();
+  const latestIndex = Math.max(chronological.length - 1, 0);
   const index =
     selected === "latest"
-      ? chronological.length
+      ? latestIndex
       : chronological.findIndex((c) => c.hash === selected);
+  const displayedIndex = scrubIndex ?? Math.max(index, 0);
+  function checkoutIndex(i: number) {
+    const hash = i === latestIndex ? "latest" : chronological[i]?.hash;
+    if (hash && (busy || hash !== selected)) {
+      setScrubIndex(i);
+      onCheckout(hash);
+    } else setScrubIndex(null);
+  }
+  // Native change also covers WebViews that only report the final value.
+  useEffect(() => {
+    const slider = revisionSlider.current;
+    if (!slider) return;
+    const commit = () => checkoutIndex(Number(slider.value));
+    slider.addEventListener("change", commit);
+    return () => slider.removeEventListener("change", commit);
+  }, [commits, selected, busy, onCheckout]);
+  useEffect(() => {
+    if (!busy) setScrubIndex(null);
+  }, [busy, selected, demo]);
   return (
     <section className="instrument board-panel">
       <div className="panel-heading board-toolbar">
@@ -509,33 +533,55 @@ export default function AetherScope({
             <History size={13} /> History
           </span>
           <button
-            onClick={() => onCheckout("latest")}
-            disabled={busy || demo || selected === "latest"}
+            onClick={() => checkoutIndex(latestIndex)}
+            disabled={demo || (!busy && selected === "latest")}
           >
             Latest
           </button>
         </div>
-        <input
-          aria-label="Board revision"
-          type="range"
-          min={0}
-          max={chronological.length}
-          value={Math.max(index, 0)}
-          disabled={!chronological.length || busy || demo}
-          onChange={(e) => {
-            const i = Number(e.target.value);
-            onCheckout(
-              i === chronological.length ? "latest" : chronological[i].hash,
-            );
-          }}
-        />
+        <div className="history-navigation">
+          <button
+            className="icon-button"
+            aria-label="Previous revision"
+            title="Previous revision"
+            disabled={demo || !commits.length || displayedIndex <= 0}
+            onClick={() => checkoutIndex(displayedIndex - 1)}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <input
+            ref={revisionSlider}
+            aria-label="Board revision"
+            type="range"
+            min={0}
+            max={latestIndex}
+            value={displayedIndex}
+            disabled={!chronological.length || demo}
+            onChange={(e) => {
+              const i = Number(e.target.value);
+              setScrubIndex(i);
+              checkoutIndex(i);
+            }}
+          />
+          <button
+            className="icon-button"
+            aria-label="Next revision"
+            title="Next revision"
+            disabled={
+              demo || !commits.length || displayedIndex >= latestIndex
+            }
+            onClick={() => checkoutIndex(displayedIndex + 1)}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
         <div className="history-caption">
           <span>
             {busy
               ? "Loading…"
-              : selected === "latest"
+              : displayedIndex === latestIndex
                 ? "Latest"
-                : selected.slice(0, 8)}
+                : chronological[displayedIndex]?.hash.slice(0, 8)}
           </span>
           <span>{demo ? "Demo" : `${commits.length} revisions`}</span>
         </div>
