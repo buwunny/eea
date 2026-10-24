@@ -32,6 +32,26 @@ class TelemetryTests(unittest.TestCase):
             self.assertEqual(json.loads(target.read_text()), {'value': 1})
 
 
+class ProtocolTests(unittest.IsolatedAsyncioTestCase):
+    async def test_registered_tools_are_callable_through_mcp(self):
+        from unittest.mock import patch
+        from fastmcp import Client
+        import server
+        with tempfile.TemporaryDirectory() as directory, patch.dict('os.environ', {'EEA_WORKSPACE': directory}):
+            async with Client(server.mcp, timeout=10, init_timeout=10) as client:
+                tools = await client.list_tools()
+                self.assertEqual({tool.name for tool in tools}, {
+                    'list_curated_parts', 'synthesize_pcb', 'run_spice_simulation',
+                    'autoroute_pcb', 'run_drc_verification', 'export_manufacturing_files',
+                })
+                result = await client.call_tool('list_curated_parts')
+                self.assertFalse(result.is_error)
+                self.assertEqual(result.data['status'], 'success')
+                self.assertIn('NE555', {part['part_id'] for part in result.data['parts']})
+            message = subprocess.check_output(['git', 'log', '-1', '--format=%s'], cwd=directory, text=True)
+            self.assertIn('MCP [list_curated_parts]', message)
+
+
 class FlowTests(unittest.TestCase):
     def test_unverified_results_do_not_complete_pipeline(self):
         from unittest.mock import patch
