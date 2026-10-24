@@ -30,7 +30,7 @@ def atomic_json(path: Path, payload: dict) -> None:
 
 
 def git(workspace: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(['git', '-c', 'user.name=Aether Forge', '-c', 'user.email=forge@localhost', *args], cwd=workspace, capture_output=True, text=True, timeout=30)
+    return subprocess.run(['git', '-c', 'user.name=EEA', '-c', 'user.email=eea@localhost', *args], cwd=workspace, capture_output=True, text=True, timeout=30)
 
 
 def read_telemetry(workspace: Path) -> dict:
@@ -40,7 +40,7 @@ def read_telemetry(workspace: Path) -> dict:
             return value
     except (OSError, ValueError):
         pass
-    return {'project_name': 'The Aether-Forge', 'pipeline_stage': 'ARCHITECTURE', 'stages': {s: 'pending' for s in STAGES}, 'metrics': {}, 'bom': [], 'git_commits': []}
+    return {'project_name': 'EEA', 'pipeline_stage': 'ARCHITECTURE', 'stages': {s: 'pending' for s in STAGES}, 'metrics': {}, 'bom': [], 'git_commits': []}
 
 
 def record(tool: str, summary: str, stage: str | None = None, state: str = 'completed', metrics: dict | None = None, bom: list | None = None, warnings: list | None = None) -> dict:

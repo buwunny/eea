@@ -16,12 +16,7 @@ export default function BrassTitlebar() {
     <header className="titlebar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region>
         <Cog size={29} />
-        <span>
-          THE AETHER-FORGE<small>ELECTRICAL ENGINEER ANYTHING</small>
-        </span>
-      </div>
-      <div className="maker-mark">
-        EST. MMXXVI <span>✦</span> ENGINEERING BY INTELLIGENCE
+        <span>EEA</span>
       </div>
       <div className="window-controls">
         <button

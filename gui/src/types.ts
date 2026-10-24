@@ -52,7 +52,7 @@ export interface Simulation {
   };
 }
 export const emptyTelemetry: Telemetry = {
-  project_name: "Awaiting your first invention",
+  project_name: "Untitled project",
   pipeline_stage: "ARCHITECTURE",
   stages: {},
   metrics: {

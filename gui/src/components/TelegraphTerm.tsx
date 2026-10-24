@@ -25,15 +25,15 @@ export default function TelegraphTerm() {
     const frame = requestAnimationFrame(() => {
       if (!host.current) return;
       const terminal = new Terminal({
-        fontFamily: '"Share Tech Mono",monospace',
-        fontSize: 13,
+        fontFamily: '"SFMono-Regular", Consolas, monospace',
+        fontSize: 15,
         cursorBlink: true,
         theme: {
-          background: "#100e0a",
-          foreground: "#d4b577",
+          background: "#101722",
+          foreground: "#e0e7ef",
           cursor: "#ff9912",
           selectionBackground: "#6b512b",
-          black: "#100e0a",
+          black: "#101722",
           green: "#b3c881",
           yellow: "#ffbb4e",
         },
@@ -43,9 +43,6 @@ export default function TelegraphTerm() {
       terminal.loadAddon(fit);
       terminal.open(host.current);
       fit.fit();
-      terminal.writeln(
-        "\x1b[33mTHE AETHER-FORGE · TELEGRAPH TERMINAL\x1b[0m\r\nConnecting to the local instrument bridge…\r\n",
-      );
       let socket: WebSocket | undefined;
       let timer: ReturnType<typeof setTimeout>;
       let disposed = false;
@@ -113,24 +110,16 @@ export default function TelegraphTerm() {
     <section className="instrument terminal-panel">
       <div className="panel-heading">
         <span>
-          <TerminalSquare size={16} /> TELEGRAPH TERMINAL
+          <TerminalSquare size={16} /> Terminal
         </span>
         <span className={`status-dot ${connected ? "online" : ""}`} />
       </div>
       <div className="terminal-path">
         <span>~/workspace</span>
-        <span>{connected ? "SHELL CONNECTED" : "BRIDGE OFFLINE"}</span>
+        <span>{connected ? "Connected" : "Offline"}</span>
       </div>
       <div ref={host} className="terminal-host" />
-      <div className="terminal-instructions">
-        Your CLI. Your command.
-        <br />
-        <span>Run your preferred AI CLI in this shell.</span>
-      </div>
       <div className="prompt-chips">
-        <label>
-          INVENTION STARTERS <span>· COPY A PROMPT</span>
-        </label>
         {prompts.map(([name, prompt]) => (
           <button
             key={name}
@@ -144,16 +133,13 @@ export default function TelegraphTerm() {
               }
             }}
           >
-            <span>{copied === name ? "Copied to clipboard" : name}</span>
+            <span>{copied === name ? "Copied" : name}</span>
             <Copy size={12} />
           </button>
         ))}
         {copied === "Clipboard unavailable" && (
           <small role="status">Clipboard unavailable in this browser.</small>
         )}
-      </div>
-      <div className="terminal-footer">
-        <span className="status-dot" /> INTERACTIVE HUMAN CONTROL
       </div>
     </section>
   );

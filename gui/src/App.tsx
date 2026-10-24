@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Activity, FlaskConical, Radio, Square } from "lucide-react";
+import { FlaskConical, Radio, Square } from "lucide-react";
+import SplitView from "./components/SplitView";
 import BrassTitlebar from "./components/BrassTitlebar";
 import TelegraphTerm from "./components/TelegraphTerm";
 import AetherScope from "./components/AetherScope";
@@ -12,6 +13,25 @@ import { demoSimulation, demoTelemetry } from "./demo";
 import { api, wsUrl } from "./api";
 
 export default function App() {
+  const [compact, setCompact] = useState(window.innerWidth < 1050);
+  const [shortWindow, setShortWindow] = useState(window.innerHeight < 740);
+  const [activeInstrument, setActiveInstrument] = useState(0);
+  const [activePane, setActivePane] = useState(1);
+  const [inspectorTab, setInspectorTab] = useState<"checks" | "parts">(
+    "checks",
+  );
+  useEffect(() => {
+    const query = matchMedia("(max-width: 1049px)");
+    const heightQuery = matchMedia("(max-height: 739px)");
+    const change = () => setCompact(query.matches);
+    const heightChange = () => setShortWindow(heightQuery.matches);
+    query.addEventListener("change", change);
+    heightQuery.addEventListener("change", heightChange);
+    return () => {
+      query.removeEventListener("change", change);
+      heightQuery.removeEventListener("change", heightChange);
+    };
+  }, []);
   const [live, setLive] = useState<Telemetry>(emptyTelemetry);
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [pcb, setPcb] = useState<string | null>(null);
@@ -152,116 +172,179 @@ export default function App() {
       <main>
         <div className="workbench-heading">
           <div>
-            <div className="eyebrow">
-              <span className="ornament">✦</span> THE INTELLIGENT CIRCUIT
-              WORKBENCH
-            </div>
-            <h1>{telemetry.project_name}</h1>
+            <h1>
+              {["The Aether-Forge", "EEA"].includes(telemetry.project_name)
+                ? "Untitled project"
+                : telemetry.project_name}
+            </h1>
           </div>
           <div className="connection">
             <Radio size={14} />
             <span className={connected ? "green" : ""}>
-              {connected ? "LOCAL BRIDGE ONLINE" : "LOCAL BRIDGE OFFLINE"}
+              {connected ? "Connected" : "Disconnected"}
             </span>
           </div>
         </div>
+        <nav className="pane-tabs" aria-label="Workspace panels">
+          {["Terminal", "Board", "Instruments"].map((label, i) => (
+            <button
+              key={label}
+              className={activePane === i ? "active" : ""}
+              onClick={() => setActivePane(i)}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <div className="workbench">
-          <TelegraphTerm />
-          <div className="center-column">
-            <AetherScope
-              pcbUrl={pcb}
-              modelUrl={model}
-              demo={isDemo}
-              commits={commits}
-              selected={selected}
-              busy={busy}
-              onCheckout={(hash) => void checkout(hash)}
-            />
-            <div className="board-metrics">
-              <div>
-                <small>COMPONENTS</small>
-                <b>
-                  {telemetry.metrics.component_count
-                    .toString()
-                    .padStart(2, "0")}
-                </b>
+          <SplitView
+            storageKey="eea-columns"
+            initial={[27, 46, 27]}
+            compactIndex={compact ? activePane : undefined}
+          >
+            <TelegraphTerm />
+            <div className="center-column">
+              <AetherScope
+                pcbUrl={pcb}
+                modelUrl={model}
+                demo={isDemo}
+                commits={commits}
+                selected={selected}
+                busy={busy}
+                onCheckout={(hash) => void checkout(hash)}
+              />
+              <div className="board-metrics">
+                <div>
+                  <small>COMPONENTS</small>
+                  <b>
+                    {telemetry.metrics.component_count
+                      .toString()
+                      .padStart(2, "0")}
+                  </b>
+                </div>
+                <div>
+                  <small>NETS</small>
+                  <b>
+                    {telemetry.metrics.net_count.toString().padStart(2, "0")}
+                  </b>
+                </div>
+                <div>
+                  <small>EST. COST</small>
+                  <b>${telemetry.metrics.estimated_cost_usd.toFixed(2)}</b>
+                </div>
               </div>
-              <div>
-                <small>CONNECTED NETS</small>
-                <b>{telemetry.metrics.net_count.toString().padStart(2, "0")}</b>
-              </div>
-              <div>
-                <small>ESTIMATED COST</small>
-                <b>${telemetry.metrics.estimated_cost_usd.toFixed(2)}</b>
-              </div>
-              <div>
-                <small>INSTRUMENT MODE</small>
-                <b className="mode-readout">{isDemo ? "DEMO" : "LIVE"}</b>
-              </div>
+              {error && (
+                <div className="bench-note" role="alert">
+                  {error}
+                </div>
+              )}
             </div>
-            <div className="bench-note">
-              <Activity size={14} />
-              <span>
-                {error ||
-                  (isDemo
-                    ? "Demonstration sequence · simulated readings and illustrative geometry."
-                    : telemetry.metrics.sim_summary ||
-                      "Artifacts arrive through the filesystem. Your invention remains yours.")}
-              </span>
-            </div>
-          </div>
-          <aside>
-            <NixieStepper telemetry={telemetry} />
-            <CathodeRay
-              simulation={sim}
-              passed={telemetry.metrics.sim_passed}
-            />
-            <section className="instrument verification">
-              <div className="panel-heading">
-                <span>03 / VERIFICATION PRESSURE</span>
-              </div>
-              <div className="gauges">
-                <PressureGauge
-                  label="DRC VIOLATIONS"
-                  value={telemetry.metrics.drc_errors}
-                  history={
-                    isDemo ? [4, 1, ...(demoStep >= 5 ? [0] : [])] : drcHistory
-                  }
-                  ready={drcReady}
+            <aside>
+              <NixieStepper telemetry={telemetry} />
+              {shortWindow && (
+                <nav className="instrument-nav" aria-label="Instruments">
+                  {["Simulation", "Checks", "Parts"].map((label, i) => (
+                    <button
+                      key={label}
+                      className={
+                        (
+                          activeInstrument === 0
+                            ? i === 0
+                            : i === (inspectorTab === "checks" ? 1 : 2)
+                        )
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() => {
+                        setActiveInstrument(i === 0 ? 0 : 1);
+                        if (i) setInspectorTab(i === 1 ? "checks" : "parts");
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              )}
+              <SplitView
+                direction="vertical"
+                storageKey="eea-instruments"
+                initial={[52, 48]}
+                compactIndex={shortWindow ? activeInstrument : undefined}
+              >
+                <CathodeRay
+                  simulation={sim}
+                  passed={telemetry.metrics.sim_passed}
                 />
-                <PressureGauge
-                  label="UNCONNECTED NETS"
-                  value={telemetry.metrics.unconnected_items}
-                  history={
-                    isDemo
-                      ? [12, ...(demoStep >= 4 ? [0] : [])]
-                      : unconnectedHistory
-                  }
-                  ready={drcReady}
-                />
-              </div>
-            </section>
-            <LedgerBOM
-              parts={telemetry.bom}
-              cost={telemetry.metrics.estimated_cost_usd}
-              canDownload={!isDemo && live.stages.MANUFACTURING === "completed"}
-            />
-          </aside>
+                <div className="inspector">
+                  <div
+                    className={`inspector-tabs ${shortWindow ? "hidden-tabs" : ""}`}
+                    role="tablist"
+                    aria-label="Inspector"
+                  >
+                    <button
+                      role="tab"
+                      aria-selected={inspectorTab === "checks"}
+                      onClick={() => setInspectorTab("checks")}
+                    >
+                      Checks
+                    </button>
+                    <button
+                      role="tab"
+                      aria-selected={inspectorTab === "parts"}
+                      onClick={() => setInspectorTab("parts")}
+                    >
+                      Parts ({telemetry.bom.length})
+                    </button>
+                  </div>
+                  {inspectorTab === "checks" ? (
+                    <section className="instrument verification">
+                      <div className="gauges">
+                        <PressureGauge
+                          label="DRC errors"
+                          value={telemetry.metrics.drc_errors}
+                          history={
+                            isDemo
+                              ? [4, 1, ...(demoStep >= 5 ? [0] : [])]
+                              : drcHistory
+                          }
+                          ready={drcReady}
+                        />
+                        <PressureGauge
+                          label="Unconnected"
+                          value={telemetry.metrics.unconnected_items}
+                          history={
+                            isDemo
+                              ? [12, ...(demoStep >= 4 ? [0] : [])]
+                              : unconnectedHistory
+                          }
+                          ready={drcReady}
+                        />
+                      </div>
+                    </section>
+                  ) : (
+                    <LedgerBOM
+                      parts={telemetry.bom}
+                      cost={telemetry.metrics.estimated_cost_usd}
+                      canDownload={
+                        !isDemo && live.stages.MANUFACTURING === "completed"
+                      }
+                    />
+                  )}
+                </div>
+              </SplitView>
+            </aside>
+          </SplitView>
         </div>
       </main>
       <footer className="forge-footer">
         <div>
           <span className={`status-dot ${connected ? "online" : ""}`} />
-          <span>
-            {isDemo
-              ? "DEMONSTRATION · NO WORKSPACE CHANGES"
-              : "FILESYSTEM TELEMETRY · INTERACTIVE SHELL"}
-          </span>
+          <span>{isDemo ? "Demo · sample data" : "EEA"}</span>
         </div>
         <div className="demo-controls">
           {isDemo && (
             <button className="exit-demo" onClick={endDemo}>
-              <Square size={10} /> RETURN TO LIVE
+              <Square size={10} /> Exit demo
             </button>
           )}
           <button
@@ -270,7 +353,7 @@ export default function App() {
             disabled={demoRunning}
           >
             <FlaskConical size={14} />
-            {demoRunning ? "INVENTION IN PROGRESS…" : "SIMULATE DEMO FLOW"}
+            {demoRunning ? "Running demo…" : "Run demo"}
           </button>
         </div>
       </footer>

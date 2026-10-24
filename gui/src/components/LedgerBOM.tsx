@@ -1,5 +1,6 @@
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
-import { Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Part } from "../types";
 export default function LedgerBOM({
   parts,
@@ -10,45 +11,77 @@ export default function LedgerBOM({
   cost: number;
   canDownload: boolean;
 }) {
+  const table = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(4);
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) =>
+      setPageSize(
+        Math.max(1, Math.floor((entry.contentRect.height - 34) / 32)),
+      ),
+    );
+    if (table.current) observer.observe(table.current);
+    return () => observer.disconnect();
+  }, []);
+  const pages = Math.max(1, Math.ceil(parts.length / pageSize));
+  const current = Math.min(page, pages - 1);
   return (
     <section className="instrument ledger">
-      <div className="panel-heading">
-        <span>04 / BILL OF MATERIALS</span>
-        <span className="tiny">{parts.length} ITEMS</span>
-      </div>
-      <div className="ledger-table">
+      <div ref={table} className="ledger-table">
         <table>
           <thead>
             <tr>
-              <th>REF.</th>
-              <th>COMPONENT</th>
+              <th>Ref</th>
+              <th>Part</th>
               <th>USD</th>
             </tr>
           </thead>
           <tbody>
             {parts.length ? (
-              parts.map((p) => (
-                <tr key={p.ref}>
-                  <td>{p.ref}</td>
-                  <td title={`${p.footprint}${p.lcsc ? " · " + p.lcsc : ""}`}>
-                    {p.value}
-                  </td>
-                  <td>{p.price_usd.toFixed(2)}</td>
-                </tr>
-              ))
+              parts
+                .slice(current * pageSize, (current + 1) * pageSize)
+                .map((p) => (
+                  <tr key={p.ref}>
+                    <td>{p.ref}</td>
+                    <td title={`${p.footprint}${p.lcsc ? " · " + p.lcsc : ""}`}>
+                      {p.value}
+                    </td>
+                    <td>{p.price_usd.toFixed(2)}</td>
+                  </tr>
+                ))
             ) : (
               <tr>
                 <td colSpan={3} className="empty-row">
-                  No components on the bench
+                  No parts
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-      <div className="ledger-total">
-        <span>ESTIMATED ASSEMBLY</span>
-        <b>${cost.toFixed(2)}</b>
+      <div className="ledger-controls">
+        <span>
+          Est. <b>${cost.toFixed(2)}</b>
+        </span>
+        <div className="pagination">
+          <button
+            aria-label="Previous parts page"
+            disabled={current === 0}
+            onClick={() => setPage(current - 1)}
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span>
+            {current + 1} / {pages}
+          </span>
+          <button
+            aria-label="Next parts page"
+            disabled={current === pages - 1}
+            onClick={() => setPage(current + 1)}
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
       </div>
       {canDownload ? (
         <a
@@ -56,11 +89,13 @@ export default function LedgerBOM({
           href={api("/artifacts/gerbers.zip")}
           download
         >
-          <Download size={14} /> DOWNLOAD JLCPCB GERBERS
+          <Download size={16} />
+          Gerbers (.zip)
         </a>
       ) : (
         <button className="download-button" disabled>
-          <Download size={14} /> GERBERS AWAITING EXPORT
+          <Download size={16} />
+          Export unavailable
         </button>
       )}
     </section>

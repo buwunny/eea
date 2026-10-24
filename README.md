@@ -1,6 +1,6 @@
-# The Aether-Forge
+# EEA
 
-A Victorian brass and vacuum-tube workbench for circuit design. Run your preferred AI CLI interactively in the embedded terminal; its MCP tools validate structured designs, write board and simulation artifacts, and update the instruments through the filesystem.
+An electrical engineering workbench for circuit design. Run your preferred AI CLI interactively in the embedded terminal; its MCP tools validate structured designs, write board and simulation artifacts, and update the instruments through the filesystem.
 
 ## Start
 
@@ -15,9 +15,11 @@ npm run dev
 
 Open http://localhost:5173. The bridge listens on loopback port 3001. `npm run setup` creates `workspace/` as an independent Git repository and preserves existing project files. Set `EEA_WORKSPACE` to an absolute directory to select another workspace for both processes. Generated workspaces, installed dependencies, and build outputs are ignored by the parent repository.
 
-The **Simulate Demo Flow** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
+Drag the dividers to resize columns and instrument panels; arrow keys work when a divider has focus. Double-click a divider to reset its proportions. Narrow and short windows use tabs, and the parts list uses pagination to keep the layout inside the window.
 
-The current GUI downloads its KiCanvas JavaScript module from kicanvas.org and its fonts from Google Fonts. PCB files are served by the local bridge. The application does not upload board files to KiCanvas; without the hosted module, it offers a local PCB download and the demo/procedural views remain available.
+The **Run demo** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
+
+The current GUI downloads its KiCanvas JavaScript module from kicanvas.org. PCB files are served by the local bridge. The application does not upload board files to KiCanvas; without the hosted module, it offers a local PCB download and the demo/procedural views remain available.
 
 ## Connect an AI CLI
 

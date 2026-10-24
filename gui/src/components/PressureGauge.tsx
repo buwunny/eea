@@ -62,8 +62,8 @@ export default function PressureGauge({
       <label>{label}</label>
       <small className={ready && value === 0 ? "green" : ""}>
         {ready
-          ? `${history.slice(-4).join(" → ")}${value === 0 ? " · CLEAR" : ""}`
-          : "AWAITING VERIFICATION"}
+          ? `${history.slice(-4).join(" → ")}${value === 0 ? " · Clear" : ""}`
+          : "Not checked"}
       </small>
     </div>
   );

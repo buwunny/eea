@@ -82,7 +82,7 @@ function IllustrativeBoard() {
             whiteSpace: "nowrap",
           }}
         >
-          AETHER / 555 · DEMONSTRATOR
+          EEA / 555
         </div>
       </Html>
     </group>
@@ -327,7 +327,7 @@ function DemoPlan() {
           D1
         </text>
         <text x="170" y="346" fontSize="13" letterSpacing="3">
-          AETHER-FORGE / REV.01
+          EEA / REV.01
         </text>
       </g>
       <g fill="#d3bf74" fontFamily="monospace" fontSize="10">
@@ -394,9 +394,8 @@ export default function AetherScope({
     <section className="instrument board-panel">
       <div className="panel-heading">
         <span>
-          <Layers size={16} /> AETHER-SCOPE
+          <Layers size={16} /> Board
         </span>
-        <span className="tiny">BOARD OBSERVATORY</span>
       </div>
       <div className="board-toolbar">
         <div className="view-tabs">
@@ -404,13 +403,13 @@ export default function AetherScope({
             className={view === "2d" ? "active" : ""}
             onClick={() => setView("2d")}
           >
-            <Layers size={13} /> 2D PCB
+            <Layers size={13} /> 2D
           </button>
           <button
             className={view === "3d" ? "active" : ""}
             onClick={() => setView("3d")}
           >
-            <Box size={13} /> 3D SPIN
+            <Box size={13} /> 3D
           </button>
         </div>
         <button
@@ -440,9 +439,9 @@ export default function AetherScope({
               />
               {!embedReady && (
                 <div className="embed-notice">
-                  KiCanvas is loading from its hosted module.
+                  Loading viewer…
                   <a href={artifact(pcbUrl)} download>
-                    Download the PCB to open locally
+                    Download PCB
                   </a>
                 </div>
               )}
@@ -452,13 +451,7 @@ export default function AetherScope({
               <div className="reticle">
                 <Maximize2 size={47} />
               </div>
-              <h2>A canvas for your next invention.</h2>
-              <p>
-                Describe a circuit in the telegraph terminal.
-                <br />
-                Its board will take shape here.
-              </p>
-              <span>50 × 40 mm · AWAITING SYNTHESIS</span>
+              <h2>No board yet</h2>
             </div>
           )
         ) : demo || modelUrl || design ? (
@@ -466,7 +459,7 @@ export default function AetherScope({
             <color attach="background" args={["#111710"]} />
             <ambientLight intensity={1.3} />
             <directionalLight position={[3, 7, 3]} intensity={2.5} />
-            <Suspense fallback={<Html center>Loading 3D instrument…</Html>}>
+            <Suspense fallback={<Html center>Loading 3D…</Html>}>
               <ModelBoundary key={modelUrl ?? "demo"}>
                 {modelUrl && !demo ? (
                   <NativeModel url={artifact(modelUrl)} />
@@ -493,40 +486,31 @@ export default function AetherScope({
         ) : (
           <div className="bench-empty">
             <Box size={45} />
-            <h2>Awaiting a 3D export.</h2>
-            <p>
-              KiCad exports appear here when available.
-              <br />
-              The demo includes an illustrative model.
-            </p>
+            <h2>No 3D model</h2>
           </div>
         )}
         <div className="viewport-caption">
           <span className="status-dot online" />
           {demo
-            ? "ILLUSTRATIVE DEMO GEOMETRY"
+            ? "Demo board"
             : view === "3d" && design && !modelUrl
-              ? "PROCEDURAL PREVIEW · APPROXIMATE PACKAGES"
+              ? "Approximate 3D preview"
               : pcbUrl
-                ? "LIVE WORKSPACE ARTIFACT"
-                : "INSTRUMENT READY"}
-          <span>
-            {view === "3d"
-              ? "DRAG TO ORBIT · SCROLL TO ZOOM"
-              : "2D BOARD OBSERVATORY"}
-          </span>
+                ? "Live board"
+                : ""}
+          <span>{view === "3d" ? "" : ""}</span>
         </div>
       </div>
       <div className="history">
         <div className="history-label">
           <span>
-            <History size={13} /> INVENTION CHRONICLE
+            <History size={13} /> History
           </span>
           <button
             onClick={() => onCheckout("latest")}
             disabled={busy || demo || selected === "latest"}
           >
-            RETURN TO LATEST ↗
+            Latest
           </button>
         </div>
         <input
@@ -546,16 +530,12 @@ export default function AetherScope({
         <div className="history-caption">
           <span>
             {busy
-              ? "RESTORING BOARD…"
+              ? "Loading…"
               : selected === "latest"
-                ? "LATEST REVISION"
+                ? "Latest"
                 : selected.slice(0, 8)}
           </span>
-          <span>
-            {demo
-              ? "DEMO · HISTORY PAUSED"
-              : `${commits.length} RECORDED MOMENTS`}
-          </span>
+          <span>{demo ? "Demo" : `${commits.length} revisions`}</span>
         </div>
       </div>
     </section>

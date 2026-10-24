@@ -334,7 +334,7 @@ export async function startBridge({
     server.once("error", reject);
     server.listen(bridgePort, "127.0.0.1", resolve);
   });
-  console.log(`Aether-Forge bridge: http://127.0.0.1:${server.address().port}`);
+  console.log(`EEA bridge: http://127.0.0.1:${server.address().port}`);
   const close = async () => {
     terminalSockets.clients.forEach((client) => client.terminate());
     telemetrySockets.clients.forEach((client) => client.terminate());

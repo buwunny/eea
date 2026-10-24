@@ -1,17 +1,36 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "The Aether-Forge",
+  "productName": "EEA",
   "version": "0.1.0",
-  "identifier": "dev.ee-anything.forge",
+  "identifier": "dev.ee-anything.eea",
   "build": {
-    "beforeDevCommand": {"script": "npm run dev", "cwd": ".."},
+    "beforeDevCommand": {
+      "script": "npm run dev",
+      "cwd": ".."
+    },
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": {"script": "npm run build", "cwd": ".."},
+    "beforeBuildCommand": {
+      "script": "npm run build",
+      "cwd": ".."
+    },
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{"title": "The Aether-Forge", "width": 1600, "height": 1000, "minWidth": 900, "minHeight": 650, "decorations": false}],
-    "security": {"csp": null}
+    "windows": [
+      {
+        "title": "EEA",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 640,
+        "minHeight": 480,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
   },
-  "bundle": {"active": false}
+  "bundle": {
+    "active": false
+  }
 }

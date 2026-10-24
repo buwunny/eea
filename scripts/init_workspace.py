@@ -21,7 +21,7 @@ def initialize(workspace=None):
         ".mcp.json": json.dumps(config, indent=2) + "\n",
         ".gemini/settings.json": json.dumps(config, indent=2) + "\n",
         "project_spec.md": "# Untitled circuit\n\nDescribe the circuit, power supply, constraints, and acceptance criteria here.\n",
-        "telemetry.json": json.dumps({"project_name": "The Aether-Forge", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
+        "telemetry.json": json.dumps({"project_name": "EEA", "pipeline_stage": "ARCHITECTURE", "stages": {stage: "pending" for stage in stages}, "metrics": {}, "bom": [], "git_commits": []}, indent=2) + "\n",
         ".gitignore": "__pycache__/\n*.pyc\n",
     }
     for relative, content in files.items():
@@ -31,7 +31,7 @@ def initialize(workspace=None):
     if not (workspace / ".git").exists():
         subprocess.run(["git", "init", "-q", str(workspace)], check=True)
         subprocess.run(["git", "-C", str(workspace), "add", "-A"], check=True)
-        subprocess.run(["git", "-C", str(workspace), "-c", "user.name=Aether-Forge", "-c", "user.email=forge@localhost", "commit", "-qm", "Initialize circuit workspace"], check=True)
+        subprocess.run(["git", "-C", str(workspace), "-c", "user.name=EEA", "-c", "user.email=eea@localhost", "commit", "-qm", "Initialize circuit workspace"], check=True)
     return workspace
 
 
