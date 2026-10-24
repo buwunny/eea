@@ -1,0 +1,676 @@
+{
+  "R": {
+    "part_id": "R",
+    "category": "passive",
+    "description": "R",
+    "footprint": "Resistor_SMD:R_0805_2012Metric",
+    "pins": [
+      {
+        "number": "1",
+        "name": "1"
+      },
+      {
+        "number": "2",
+        "name": "2"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Resistor_SMD:R_0805_2012Metric\" (layer \"F.Cu\")\n  (fp_rect (start -1 -0.625) (end 1 0.625) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C17414",
+    "price_usd": 0.01,
+    "spice_model": {
+      "kind": "R"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "C": {
+    "part_id": "C",
+    "category": "passive",
+    "description": "C",
+    "footprint": "Capacitor_SMD:C_0805_2012Metric",
+    "pins": [
+      {
+        "number": "1",
+        "name": "1"
+      },
+      {
+        "number": "2",
+        "name": "2"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Capacitor_SMD:C_0805_2012Metric\" (layer \"F.Cu\")\n  (fp_rect (start -1 -0.625) (end 1 0.625) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C49678",
+    "price_usd": 0.02,
+    "spice_model": {
+      "kind": "C"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "LED": {
+    "part_id": "LED",
+    "category": "opto",
+    "description": "LED",
+    "footprint": "LED_SMD:LED_0805_2012Metric",
+    "pins": [
+      {
+        "number": "1",
+        "name": "K"
+      },
+      {
+        "number": "2",
+        "name": "A"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 0,
+        "width_mm": 1,
+        "height_mm": 1.45,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"LED_SMD:LED_0805_2012Metric\" (layer \"F.Cu\")\n  (fp_rect (start -1 -0.625) (end 1 0.625) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 0) (size 1 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C17516",
+    "price_usd": 0.04,
+    "spice_model": {
+      "kind": "LED"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "NE555": {
+    "part_id": "NE555",
+    "category": "timer",
+    "description": "NE555",
+    "footprint": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm",
+    "pins": [
+      {
+        "number": "1",
+        "name": "GND"
+      },
+      {
+        "number": "2",
+        "name": "TRIG"
+      },
+      {
+        "number": "3",
+        "name": "OUT"
+      },
+      {
+        "number": "4",
+        "name": "RESET"
+      },
+      {
+        "number": "5",
+        "name": "CTRL"
+      },
+      {
+        "number": "6",
+        "name": "THR"
+      },
+      {
+        "number": "7",
+        "name": "DISCH"
+      },
+      {
+        "number": "8",
+        "name": "VCC"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -2.7,
+        "y_mm": -1.905,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": -2.7,
+        "y_mm": -0.635,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": -2.7,
+        "y_mm": 0.635,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "4",
+        "x_mm": -2.7,
+        "y_mm": 1.905,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "8",
+        "x_mm": 2.7,
+        "y_mm": -1.905,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "7",
+        "x_mm": 2.7,
+        "y_mm": -0.635,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "6",
+        "x_mm": 2.7,
+        "y_mm": 0.635,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "5",
+        "x_mm": 2.7,
+        "y_mm": 1.905,
+        "width_mm": 1.55,
+        "height_mm": 0.6,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_SO:SOIC-8_3.9x4.9mm_P1.27mm\" (layer \"F.Cu\")\n  (fp_rect (start -1.95 -2.45) (end 1.95 2.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -2.7 -1.905) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -2.7 -0.635) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -2.7 0.635) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -2.7 1.905) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at 2.7 -1.905) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at 2.7 -0.635) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at 2.7 0.635) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at 2.7 1.905) (size 1.55 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C7593",
+    "price_usd": 0.18,
+    "spice_model": {
+      "kind": "subcircuit",
+      "name": "EEA555",
+      "subcircuit": ".subckt EEA555 GND TRIG OUT RESET CTRL THR DISCH VCC\n* Approximate behavioral 555; latch modeled by hysteretic switch\nRCTRL VCC CTRL 5k\nRCTRL2 CTRL MID 5k\nRCTRL3 MID GND 5k\nBSET SET GND V=V(TRIG)<V(VCC)/3 ? V(VCC) : (V(THR)>2*V(VCC)/3 ? 0 : V(LATCH))\nRL SET LATCH 1k\nCL LATCH GND 1n IC=0\nBOUT OUT GND V=V(RESET)<0.7 ? 0 : (V(LATCH)>V(VCC)/2 ? V(VCC)-0.2 : 0.1)\nSD DISCH GND GND OUT DISCHSW\n.model DISCHSW SW(Ron=10 Roff=1e9 Vt=-2.5 Vh=0.1)\n.ends EEA555"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 8
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "USB_C_Receptacle_PowerOnly": {
+    "part_id": "USB_C_Receptacle_PowerOnly",
+    "category": "connector",
+    "description": "USB_C_Receptacle_PowerOnly",
+    "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+    "pins": [
+      {
+        "number": "A1",
+        "name": "GND"
+      },
+      {
+        "number": "A4",
+        "name": "VBUS"
+      },
+      {
+        "number": "A5",
+        "name": "CC1"
+      },
+      {
+        "number": "A9",
+        "name": "VBUS"
+      },
+      {
+        "number": "A12",
+        "name": "GND"
+      },
+      {
+        "number": "B1",
+        "name": "GND"
+      },
+      {
+        "number": "B4",
+        "name": "VBUS"
+      },
+      {
+        "number": "B5",
+        "name": "CC2"
+      },
+      {
+        "number": "B9",
+        "name": "VBUS"
+      },
+      {
+        "number": "B12",
+        "name": "GND"
+      },
+      {
+        "number": "S1",
+        "name": "SHIELD"
+      },
+      {
+        "number": "S2",
+        "name": "SHIELD"
+      }
+    ],
+    "pads": [
+      {
+        "number": "A1",
+        "x_mm": -2.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "A4",
+        "x_mm": -1.75,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "A5",
+        "x_mm": -1.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "A9",
+        "x_mm": -0.75,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "A12",
+        "x_mm": -0.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "B1",
+        "x_mm": 0.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "B4",
+        "x_mm": 0.75,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "B5",
+        "x_mm": 1.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "B9",
+        "x_mm": 1.75,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "B12",
+        "x_mm": 2.25,
+        "y_mm": -2.8,
+        "width_mm": 0.3,
+        "height_mm": 1.4,
+        "through_hole": false
+      },
+      {
+        "number": "S1",
+        "x_mm": -4.3,
+        "y_mm": 0,
+        "width_mm": 1.2,
+        "height_mm": 1.8,
+        "through_hole": true
+      },
+      {
+        "number": "S2",
+        "x_mm": 4.3,
+        "y_mm": 0,
+        "width_mm": 1.2,
+        "height_mm": 1.8,
+        "through_hole": true
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12\" (layer \"F.Cu\")\n  (fp_rect (start -4.45 -3.7) (end 4.45 3.7) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"A1\" smd rect (at -2.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"A4\" smd rect (at -1.75 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"A5\" smd rect (at -1.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"A9\" smd rect (at -0.75 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"A12\" smd rect (at -0.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"B1\" smd rect (at 0.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"B4\" smd rect (at 0.75 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"B5\" smd rect (at 1.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"B9\" smd rect (at 1.75 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"B12\" smd rect (at 2.25 -2.8) (size 0.3 1.4) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"S1\" thru_hole circle (at -4.3 0) (size 1.2 1.8) (drill 0.6) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"S2\" thru_hole circle (at 4.3 0) (size 1.2 1.8) (drill 0.6) (layers \"*.Cu\" \"*.Mask\"))\n)",
+    "lcsc": "C165948",
+    "price_usd": 0.25,
+    "spice_model": null,
+    "spice_pin_map": {
+      "A1": 1,
+      "A4": 2,
+      "A5": 3,
+      "A9": 4,
+      "A12": 5,
+      "B1": 6,
+      "B4": 7,
+      "B5": 8,
+      "B9": 9,
+      "B12": 10,
+      "S1": 11,
+      "S2": 12
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "AMS1117_3V3": {
+    "part_id": "AMS1117_3V3",
+    "category": "power",
+    "description": "AMS1117_3V3",
+    "footprint": "Package_TO_SOT_SMD:SOT-223-3_TabPin2",
+    "pins": [
+      {
+        "number": "1",
+        "name": "GND"
+      },
+      {
+        "number": "2",
+        "name": "VOUT"
+      },
+      {
+        "number": "3",
+        "name": "VIN"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -2.3,
+        "y_mm": 3.15,
+        "width_mm": 1.2,
+        "height_mm": 2,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0,
+        "y_mm": 3.15,
+        "width_mm": 1.2,
+        "height_mm": 2,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 2.3,
+        "y_mm": 3.15,
+        "width_mm": 1.2,
+        "height_mm": 2,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0,
+        "y_mm": -3.15,
+        "width_mm": 3.6,
+        "height_mm": 2.2,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_TO_SOT_SMD:SOT-223-3_TabPin2\" (layer \"F.Cu\")\n  (fp_rect (start -3.25 -1.75) (end 3.25 1.75) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -2.3 3.15) (size 1.2 2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0 3.15) (size 1.2 2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 2.3 3.15) (size 1.2 2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0 -3.15) (size 3.6 2.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C6186",
+    "price_usd": 0.12,
+    "spice_model": {
+      "kind": "regulator",
+      "voltage": 3.3
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "PinHeader_1x04": {
+    "part_id": "PinHeader_1x04",
+    "category": "connector",
+    "description": "PinHeader_1x04",
+    "footprint": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical",
+    "pins": [
+      {
+        "number": "1",
+        "name": "1"
+      },
+      {
+        "number": "2",
+        "name": "2"
+      },
+      {
+        "number": "3",
+        "name": "3"
+      },
+      {
+        "number": "4",
+        "name": "4"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": 0,
+        "y_mm": 0.0,
+        "width_mm": 1.7,
+        "height_mm": 1.7,
+        "through_hole": true
+      },
+      {
+        "number": "2",
+        "x_mm": 0,
+        "y_mm": 2.54,
+        "width_mm": 1.7,
+        "height_mm": 1.7,
+        "through_hole": true
+      },
+      {
+        "number": "3",
+        "x_mm": 0,
+        "y_mm": 5.08,
+        "width_mm": 1.7,
+        "height_mm": 1.7,
+        "through_hole": true
+      },
+      {
+        "number": "4",
+        "x_mm": 0,
+        "y_mm": 7.62,
+        "width_mm": 1.7,
+        "height_mm": 1.7,
+        "through_hole": true
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical\" (layer \"F.Cu\")\n  (fp_rect (start -1.27 -5.08) (end 1.27 5.08) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" thru_hole circle (at 0 0.0) (size 1.7 1.7) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"2\" thru_hole circle (at 0 2.54) (size 1.7 1.7) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"3\" thru_hole circle (at 0 5.08) (size 1.7 1.7) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"4\" thru_hole circle (at 0 7.62) (size 1.7 1.7) (drill 1) (layers \"*.Cu\" \"*.Mask\"))\n)",
+    "lcsc": "C124378",
+    "price_usd": 0.08,
+    "spice_model": null,
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "2N7002": {
+    "part_id": "2N7002",
+    "category": "transistor",
+    "description": "2N7002",
+    "footprint": "Package_TO_SOT_SMD:SOT-23",
+    "pins": [
+      {
+        "number": "1",
+        "name": "G"
+      },
+      {
+        "number": "2",
+        "name": "S"
+      },
+      {
+        "number": "3",
+        "name": "D"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -0.95,
+        "y_mm": 1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 0.95,
+        "y_mm": 1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      },
+      {
+        "number": "3",
+        "x_mm": 0,
+        "y_mm": -1,
+        "width_mm": 1,
+        "height_mm": 0.6,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Package_TO_SOT_SMD:SOT-23\" (layer \"F.Cu\")\n  (fp_rect (start -0.65 -1.45) (end 0.65 1.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -0.95 1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 0.95 1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at 0 -1) (size 1 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C8545",
+    "price_usd": 0.03,
+    "spice_model": {
+      "kind": "mosfet",
+      "model": ".model EEA2N7002 NMOS(Vto=2 Kp=0.1)"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2,
+      "3": 3
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  },
+  "1N4148": {
+    "part_id": "1N4148",
+    "category": "diode",
+    "description": "1N4148",
+    "footprint": "Diode_SMD:D_SOD-123",
+    "pins": [
+      {
+        "number": "1",
+        "name": "K"
+      },
+      {
+        "number": "2",
+        "name": "A"
+      }
+    ],
+    "pads": [
+      {
+        "number": "1",
+        "x_mm": -1.8,
+        "y_mm": 0,
+        "width_mm": 1.2,
+        "height_mm": 1.1,
+        "through_hole": false
+      },
+      {
+        "number": "2",
+        "x_mm": 1.8,
+        "y_mm": 0,
+        "width_mm": 1.2,
+        "height_mm": 1.1,
+        "through_hole": false
+      }
+    ],
+    "footprint_sexpr": "(footprint \"Diode_SMD:D_SOD-123\" (layer \"F.Cu\")\n  (fp_rect (start -1.35 -0.8) (end 1.35 0.8) (stroke (width 0.12) (type default)) (fill none) (layer \"F.SilkS\"))\n  (pad \"1\" smd rect (at -1.8 0) (size 1.2 1.1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at 1.8 0) (size 1.2 1.1) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "lcsc": "C81598",
+    "price_usd": 0.02,
+    "spice_model": {
+      "kind": "diode",
+      "model": ".model EEA1N4148 D(Is=2.52n Rs=0.568 N=1.906 Cjo=4p)"
+    },
+    "spice_pin_map": {
+      "1": 1,
+      "2": 2
+    },
+    "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication"
+  }
+}

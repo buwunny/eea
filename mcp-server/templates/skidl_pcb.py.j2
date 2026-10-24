@@ -1,0 +1,22 @@
+"""Generated from validated structured input. Run from the workspace directory."""
+from pathlib import Path
+DESIGN = {{ design_literal }}
+CATALOG = {{ catalog_literal }}
+try:
+    from skidl import Circuit, Part, Pin, Net, SKIDL
+    circuit = Circuit()
+    parts = {}
+    for component in DESIGN['components']:
+        entry = CATALOG[component['part_id']]
+        parts[component['ref']] = Part(name=component['part_id'], tool=SKIDL,
+            ref=component['ref'], value=component['value'], footprint=entry['footprint'],
+            pins=[Pin(num=p['number'], name=p['name']) for p in entry['pins']], circuit=circuit)
+    for spec in DESIGN['nets']:
+        net = Net(spec['name'], circuit=circuit)
+        for connection in spec['connections']:
+            ref, number = connection.split('.', 1)
+            net += parts[ref][number]
+    circuit.generate_netlist(file_=str(Path('build/board.net')))
+    print('EEA_SKIDL_OK')
+except ImportError:
+    print('SKiDL is not installed; the deterministic XML netlist remains available.')

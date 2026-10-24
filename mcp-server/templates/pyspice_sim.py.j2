@@ -1,0 +1,18 @@
+"""Generated validated PySpice testbench; batch ngspice is the server fallback."""
+from pathlib import Path
+import json
+CIRCUIT = {{ circuit_literal }}
+if __name__ == '__main__':
+    from PySpice.Spice.Parser import SpiceParser
+    from PySpice.Unit import u_s
+    # Remove only the generated batch control section before passing the same validated circuit to PySpice.
+    source = CIRCUIT.split('.control')[0] + '.end\n'
+    circuit = SpiceParser(source=source).build_circuit()
+    control = CIRCUIT.split('.control')[1]
+    transient = next(line.split() for line in control.splitlines() if line.startswith('tran '))
+    probes = next(line.split()[2:] for line in control.splitlines() if line.startswith('wrdata '))
+    analysis = circuit.simulator(temperature=25, nominal_temperature=25).transient(step_time=float(transient[1]) @ u_s, end_time=float(transient[2]) @ u_s, use_initial_condition=True)
+    nodes = [probe[2:-1] for probe in probes]
+    with Path('build/spice_data.txt').open('w') as output:
+        for index,time in enumerate(analysis.time):
+            output.write(' '.join(str(value) for value in [float(time)]+[float(analysis[node][index]) if node!='0' else 0.0 for node in nodes])+'\n')
