@@ -35,6 +35,7 @@ class EngineTests(unittest.TestCase):
             self.assertIn('(layer "Edge.Cuts")',text)
             self.assertEqual(text.count('('),text.count(')'))
             self.assertFalse(report['verified'])
+            self.assertTrue(all(not item['lcsc'] for item in report['bom'] if item['ref'].startswith(('R', 'C'))))
             self.assertTrue((Path(directory)/'src/design.py').exists())
 
     def test_fallback_end_to_end_never_claims_verified_or_fabricated_gerbers(self):

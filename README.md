@@ -17,6 +17,8 @@ Open http://localhost:5173. The bridge listens on loopback port 3001. `npm run s
 
 The **Simulate Demo Flow** button replays a sample 555 tuning sequence in the browser without EDA dependencies. Demo values and geometry are illustrative. Real design state comes from `workspace/telemetry.json` and artifacts written by the MCP tools.
 
+The current GUI downloads its KiCanvas JavaScript module from kicanvas.org and its fonts from Google Fonts. PCB files are served by the local bridge. The application does not upload board files to KiCanvas; without the hosted module, it offers a local PCB download and the demo/procedural views remain available.
+
 ## Connect an AI CLI
 
 The application opens an ordinary shell. Start your chosen CLI yourself in that shell. Claude Code reads `.mcp.json`; Gemini CLI reads `.gemini/settings.json`. Both configurations are provided in the repository and generated workspace. Other MCP clients can register this generic stdio command, replacing the paths:
@@ -41,6 +43,8 @@ Optional KiCad 3D models require `kicad-library`. `pcbnew` comes from the system
 
 The curated catalog embeds footprint geometry in the generated `.kicad_pcb`; rendering does not require machine-specific KiCad footprint libraries. These are curated generator geometries and must be reviewed against the chosen physical part before fabrication.
 
+Resistor and capacitor BOM order codes remain blank until value, voltage/power rating, and tolerance are matched to an orderable part. Catalog prices are estimates.
+
 Missing native tools degrade explicitly. Python generation remains available, an analytical 555 fallback can illustrate timing, and a Python router can attempt routing. Estimated simulation is not a SPICE verification. Missing KiCad DRC cannot certify electrical or physical correctness, and unavailable exporters do not produce purported fabrication files. Review warnings and backend provenance in returned reports and generated JSON.
 
 ## Desktop window
@@ -58,7 +62,7 @@ This starts the same bridge and Vite application in a frameless desktop window. 
 ```sh
 npm run build
 python3 -m unittest discover -s scripts -p 'test_*.py' -v
-python3 -m unittest discover -s mcp-server/tests -v
+uv run --project mcp-server python -m unittest discover -s mcp-server/tests -v
 node --test gui/server/*.test.js
 ```
 

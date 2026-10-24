@@ -79,6 +79,7 @@ class FlowTests(unittest.TestCase):
             telemetry = json.loads((Path(directory) / 'telemetry.json').read_text())
             self.assertEqual(telemetry['stages']['DRC_VERIFICATION'], 'pending')
             self.assertEqual(telemetry['stages']['SIMULATION'], 'pending')
+            self.assertEqual(telemetry['stages']['ARCHITECTURE'], 'completed')
             self.assertIsNone(telemetry['metrics']['drc_errors'])
             self.assertIsNone(telemetry['metrics']['sim_passed'])
 

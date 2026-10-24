@@ -92,7 +92,9 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40):
             if f"{c['ref']}.{pin['number']}" not in used:
                 warnings.append(f"Unassigned pin {c['ref']}.{pin['number']} ({pin['name']})")
     design = {'components':cs,'nets':ns,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
-              'bom':[{'ref':c['ref'],'value':c['value'],'footprint':cat[c['part_id']]['footprint'],'lcsc':cat[c['part_id']]['lcsc'],'price_usd':cat[c['part_id']]['price_usd']} for c in cs]}
+              'bom':[{'ref':c['ref'],'value':c['value'],'footprint':cat[c['part_id']]['footprint'],'lcsc':('' if c['part_id'] in ('R','C') else cat[c['part_id']]['lcsc']),'price_usd':cat[c['part_id']]['price_usd']} for c in cs]}
+    if any(c['part_id'] in ('R','C') for c in cs):
+        warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')
     for pad in pad_positions(design):
         if not (0 < pad['x_mm']-pad['radius_mm'] and pad['x_mm']+pad['radius_mm'] < width and 0 < pad['y_mm']-pad['radius_mm'] and pad['y_mm']+pad['radius_mm'] < height):
             raise ValueError(f"{pad['connection']} pad extends beyond the board edge; adjust placement")

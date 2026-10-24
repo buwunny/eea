@@ -46,6 +46,10 @@ def execute(name, stage, operation):
             for key in ('drc_errors', 'unconnected_items', 'sim_passed', 'sim_summary', 'component_count', 'net_count', 'estimated_cost_usd'):
                 if key in report:
                     metrics[key] = report[key]
+            if name == 'synthesize_pcb' and not failed:
+                telemetry = read_telemetry(workspace_path())
+                telemetry.setdefault('stages', {})['ARCHITECTURE'] = 'completed'
+                atomic_json(workspace_path() / 'telemetry.json', telemetry)
             record(name, report.get('summary', f'{status} via {report.get("backend", "catalog")}'), stage, state, metrics, report.get('bom'), report.get('warnings'))
             return report
         except Exception as error:

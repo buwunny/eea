@@ -3,12 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "workspaces": ["gui"],
+  "workspaces": [
+    "gui"
+  ],
   "scripts": {
     "setup": "python3 scripts/init_workspace.py",
     "dev": "npm run setup && concurrently -k -n bridge,forge \"node gui/server/bridge.js\" \"npm run dev --workspace gui\"",
     "build": "npm run build --workspace gui",
-    "test": "python3 -m unittest discover -s mcp-server/tests -v && node --test gui/server/*.test.js",
+    "test": "python3 -m unittest discover -s scripts -p 'test_*.py' -v && uv run --project mcp-server python -m unittest discover -s mcp-server/tests -v && node --test gui/server/*.test.js",
     "tauri": "npm run setup && cd gui && tauri dev"
   },
   "dependencies": {
@@ -19,5 +21,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",
     "concurrently": "^9.1.0"
+  },
+  "allowScripts": {
+    "node-pty@1.1.0": true
   }
 }
