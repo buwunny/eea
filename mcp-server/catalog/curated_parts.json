@@ -1482,70 +1482,70 @@
     "pads": [
       {
         "number": "1",
-        "x_mm": -3.5875,
+        "x_mm": -2.475,
         "y_mm": -1.905,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "2",
-        "x_mm": -3.5875,
+        "x_mm": -2.475,
         "y_mm": -0.635,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "3",
-        "x_mm": -3.5875,
+        "x_mm": -2.475,
         "y_mm": 0.635,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "4",
-        "x_mm": -3.5875,
+        "x_mm": -2.475,
         "y_mm": 1.905,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "8",
-        "x_mm": 3.5875,
+        "x_mm": 2.475,
         "y_mm": -1.905,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "7",
-        "x_mm": 3.5875,
+        "x_mm": 2.475,
         "y_mm": -0.635,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "6",
-        "x_mm": 3.5875,
+        "x_mm": 2.475,
         "y_mm": 0.635,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       },
       {
         "number": "5",
-        "x_mm": 3.5875,
+        "x_mm": 2.475,
         "y_mm": 1.905,
-        "width_mm": 1.625,
-        "height_mm": 0.65,
+        "width_mm": 1.95,
+        "height_mm": 0.6,
         "through_hole": false
       }
     ],
-    "footprint_sexpr": "(footprint \"Package_SO:SOIC-8_3.9x4.9mm_P1.27mm\" (layer \"F.Cu\")\n  (fp_rect (start -1.95 -2.45) (end 1.95 2.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at 3.5875 -1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at 3.5875 -0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at 3.5875 0.635) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at 3.5875 1.905) (size 1.625 0.65) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
+    "footprint_sexpr": "(footprint \"Package_SO:SOIC-8_3.9x4.9mm_P1.27mm\" (layer \"F.Cu\")\n  (fp_rect (start -1.95 -2.45) (end 1.95 2.45) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd rect (at -2.475 -1.905) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"2\" smd rect (at -2.475 -0.635) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"3\" smd rect (at -2.475 0.635) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"4\" smd rect (at -2.475 1.905) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"8\" smd rect (at 2.475 -1.905) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"7\" smd rect (at 2.475 -0.635) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"6\" smd rect (at 2.475 0.635) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n  (pad \"5\" smd rect (at 2.475 1.905) (size 1.95 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\"))\n)",
     "lcsc": "C7950",
     "price_usd": 0.07,
     "spice_model": {

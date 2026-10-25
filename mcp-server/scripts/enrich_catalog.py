@@ -64,6 +64,10 @@ def smd(n, x, y, w, h):
 soic = [smd(str(i+1), -3.5875, round(-1.905+1.27*i, 3), 1.625, 0.65) for i in range(4)] + \
        [smd(str(8-i), 3.5875, round(-1.905+1.27*i, 3), 1.625, 0.65) for i in range(4)]
 
+# 3.9 mm-body SOIC-8 (KiCad Package_SO:SOIC-8_3.9x4.9mm_P1.27mm); `soic` above is the wider 5.3 mm-body layout
+soic39 = [smd(str(i+1), -2.475, round(-1.905+1.27*i, 3), 1.95, 0.6) for i in range(4)] + \
+         [smd(str(8-i), 2.475, round(-1.905+1.27*i, 3), 1.95, 0.6) for i in range(4)]
+
 NEW = [
  dict(part_id='Crystal_16MHz', category='clock', description='16 MHz SMD crystal (YXC X322516MLB4SI), 3.2x2.5 mm, 4-pad (pins 2,4 are case ground), 9 pF load',
       footprint='Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm', rect=(-1.6, -1.25, 1.6, 1.25),
@@ -118,7 +122,7 @@ NEW = [
       ratings={'voltage_v': 16, 'capacitance_uf': 100, 'temp_max_c': 105}),
  # --- Added 2026-10-24: analog/sensor/control parts. LCSC ids checked against lcsc.com listings; prices are estimates.
  dict(part_id='LM358', category='ic', description='LM358 dual op-amp, SOIC-8 (onsemi LM358DR2G); single supply 3-32 V, output swings to about VCC-1.5 V',
-      footprint='Package_SO:SOIC-8_3.9x4.9mm_P1.27mm', rect=(-1.95, -2.45, 1.95, 2.45), pads=soic,
+      footprint='Package_SO:SOIC-8_3.9x4.9mm_P1.27mm', rect=(-1.95, -2.45, 1.95, 2.45), pads=soic39,
       pins=[('1', 'OUT1'), ('2', 'IN1-'), ('3', 'IN1+'), ('4', 'GND'), ('5', 'IN2+'), ('6', 'IN2-'), ('7', 'OUT2'), ('8', 'VCC')],
       lcsc='C7950', price=0.07,
       app='Comparator or amplifier on one supply. Comparator: sensor divider on IN+, pot/reference divider on IN-. Non-inverting gain = 1 + Rf/Rg. Tie unused amp as a follower with IN+ to a mid-rail divider.',

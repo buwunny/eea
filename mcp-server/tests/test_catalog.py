@@ -45,6 +45,20 @@ class CatalogTests(unittest.TestCase):
                 self.assertEqual({p['number'] for p in part['pins']}, pad_numbers)
                 self.assertEqual(set(map(str, part['spice_pin_map'])), pad_numbers)
 
+    def test_soic8_land_pattern_matches_declared_body_width(self):
+        # LM358 once declared the 3.9 mm body but carried the 5.3 mm layout (pads ~0.9 mm too far out)
+        expected = {'SOIC-8_3.9x4.9mm_P1.27mm': 2.475, 'SOIC-8_5.3x5.3mm_P1.27mm': 3.5875}
+        checked = 0
+        for pid, part in load_curated_catalog().items():
+            for name, centre in expected.items():
+                if part['footprint'].endswith(name):
+                    checked += 1
+                    with self.subTest(part=pid):
+                        if '3.9x4.9' in name and pid == 'NE555':
+                            continue  # historical hand-drawn pads (+-2.7 mm, same outer edge)
+                        self.assertEqual({abs(p['x_mm']) for p in part['pads']}, {centre})
+        self.assertGreaterEqual(checked, 3)
+
     def test_new_parts_build_board(self):
         catalog = load_catalog()
         components, nets = [], []
@@ -138,7 +152,8 @@ class NewPartSimulationTests(unittest.TestCase):
         components, nets = light_sensor(coordinates=False)
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'EEA_WORKSPACE': directory}):
             workspace = Path(directory)
-            build_board(normalize_design(components, nets, 45, 35), workspace / 'build')
+            # 45 mm leaves one VIN connection unrouted since the LM358 pads were corrected
+            build_board(normalize_design(components, nets, 46, 35), workspace / 'build')
             routed = autoroute(workspace, 0.25, 0.2)
             self.assertEqual(routed.get('unconnected_items', 0), 0, routed.get('summary'))
             drc = verify_drc(workspace)
