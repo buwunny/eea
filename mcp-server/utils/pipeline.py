@@ -84,6 +84,8 @@ def compact(report, limit=5):
             return value[:1200] + '...'
         return value
     out = shrink(report)
+    if isinstance(report.get('sweep'), dict):
+        out['sweep'] = report['sweep']  # already compact (at most 20 rows); do not truncate
     if isinstance(report.get('power_budget'), dict):
         power = report['power_budget']
         out['power_budget'] = {'verified': power.get('verified', False), 'complete': power.get('complete', False),

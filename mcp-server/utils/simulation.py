@@ -7,6 +7,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+from decimal import Decimal
 from pathlib import Path
 from .telemetry import progress, atomic_json
 from .pcb_builder import normalize_design, load_catalog, finite, render_template
@@ -63,6 +65,109 @@ def simulation_coverage(design):
 SUPPLY_NAMES = ('VBUS', 'VIN', 'VCC', 'VDD', '5V', '+5V')
 
 
+WAVEFORM_FIELDS = {
+    'pulse': {'v1', 'v2', 'delay_ms', 'rise_ms', 'fall_ms', 'width_ms', 'period_ms'},
+    'sine': {'offset', 'amplitude', 'freq_hz', 'delay_ms'},
+    'pwl': {'points'},
+}
+DEFAULT_EDGE_MS = 0.001
+
+
+def waveform_for(spec, name):
+    """Validate a time-varying source description; returns (normalized waveform, DC level)."""
+    if not isinstance(spec, dict) or spec.get('type') not in WAVEFORM_FIELDS:
+        raise ValueError(f'{name}.waveform must be an object with type pulse, sine or pwl')
+    kind = spec['type']
+    unknown = set(spec) - WAVEFORM_FIELDS[kind] - {'type'}
+    if unknown:
+        raise ValueError(f"{name}.waveform has unsupported {kind} fields: {', '.join(sorted(map(str, unknown)))}")
+    label = f'{name}.waveform'
+    level = lambda key, default=None: finite(spec.get(key, default), f'{label}.{key}', -1000, 1000)
+    span = lambda key, low, default=None: finite(spec.get(key, default), f'{label}.{key}', low, 1e7)
+    if kind == 'pulse':
+        for required in ('v1', 'v2', 'width_ms'):
+            if required not in spec:
+                raise ValueError(f'{label}.{required} is required for a pulse')
+        wave = {'type': kind, 'v1': level('v1'), 'v2': level('v2'), 'delay_ms': span('delay_ms', 0, 0),
+                'rise_ms': span('rise_ms', 1e-6, DEFAULT_EDGE_MS), 'fall_ms': span('fall_ms', 1e-6, DEFAULT_EDGE_MS),
+                'width_ms': span('width_ms', 1e-6)}
+        if spec.get('period_ms') is not None:  # omitted: a single pulse
+            wave['period_ms'] = span('period_ms', 1e-6)
+            if wave['period_ms'] < wave['rise_ms'] + wave['width_ms'] + wave['fall_ms']:
+                raise ValueError(f'{label}.period_ms must be at least rise_ms + width_ms + fall_ms')
+        return wave, wave['v1']
+    if kind == 'sine':
+        for required in ('amplitude', 'freq_hz'):
+            if required not in spec:
+                raise ValueError(f'{label}.{required} is required for a sine')
+        wave = {'type': kind, 'offset': level('offset', 0), 'amplitude': finite(spec.get('amplitude'), f'{label}.amplitude', 0, 1000),
+                'freq_hz': finite(spec.get('freq_hz'), f'{label}.freq_hz', 1e-6, 1e9), 'delay_ms': span('delay_ms', 0, 0)}
+        return wave, wave['offset']
+    points = spec.get('points')
+    if not isinstance(points, list) or not 2 <= len(points) <= 200:
+        raise ValueError(f'{label}.points must be a list of 2 to 200 [t_ms, value] pairs')
+    clean = []
+    for point in points:
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ValueError(f'{label}.points entries must be [t_ms, value] pairs')
+        t = finite(point[0], f'{label} point time', 0, 1e7)
+        if clean and t <= clean[-1][0]:
+            raise ValueError(f'{label}.points times must be strictly increasing')
+        clean.append([t, finite(point[1], f'{label} point value', -1000, 1000)])
+    return {'type': kind, 'points': clean}, clean[0][1]
+
+
+def waveform_text(wave):
+    """ngspice transient specification (times in seconds) for a validated waveform."""
+    g = lambda v: format(v, '.12g')
+    if wave['type'] == 'pulse':
+        fields = [wave['v1'], wave['v2'], wave['delay_ms']/1000, wave['rise_ms']/1000, wave['fall_ms']/1000, wave['width_ms']/1000]
+        if 'period_ms' in wave:
+            fields.append(wave['period_ms']/1000)
+        return 'PULSE(' + ' '.join(g(v) for v in fields) + ')'
+    if wave['type'] == 'sine':
+        return 'SIN(' + ' '.join(g(v) for v in (wave['offset'], wave['amplitude'], wave['freq_hz'], wave['delay_ms']/1000)) + ')'
+    return 'PWL(' + ' '.join(f'{g(t/1000)} {g(v)}' for t, v in wave['points']) + ')'
+
+
+def loads_for(design, config, source_names=()):
+    """Validate sim_config.loads: resistive or capacitive loads between existing nets."""
+    supplied = config.get('loads')
+    if supplied is None:
+        return []
+    if not isinstance(supplied, list) or len(supplied) > 32:
+        raise ValueError('loads must be a list of at most 32 resistor/capacitor loads')
+    nets = {net['name'] for net in design['nets']}
+    reserved = {n.upper() for n in source_names}
+    for c in design['components']:
+        ref = c['ref'].upper()
+        reserved.update({ref, *(f'{p}{ref}' for p in 'RCDXMQB'), f'R{ref}A', f'R{ref}B'})
+    out = []
+    for load in supplied:
+        if not isinstance(load, dict):
+            raise ValueError('each load must be an object')
+        kind = load.get('kind', 'resistor')
+        if kind not in ('resistor', 'capacitor'):
+            raise ValueError('load kind must be resistor or capacitor')
+        prefix = 'R' if kind == 'resistor' else 'C'
+        name = load.get('name')
+        if not isinstance(name, str) or not re.fullmatch(prefix + r'[A-Za-z0-9_]{1,31}', name, re.I):
+            raise ValueError(f'{kind} load name must start with {prefix} and contain letters, numbers or underscores')
+        if name.upper() in reserved:
+            raise ValueError(f'load name {name} clashes with a component reference, generated element or source name')
+        reserved.add(name.upper())
+        positive, negative = load.get('positive_net'), load.get('negative_net', '0')
+        if not isinstance(positive, str) or not isinstance(negative, str) or positive not in nets or (negative != '0' and negative not in nets):
+            raise ValueError(f'load {name} terminals must name existing nets (or negative_net "0" for ground)')
+        if positive == negative or (positive.upper() in ('GND', '0') and negative.upper() in ('GND', '0')):
+            raise ValueError(f'load {name} terminals must be different nets')
+        value = load.get('value')
+        value = engineering(value) if isinstance(value, str) else value
+        value = finite(value, f'{name}.value', 1e-3 if kind == 'resistor' else 1e-15, 1e12 if kind == 'resistor' else 1)
+        out.append({'name': name, 'kind': kind, 'positive_net': positive, 'negative_net': negative, 'value': value})
+    return out
+
+
 def sources_for(design, config):
     """Validate explicit DC sources; preserve legacy supply inference deterministically."""
     nets = {net['name'] for net in design['nets']}
@@ -99,9 +204,16 @@ def sources_for(design, config):
             raise ValueError('source terminals must name existing nets (or negative_net "0" for ground)')
         if positive == negative or (positive.upper() in ('GND', '0') and negative.upper() in ('GND', '0')):
             raise ValueError('source terminals must be different nets')
-        value = finite(source.get('value'), f'{name}.value', -1000, 1000)
-        out.append({'name': name, 'kind': kind, 'positive_net': positive,
-                    'negative_net': negative, 'value': value})
+        entry = {'name': name, 'kind': kind, 'positive_net': positive, 'negative_net': negative}
+        if source.get('waveform') is not None:
+            # A waveform source's DC level is its initial level; the ideal-source loop checks use it.
+            entry['waveform'], level = waveform_for(source['waveform'], name)
+            if source.get('value') is not None and not math.isclose(finite(source['value'], f'{name}.value', -1000, 1000), level, abs_tol=1e-12):
+                raise ValueError(f'{name}.value conflicts with its waveform; omit value for waveform sources')
+            entry['value'] = level
+        else:
+            entry['value'] = finite(source.get('value'), f'{name}.value', -1000, 1000)
+        out.append(entry)
     # Independent ideal voltage sources may form neither conflicting nor redundant loops.
     edges = {}
     declared = {n['name']: n['voltage_v'] for n in design['nets'] if 'voltage_v' in n}
@@ -145,7 +257,11 @@ def spice_text(design, config):
     for source in sources:
         positive = names[source['positive_net']]
         negative = '0' if source['negative_net'] == '0' else names[source['negative_net']]
-        lines.append(f"{source['name']} {positive} {negative} {source['value']:g}")
+        wave = f" {waveform_text(source['waveform'])}" if source.get('waveform') else ''
+        lines.append(f"{source['name']} {positive} {negative} {'DC ' if wave else ''}{source['value']:g}{wave}")
+    for load in loads_for(design, config, [s['name'] for s in sources]):
+        negative = '0' if load['negative_net'] == '0' else names[load['negative_net']]
+        lines.append(f"{load['name']} {names[load['positive_net']]} {negative} {load['value']:g}")
     definitions = set()
     for c in design['components']:
         pid, ref = c['part_id'],c['ref']
@@ -300,7 +416,8 @@ def default_sim_config(design):
     return config
 
 
-def simulate(components, nets, sim_config, workspace):
+def _simulate_point(components, nets, sim_config, workspace, override=None, persist=True):
+    """One simulation; override optionally replaces a component value or source level (sweeps)."""
     source_design = None
     source_path = Path(workspace)/'build/design.json'
     source_digest = None
@@ -322,6 +439,8 @@ def simulate(components, nets, sim_config, workspace):
             source_design = saved
             source_digest = hashlib.sha256(source_path.read_bytes()).hexdigest()
     source_design = source_design or design
+    if override and 'component' in override:
+        apply_component_override(design, override)
     requirements = normalize_requirements(source_design.get('requirements'), source_design.get('board_width_mm'), source_design.get('board_height_mm'))
     design['requirements'] = requirements
     provenance = {'design_sha256': source_digest, 'design_fingerprint': design_signature(source_design), 'requirements': requirements}
@@ -357,6 +476,14 @@ def simulate(components, nets, sim_config, workspace):
             raise ValueError('Explicit sources require an unambiguous requirements.supply_net for the required supply voltage')
         if not math.isclose(primary['value'], requirements['supply_voltage_v'], abs_tol=1e-9):
             raise ValueError('Explicit source voltage conflicts with persisted supply_voltage_v requirement')
+    config['loads'] = loads_for(design, config, [s['name'] for s in sources])
+    if override and 'source' in override:
+        target = next((s for s in sources if s['name'].upper() == str(override['source']).upper()), None)
+        if target is None:
+            raise ValueError(f"sweep source {override['source']} is not among the simulation sources")
+        if target.get('waveform'):
+            raise ValueError('sweep over a source requires a DC source, not a waveform source')
+        target['value'] = finite(override['value'], f"sweep value for {target['name']}", -1000, 1000)
     config['sweep_source'] = config.get('sweep_source', 'VSUPPLY')
     if config['analysis_type'] == 'dc' and not any(s['name'] == config['sweep_source'] and s['kind'] == 'voltage' for s in sources):
         raise ValueError('DC sweep_source must name an existing voltage source')
@@ -407,13 +534,15 @@ def simulate(components, nets, sim_config, workspace):
             warnings.append(f'{native_backend} unavailable or failed: {error}')
     if not verified and config['analysis_type']=='dc':
         report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,'nominal_verified':False,**coverage,**provenance,'requirements_met':None,'requirements_report':evaluate_requirements(requirements,source_design,sources,None,False),'tolerance_analysis':tolerance_555(design,requirements,sources),'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
-        atomic_json(build/'sim_results.json', report)
-        return {k:v for k,v in report.items() if k not in ('x_data','signals')}
+        if persist: atomic_json(build/'sim_results.json', report)
+        return report
     if not verified:
         progress(workspace, 'Estimating 555 timing; native simulation unavailable')
         timer = next((c for c in design['components'] if c['part_id'] == 'NE555'), {})
         if sim_config.get('sources') is not None:
             supply_net = next((n['name'] for n in design['nets'] if f"{timer.get('ref')}.8" in n['connections']), None)
+            if any(s.get('waveform') for s in sources):
+                raise ValueError('Analytical 555 fallback cannot evaluate waveform sources; install ngspice')
             if len(sources) != 1 or sources[0]['kind'] != 'voltage' or sources[0]['positive_net'] != supply_net or sources[0]['negative_net'].upper() not in ('0', 'GND') or sources[0]['value'] <= 0.3:
                 raise ValueError('Analytical 555 fallback supports one positive supply on the timer VCC only; install ngspice for explicit multi-source circuits')
             config['supply_voltage_v'] = sources[0]['value']
@@ -430,6 +559,105 @@ def simulate(components, nets, sim_config, workspace):
     passed=verified and (target_met if config['analysis_type']=='transient' else True) and requirement_report['requirements_met'] is not False
     nominal_verified = verified and (target_met if config['analysis_type']=='transient' else True) and coverage['coverage_complete'] and bool(sources)
     summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
-    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),'nominal_verified':nominal_verified,**coverage,**provenance,'requirements_met':requirement_report['requirements_met'],'requirements_report':requirement_report,'tolerance_analysis':tolerance_report,'target_met':target_met,'sources':sources,'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
-    atomic_json(build/'sim_results.json', report)
-    return {k:v for k,v in report.items() if k not in ('x_data','signals')}
+    report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),'nominal_verified':nominal_verified,**coverage,**provenance,'requirements_met':requirement_report['requirements_met'],'requirements_report':requirement_report,'tolerance_analysis':tolerance_report,'target_met':target_met,'sources':sources,'loads':config['loads'],'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
+    if persist: atomic_json(build/'sim_results.json', report)
+    return report
+
+
+SWEEPABLE_VALUE_PARTS = {'R', 'C', 'Capacitor_Electrolytic', 'NTC_10k_0805', 'LDR_GL5528', 'Potentiometer_10k'}
+MAX_SWEEP_POINTS = 20
+
+
+def sweep_value_text(value):
+    """Plain-decimal text that engineering() accepts, for a numeric or engineering-notation sweep value."""
+    if isinstance(value, str):
+        engineering(value)
+        return value.strip()
+    number = finite(value, 'sweep value', 1e-15, 1e15)
+    return format(Decimal(repr(number)), 'f')
+
+
+def apply_component_override(design, override):
+    """Replace one component's value in-place (resistor/capacitor/NTC/LDR/pot style parts)."""
+    ref = str(override['component'])
+    component = next((c for c in design['components'] if c['ref'].upper() == ref.upper()), None)
+    if component is None:
+        raise ValueError(f'sweep component {ref} is not in the design')
+    catalog = load_catalog()
+    part = catalog[component['part_id']]
+    generic_resistor = isinstance(part.get('spice_model'), dict) and part['spice_model'].get('template') == 'resistor'
+    if component['part_id'] not in SWEEPABLE_VALUE_PARTS and not generic_resistor:
+        raise ValueError(f"sweep component {component['ref']} ({component['part_id']}) has no sweepable value; "
+                         'use a resistor, capacitor, NTC, LDR or potentiometer')
+    component['value'] = override['text']
+
+
+def sweep_spec(sim_config):
+    spec = sim_config.get('sweep')
+    if not isinstance(spec, dict) or ('component' in spec) == ('source' in spec):
+        raise ValueError("sweep must be {'component': ref, 'values': [...]} or {'source': name, 'values': [...]}")
+    unknown = set(spec) - {'component', 'source', 'values'}
+    if unknown:
+        raise ValueError('sweep has unsupported fields: ' + ', '.join(sorted(map(str, unknown))))
+    kind = 'component' if 'component' in spec else 'source'
+    if not isinstance(spec[kind], str) or not spec[kind]:
+        raise ValueError(f'sweep.{kind} must be a name')
+    values = spec.get('values')
+    if not isinstance(values, list) or not 1 <= len(values) <= MAX_SWEEP_POINTS:
+        raise ValueError(f'sweep.values must contain 1 to {MAX_SWEEP_POINTS} values')
+    if kind == 'component':
+        points = [{'component': spec[kind], 'text': sweep_value_text(v), 'value': v} for v in values]
+    else:
+        points = [{'source': spec[kind], 'value': finite(v, 'sweep value', -1000, 1000)} for v in values]
+    return kind, spec[kind], points
+
+
+def simulate(components, nets, sim_config, workspace):
+    """Run one simulation, or one per point of sim_config.sweep (component value or source level, max 20).
+
+    A sweep adds a compact per-point 'sweep' table to the report; build/sim_results.json keeps the full
+    waveforms of the first point only, and pass/verified flags are true only when every point agrees."""
+    if not isinstance(sim_config, dict) or sim_config.get('sweep') is None:
+        report = _simulate_point(components, nets, sim_config, workspace)
+        return {k: v for k, v in report.items() if k not in ('x_data', 'signals')}
+    kind, target, points = sweep_spec(sim_config)
+    base = {k: v for k, v in sim_config.items() if k != 'sweep'}
+    workspace = Path(workspace)
+    if components is None and nets is None:
+        saved = load_saved_design(workspace)
+        components, nets = saved['components'], saved['nets']
+    rows, first = [], None
+    for index, point in enumerate(points):
+        override = {kind: target, 'value': point['value'], **({'text': point['text']} if kind == 'component' else {})}
+        with tempfile.TemporaryDirectory() as scratch:
+            # Later points run in a scratch workspace holding a copy of the design so provenance and
+            # persisted requirements match, and so the live build/ keeps the first point's artifacts.
+            if index:
+                saved_design = workspace/'build/design.json'
+                if saved_design.exists():
+                    (Path(scratch)/'build').mkdir()
+                    shutil.copy(saved_design, Path(scratch)/'build/design.json')
+            report = _simulate_point(components, nets, base, workspace if index == 0 else scratch, override, persist=False)
+        first = first or report
+        rows.append({'value': point['value'], 'status': report['status'], 'verified': report['verified'],
+                     'sim_passed': report['sim_passed'], 'measurements': report['measurements'],
+                     'final': {name: round(values[-1], 6) for name, values in report['signals'].items() if values}})
+    first = dict(first)
+    return _merge_sweep(first, rows, kind, target, workspace)
+
+
+def _merge_sweep(first, rows, kind, target, workspace):
+    report = first
+    report['sweep'] = {kind: target, 'measurement_net': report['measurement_net'], 'points': rows}
+    verified = all(r['verified'] for r in rows)
+    passed = verified and all(r['sim_passed'] for r in rows)
+    report.update(verified=verified, sim_passed=passed,
+                  functional_verified=report['functional_verified'] and passed,
+                  nominal_verified=report['nominal_verified'] and passed,
+                  status='success' if passed else ('failed' if verified else 'degraded'))
+    failing = [str(r['value']) for r in rows if not r['sim_passed']]
+    if failing:
+        report['warnings'] = list(report['warnings']) + [f'Sweep points not passing: {target}={", ".join(failing)}']
+    report['sim_summary'] += f"; sweep of {target} over {len(rows)} points"
+    atomic_json(Path(workspace)/'build/sim_results.json', report)
+    return {k: v for k, v in report.items() if k not in ('x_data', 'signals')}

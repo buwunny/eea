@@ -89,7 +89,8 @@ def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: f
     (a 555 gets ~5 periods automatically); set skip_simulation=True for circuits with no simulation model.
     Optional requirements persist target_freq_hz, frequency_tolerance_pct, supply_voltage_v,
     min_supply_voltage_v/max_supply_voltage_v and max_board_width_mm/max_board_height_mm.
-    Component tolerance_pct enables conservative standard-555 RC corner estimates."""
+    Component tolerance_pct enables conservative standard-555 RC corner estimates.
+    sim_config also accepts source waveforms, loads and a sweep (see run_spice_simulation)."""
     return pipeline.build_and_verify(components, nets, board_width_mm, board_height_mm, sim_config,
                                      trace_width_mm, clearance_mm, export, skip_simulation, requirements)
 
@@ -111,7 +112,13 @@ def run_spice_simulation(components: list[dict] | None = None, nets: list[dict] 
     sim_config.sources optionally defines DC sources, e.g. [{name: VMAIN, kind: voltage,
     positive_net: VIN, negative_net: GND, value: 5}]; current source values are amperes.
     measurement_net selects a probed net; measurement_start_ms/measurement_end_ms trim transient measurements.
-    DC analysis can select an explicit voltage sweep_source by name."""
+    DC analysis can select an explicit voltage sweep_source by name.
+    A source may add waveform: {type: pulse, v1, v2, delay_ms, rise_ms, fall_ms, width_ms, period_ms} | {type: sine,
+    offset, amplitude, freq_hz, delay_ms} | {type: pwl, points: [[t_ms, v], ...]} (omit value; DC level is the initial level).
+    sim_config.loads: [{name: RLOAD1, positive_net, negative_net, kind: resistor|capacitor, value}] loads connector nets.
+    sim_config.sweep: {component: TH1, values: [3000, 10000]} or {source: VIN, values: [...]} (max 20 points) runs one
+    simulation per point; the report gets a compact sweep.points table (measurements and final probe values),
+    full waveforms are kept for the first point only, and sim_passed requires every point to pass."""
     return execute('run_spice_simulation', 'SIMULATION', pipeline.simulate_op(components, nets, sim_config))
 
 
