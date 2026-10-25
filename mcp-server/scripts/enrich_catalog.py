@@ -204,7 +204,17 @@ NEW = [
              '4': 'GPIO5', '5': 'GPIO6', '6': 'GPIO7', '7': 'GPIO8; strapping pin, keep high at boot (LED is OK)', '8': 'GPIO9; strapping pin, low at reset = download mode',
              '9': 'Ground', '10': 'GPIO10', '11': 'GPIO20 / UART0 RX', '12': 'GPIO21 / UART0 TX', '13': 'GPIO18 / USB D-', '14': 'GPIO19 / USB D+',
              '15': 'GPIO3 / ADC1_CH3', '16': 'GPIO2; strapping pin, keep high at boot', '17': 'GPIO1 / ADC1_CH1', '18': 'GPIO0 / ADC1_CH0', '19': 'Exposed ground pad'},
-      ratings={'vdd_min_v': 3.0, 'vdd_max_v': 3.6, 'peak_current_ma': 350, 'gpio_max_v': 3.6, 'flash_mb': 4}),
+      ratings={'vdd_min_v': 3.0, 'vdd_max_v': 3.6, 'peak_current_ma': 350, 'gpio_max_v': 3.6, 'flash_mb': 4},
+      # Copper-free region in footprint coordinates [x1, y1, x2, y2] (mm; +y points down the board). The pad rows
+      # end 0.05 mm below the rect (pad 1 and 18 edges at y=-6.45); the antenna is the module end at y=-12.8.
+      keepouts=[dict(id='pcb_antenna', layers='all_copper', rect=[-12.0, -17.8, 12.0, -6.5],
+                     restrict=['tracks', 'vias', 'pads', 'copper_pour'],
+                     reason='On-board PCB antenna: no copper on any layer under or beside it, and place the module on the board edge with the antenna end outward or overhanging.',
+                     source='Espressif ESP32-C3-WROOM-02 & WROOM-02U Datasheet v1.7: Figure 11-1 Recommended PCB Land Pattern (p. 38, antenna area at the module end) '
+                            'and Section 3.1 Pin Layout note A (p. 9, antenna keepout zone); ESP32-C3 Hardware Design Guidelines, PCB Layout Design > '
+                            'General Principles of PCB Layout for Modules (antenna outside the base board, base board cut away below and beside it). '
+                            'The module outline spans x -9..9 and the antenna end is y -12.8; the rect adds a 3 mm margin each side and 5 mm beyond the module end '
+                            '(EEA margins: Espressif gives the keepout only as a figure without dimensions).')]),
 ]
 
 def main():
@@ -216,6 +226,8 @@ def main():
             'footprint': n['footprint'], 'pins': pins, 'pads': pads,
             'footprint_sexpr': sexpr(n['footprint'], n['rect'], n['pads'], n.get('holes', ())), 'lcsc': n['lcsc'], 'price_usd': n['price'],
             'spice_model': n.get('spice'), 'spice_pin_map': n.get('pin_map') or {p['number']: int(p['number']) for p in pins}, 'footprint_source': SRC}
+        if n.get('keepouts'):
+            d[n['part_id']]['keepouts'] = n['keepouts']
         INFO[n['part_id']] = (n['app'], n['support'], n['funcs'], n['ratings'])
     for pid, part in d.items():
         app, support, funcs, ratings = INFO[pid]
@@ -229,8 +241,8 @@ def main():
                             'Courtyard and mechanical keepouts are not certified'],
         }
         if pid == 'ESP32_C3_WROOM_02':
-            part['placement_requirements'] = ['Place antenna at board edge',
-                'Manufacturer antenna keepout must be reviewed; no automatic RF keepout is claimed']
+            part['placement_requirements'] = ['Place antenna at board edge, facing outward',
+                'The antenna keepout (catalog keepouts) is a copper-free rule area on all layers; its margins are EEA estimates from Espressif figures, review before fabrication']
         for pin in part['pins']:
             pin['function'] = funcs[pin['number']]
     PATH.write_text(json.dumps(d, indent=2, ensure_ascii=False) + '\n')

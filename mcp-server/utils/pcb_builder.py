@@ -231,6 +231,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
         design['requirements'] = normalize_requirements(requirements, width, height)
     design['placement_checks'] = inspect_placement(cs, ns, cat, bypasses, placement_issues)
     warnings.extend(item['message'] for item in design['placement_checks']['issues'])
+    from .keepouts import inspect_keepouts
+    warnings.extend(inspect_keepouts(design, cat))
     if clusters:
         design['cluster_checks'] = inspect_clusters(cs, cat, clusters)
         warnings.extend(item['message'] for item in design['cluster_checks']['issues'])
@@ -309,6 +311,8 @@ def write_board(design, destination, segments=None, zones=''):
         lines.append(f' (gr_line (start {x1:g} {y1:g}) (end {x2:g} {y2:g}) (stroke (width 0.05) (type default)) (layer "Edge.Cuts"))')
     for s in segments or []:
         lines.append(f' (segment (start {s["start"][0]:g} {s["start"][1]:g}) (end {s["end"][0]:g} {s["end"][1]:g}) (width {s["width"]:g}) (layer {q(s.get("layer","F.Cu"))}) (net {codes[s["net"]]}))')
+    from .keepouts import rule_area_lines
+    lines.extend(rule_area_lines(design, catalog, q))
     lines.extend([zones, ')'])
     _atomic_bytes(destination, ('\n'.join(lines)+'\n').encode('utf-8'))
 

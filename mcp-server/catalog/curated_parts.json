@@ -2281,6 +2281,26 @@
       "19": 19
     },
     "footprint_source": "EEA deterministic minimal land pattern; verify against manufacturer drawing before fabrication",
+    "keepouts": [
+      {
+        "id": "pcb_antenna",
+        "layers": "all_copper",
+        "rect": [
+          -12.0,
+          -17.8,
+          12.0,
+          -6.5
+        ],
+        "restrict": [
+          "tracks",
+          "vias",
+          "pads",
+          "copper_pour"
+        ],
+        "reason": "On-board PCB antenna: no copper on any layer under or beside it, and place the module on the board edge with the antenna end outward or overhanging.",
+        "source": "Espressif ESP32-C3-WROOM-02 & WROOM-02U Datasheet v1.7: Figure 11-1 Recommended PCB Land Pattern (p. 38, antenna area at the module end) and Section 3.1 Pin Layout note A (p. 9, antenna keepout zone); ESP32-C3 Hardware Design Guidelines, PCB Layout Design > General Principles of PCB Layout for Modules (antenna outside the base board, base board cut away below and beside it). The module outline spans x -9..9 and the antenna end is y -12.8; the rect adds a 3 mm margin each side and 5 mm beyond the module end (EEA margins: Espressif gives the keepout only as a figure without dimensions)."
+      }
+    ],
     "typical_application": "WiFi/BLE MCU on 3.3 V (feed from AMS1117_3V3). Put the antenna end at the board edge with no copper under it. EN needs 10k pull-up + 1uF to GND. IO9 low at reset enters download mode; IO18/IO19 are native USB D-/D+.",
     "required_support_parts": [
       "10uF + 100nF C on 3V3 to GND",
@@ -2306,8 +2326,8 @@
       ]
     },
     "placement_requirements": [
-      "Place antenna at board edge",
-      "Manufacturer antenna keepout must be reviewed; no automatic RF keepout is claimed"
+      "Place antenna at board edge, facing outward",
+      "The antenna keepout (catalog keepouts) is a copper-free rule area on all layers; its margins are EEA estimates from Espressif figures, review before fabrication"
     ]
   }
 }

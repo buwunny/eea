@@ -413,6 +413,13 @@ def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None
     w=int(design['board_width_mm']/cell); h=int(design['board_height_mm']/cell)
     pads=pad_positions(design); segments=[]; occupied={}; unrouted=[]
     def grid(p): return (round(p['x_mm']/cell),round(p['y_mm']/cell))
+    # Part keep-outs (antennas) refuse tracks: block every cell a track would overlap.
+    from .keepouts import design_keepouts
+    from .pcb_builder import load_catalog
+    reach=trace_width_mm/2
+    keepout_cells={(gx,gy) for k in design_keepouts(design, load_catalog(), ['F.Cu']) if 'tracks' in k['restrict']
+                   for gx in range(math.floor((k['box'][0]-reach)/cell), math.ceil((k['box'][2]+reach)/cell)+1)
+                   for gy in range(math.floor((k['box'][1]-reach)/cell), math.ceil((k['box'][3]+reach)/cell)+1)}
     for net in design['nets']:
         targets=[p for p in pads if p['net']==net['name']]
         for a,b in zip(targets,targets[1:]):
@@ -427,6 +434,7 @@ def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None
             for point,other in occupied.items():
                 if other!=net['name']:
                     blocked.update((point[0]+dx,point[1]+dy) for dx in (-1,0,1) for dy in (-1,0,1))
+            blocked|=keepout_cells
             path=_astar(grid(a),grid(b),blocked,w,h,deadline)
             if path is None:
                 unrouted.append({'net':net['name'],'from':a['connection'],'to':b['connection']}); continue

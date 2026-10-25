@@ -6,6 +6,7 @@ Rotation convention matches pcb_builder.pad_positions (KiCad, CCW on screen).
 from __future__ import annotations
 import math
 import re
+from .keepouts import EDGE_TOLERANCE_MM, has_keepouts, local_direction, part_keepouts, polygon as keepout_polygon, box as keepout_box, rotate as keepout_rotate
 
 GRID = 0.5
 TIERS = (0.5, 0.25)  # per-side margin (mm) -> 1.0 / 0.5 mm part-to-part gap
@@ -179,10 +180,30 @@ class _Board:
     def __init__(self, ctx, width, height, lookup):
         self.ctx, self.width, self.height, self.lookup = ctx, width, height, lookup
         self.boxes, self.pads_by_net = [], {}
+        self.reserved = []  # (owner ref, box): keep-out regions of placed parts, free of every other part
+        self.edge_strict = False
+
+    def keepout_boxes(self, part, rot, x, y):
+        return [keepout_box(keepout_polygon(k['rect'], x, y, rot)) for k in part_keepouts(part)]
+
+    def blocked(self, box, owner):
+        return any(_overlap(box, b) for ref, b in self.reserved if ref != owner)
+
+    def edge_gap(self, part, rot, x, y):
+        """Distance from the board edge the part's keep-out faces to the body edge on that side."""
+        d = local_direction(part)
+        ox, oy = keepout_rotate(d[0], d[1], rot)
+        e = extent(part, rot, 0.0)
+        if ox < -0.5:
+            return x + e[0]
+        if ox > 0.5:
+            return self.width - (x + e[2])
+        return y + e[1] if oy < -0.5 else self.height - (y + e[3])
 
     def register(self, c):
         ctx = self.ctx
         part = ctx.by_part[c['ref']]
+        self.reserved += [(c['ref'], b) for b in self.keepout_boxes(part, c['rotation_deg'], c['x_mm'], c['y_mm'])]
         e = extent(part, c['rotation_deg'], ctx.margin)
         self.boxes.append((c['x_mm'] + e[0], c['y_mm'] + e[1], c['x_mm'] + e[2], c['y_mm'] + e[3]))
         for p in part['pads']:
@@ -240,7 +261,7 @@ class _Board:
         constraint = ctx.bypass_by_ref.get(c['ref'])
         if constraint and constraint['owner'] not in self.lookup:
             constraint = None  # owner lives outside this cluster sandbox
-        if kind == 'connector' or constraint:
+        if kind == 'connector' or constraint or has_keepouts(part):
             rots = (0, 90, 180, 270)
         elif kind == 'ic':
             rots = (0,)
@@ -249,9 +270,14 @@ class _Board:
         facing = _facing(part)
         usb = 'USB' in c['part_id'].upper() and math.hypot(*facing) >= 1.0
         # Cluster members scan a window around the anchor first; the whole area only if it is full.
-        best = self._scan(c, part, kind, rots, constraint, limit, usb, facing, True) if limit else None
-        if best is None:
-            best = self._scan(c, part, kind, rots, constraint, limit, usb, facing, False)
+        best = None
+        # A part with an antenna keep-out must sit on a board edge facing outward; relax that only when no such spot exists.
+        for self.edge_strict in ((True, False) if has_keepouts(part) else (False,)):
+            best = self._scan(c, part, kind, rots, constraint, limit, usb, facing, True) if limit else None
+            if best is None:
+                best = self._scan(c, part, kind, rots, constraint, limit, usb, facing, False)
+            if best is not None:
+                break
         if best is None:
             return False
         c['x_mm'], c['y_mm'], c['rotation_deg'] = best[1], best[2], float(best[3])
@@ -263,6 +289,7 @@ class _Board:
         from .placement_constraints import bypass_distance
         ctx, width, height, margin = self.ctx, self.width, self.height, self.ctx.margin
         best = None
+        keepouts = has_keepouts(part)
         for rot in rots:
             e = extent(part, rot, margin)
             if e[2] - e[0] > width + 1e-9 or e[3] - e[1] > height + 1e-9:
@@ -276,10 +303,18 @@ class _Board:
             for y in _snap_range(*ys):
                 for x in _snap_range(*xs):
                     box = (x + e[0], y + e[1], x + e[2], y + e[3])
-                    if any(_overlap(box, b) for b in self.boxes):
+                    if any(_overlap(box, b) for b in self.boxes) or self.blocked(box, c['ref']):
                         continue
+                    if keepouts:
+                        if any(_overlap(kb, b) for kb in self.keepout_boxes(part, rot, x, y) for b in self.boxes):
+                            continue
+                        gap = self.edge_gap(part, rot, x, y)
+                        if self.edge_strict and gap > EDGE_TOLERANCE_MM + margin:
+                            continue
                     if kind == 'connector':
                         s = self.connector_score(part, rot, x, y, box, usb, facing)
+                    elif keepouts:
+                        s = 100 * gap + self.wire(c['ref'], part, rot, x, y) + (0.2 if rot else 0.0)
                     else:
                         s = self.wire(c['ref'], part, rot, x, y) + self.centrality(x, y, kind) + (0.2 if rot else 0.0)
                     if constraint:
@@ -308,7 +343,8 @@ class _Board:
         facing = _facing(apart)
         usb = 'USB' in anchor['part_id'].upper() and math.hypot(*facing) >= 1.0
         best = None
-        for rot in ((0, 90, 180, 270) if kind == 'connector' else (0,)):
+        keepouts = has_keepouts(apart)
+        for rot in ((0, 90, 180, 270) if kind == 'connector' or keepouts else (0,)):
             members, pads = [], []
             for comp, dx, dy, r in layout:
                 ox, oy = _rot(dx, dy, rot)
@@ -335,12 +371,20 @@ class _Board:
                     if hits and any(_overlap((x + m[4][0], y + m[4][1], x + m[4][2], y + m[4][3]), b)
                                     for m in members for b in hits):
                         continue
+                    if any(self.blocked((x + m[4][0], y + m[4][1], x + m[4][2], y + m[4][3]), m[0]['ref']) for m in members):
+                        continue
+                    if keepouts:
+                        if any(_overlap(kb, b) for kb in self.keepout_boxes(apart, rot, x, y) for b in self.boxes):
+                            continue
+                        gap = self.edge_gap(apart, rot, x, y)
+                        if self.edge_strict and gap > EDGE_TOLERANCE_MM + margin:
+                            continue
                     if kind == 'connector':
                         box = (x + abox[0], y + abox[1], x + abox[2], y + abox[3])
                         s = self.connector_score(apart, rot, x, y, box, usb, facing)
                     else:
                         s = sum(w * min(abs(x + px - tx) + abs(y + py - ty) for tx, ty in targets)
-                                for px, py, targets, w in pads) + self.centrality(x, y, kind)
+                                for px, py, targets, w in pads) + (100 * gap if keepouts else self.centrality(x, y, kind))
                     key = (s, y, x, rot)
                     if best is None or key < best[0]:
                         best = (key, x, y, members)
@@ -442,7 +486,12 @@ def _place_once(todo, fixed, nets, catalog, width, height, margin, bypass_constr
 
     def place_unit(unit, kind):
         layout = _arrange_unit(ctx, unit['anchor'], unit['members'], width, height)
-        if board.place_rigid(layout, kind):
+        placed = False
+        for board.edge_strict in ((True, False) if has_keepouts(ctx.by_part[unit['anchor']['ref']]) else (False,)):
+            placed = board.place_rigid(layout, kind)
+            if placed:
+                break
+        if placed:
             return
         # No room for the rigid arrangement: anchor first, then members as close as the board allows.
         anchor = unit['anchor']

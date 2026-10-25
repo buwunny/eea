@@ -30,6 +30,11 @@ class _Rules:
         self.drill = max(drill_mm, mm(settings.m_MinThroughDrill))
         self.diameter = max(diameter_mm, mm(settings.m_ViasMinSize), self.drill + 2 * mm(settings.m_ViasMinAnnularWidth))
         self.radius = self.diameter / 2
+        self.keepouts = []  # rule areas that refuse vias (part keep-outs such as antennas)
+
+
+def via_keepouts(board):
+    return [z for z in board.Zones() if z.GetIsRuleArea() and z.GetDoNotAllowVias()]
 
 
 def _copper_layers(board, pcbnew):
@@ -66,6 +71,8 @@ def _clear(pcbnew, rules, x, y, net, items, holes):
             return False
     point = pcbnew.VECTOR2I(pcbnew.FromMM(x), pcbnew.FromMM(y))
     reach = pcbnew.FromMM(max(rules.radius + rules.clearance, rules.drill / 2 + rules.hole_clearance))
+    if any(z.Outline().Collide(point, pcbnew.FromMM(rules.radius + rules.clearance)) for z in rules.keepouts):
+        return False
     for code, layers, item in items:
         if code == net and code > 0:
             continue
@@ -230,6 +237,7 @@ def add_board_vias(board, pcbnew, design, planes, stitching=True,
               'via_drill_mm': round(rules.drill, 4), 'via_diameter_mm': round(rules.diameter, 4)}
     if not planes:
         return report
+    rules.keepouts = via_keepouts(board)
     nets = board.GetNetsByName()
     items, holes = _obstacles(board, pcbnew, rules)
     report['thermal_pads'] = add_thermal_vias(board, pcbnew, rules, {p['net'] for p in planes}, items, holes)
