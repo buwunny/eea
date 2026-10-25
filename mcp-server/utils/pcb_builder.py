@@ -82,7 +82,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     False disables auto-placement (legacy 8 mm grid for missing coordinates).
     Refs that were placed by the server are listed in design['auto_placed'].
     """
-    from .placement import auto_place as _auto_place
+    from .placement import auto_place as _auto_place, normalize_cluster_metadata, resolve_clusters, inspect_clusters
     from .stackups import resolve_stackup
     layer_count, stackup = resolve_stackup(layer_count, stackup)
     width = finite(board_width_mm, 'board_width_mm', 5, 300)
@@ -140,6 +140,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
                 normalized['tolerance_pct'] = normalized['sourcing']['tolerance_pct']
         from .placement_constraints import normalize_bypass_metadata
         normalize_bypass_metadata(c, normalized)
+        normalize_cluster_metadata(c, normalized)
         cs.append(normalized); refs[ref] = normalized
     used, ns, names = {}, [], set()
     for net in nets:
@@ -191,7 +192,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
                 warnings.append(f"Unassigned pin {c['ref']}.{pin['number']} ({pin['name']})")
     from .placement_constraints import resolve_bypasses, inspect_placement
     bypasses, placement_issues = resolve_bypasses(cs, ns)
-    auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses) if movable else []
+    clusters = resolve_clusters(cs)
+    auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses, clusters=clusters) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,
               'layer_count':layer_count,'stackup':stackup,'warnings':warnings,
               'bom':[bom_entry(c, cat[c['part_id']]) for c in cs]}
@@ -219,6 +221,9 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
         design['requirements'] = normalize_requirements(requirements, width, height)
     design['placement_checks'] = inspect_placement(cs, ns, cat, bypasses, placement_issues)
     warnings.extend(item['message'] for item in design['placement_checks']['issues'])
+    if clusters:
+        design['cluster_checks'] = inspect_clusters(cs, cat, clusters)
+        warnings.extend(item['message'] for item in design['cluster_checks']['issues'])
     from .electrical import inspect_electrical
     design['electrical_checks'], design['power_budget'] = inspect_electrical(design, cat)
     design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], 'cross_check': (checks.get(c['part_id']) or {}).get('status', 'missing'), **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]

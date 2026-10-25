@@ -14,6 +14,7 @@ from .pcb_builder import load_catalog, normalize_design
 
 LED_VF = 2.0
 LM317_MAX_W = 0.8   # SOT-223 on a small board
+RP2040_BYPASS_MM = 8.0  # 8 supply pins share one QFN side, so single-sided caps cannot all sit within the 5 mm default
 USB_GND = ['J.A1', 'J.A12', 'J.B1', 'J.B12', 'J.S1', 'J.S2']
 USB_VBUS = ['J.A4', 'J.A9', 'J.B4', 'J.B9']
 DIRECTIONS = ('power_in', 'power_out', 'signal_in', 'signal_out', 'ground', 'bidir')
@@ -23,7 +24,9 @@ PREFIX = {'R': 'R', 'C': 'C', 'Capacitor_Electrolytic': 'C', 'NE555': 'U', 'AMS1
           'AP2112K_3V3': 'U', 'LM317_SOT223': 'U', 'MCP6002_SOIC8': 'U', 'Optocoupler_PC817': 'U',
           'AO3400A': 'Q', 'AO3401A': 'Q', 'BC817_SOT23': 'Q', 'BSS138_SOT23': 'Q',
           '1N4007': 'D', 'SS14_SMA': 'D', 'SMAJ5_0A': 'D', 'Polyfuse_1206': 'F',
-          'Conn_1x02_Header': 'J', 'NTC_10k_0805': 'RT'}
+          'Conn_1x02_Header': 'J', 'NTC_10k_0805': 'RT', 'ESP32_C3_WROOM_02': 'U', 'CH340G': 'U', 'RP2040_QFN56': 'U',
+          'W25Q32JV_SOIC8': 'U', 'Crystal_HC49': 'Y', 'USB_Micro_B': 'J'}
+FLAT_PART_LIMIT = 40  # composed designs larger than this should keep most parts in placement clusters
 
 
 def fmt(value):
@@ -84,6 +87,7 @@ def _ldo(p):
     comps = [_c('U', 'AMS1117_3V3'), _c('CI', 'C', '10u'), _c('CO', 'C', '22u')]
     nets = {'VIN': ['U.3', 'CI.1'], 'VOUT': ['U.2', 'CO.1'], 'GND': ['U.1', 'CI.2', 'CO.2']}
     return {'components': comps, 'nets': nets, 'ports': {'VIN': 'VIN', 'VOUT': 'VOUT', 'GND': 'GND'},
+            'clusters': [_cluster('U', CI=3, CO=3)],
             'notes': ['10 uF on VIN and 22 uF on VOUT per the AMS1117 support-part rules.']}
 
 
@@ -206,7 +210,7 @@ def _ldo_ap2112k(p):
         meta = {'EN': {'description': 'Enable input: high (>= 1.2 V, up to VIN) = on, low (<= 0.4 V) = off; do not leave floating',
                        'optional': False}}
         note = 'EN is exposed as a port; drive it from a GPIO or tie it to VIN.'
-    return {'components': comps, 'nets': nets, 'ports': ports, 'port_meta': meta,
+    return {'components': comps, 'nets': nets, 'ports': ports, 'port_meta': meta, 'clusters': [_cluster('U', CI=3, CO=3)],
             'sim_default': {'sources': [{'net': 'VIN', 'value': 5.0}], 'probes': ['VOUT']},
             'notes': [f'AP2112K-3.3 with 1 uF on VIN and 2.2 uF on VOUT (stable with ceramics). {note}']}
 
@@ -419,6 +423,125 @@ def _gpio(n):
     return {f'PB{i}': _port('bidir', f'ATtiny85 pin PB{i} (GPIO)', optional=True, max_current_ma=40) for i in range(n)}
 
 
+# Subsystem blocks for MCU boards. 'clusters' keep each block's support parts within N mm
+# (footprint-to-footprint gap) of its anchor; auto-placement moves a cluster as one unit.
+
+def _cluster(anchor, **members):
+    return {'anchor': anchor, 'members': members}
+
+
+def _usb_c_power_in(p):
+    comps = [_c('J', 'USB_C_Receptacle_PowerOnly'), _c('RC1', 'R', '5.1k'), _c('RC2', 'R', '5.1k'), _c('CB', 'C', '10u')]
+    nets = {'GND': USB_GND + ['RC1.2', 'RC2.2', 'CB.2'], 'VBUS': USB_VBUS + ['CB.1'],
+            'CC1': ['J.A5', 'RC1.1'], 'CC2': ['J.B5', 'RC2.1']}
+    return {'components': comps, 'nets': nets, 'ports': {'VBUS': 'VBUS', 'GND': 'GND'},
+            'clusters': [_cluster('J', RC1=4, RC2=4, CB=5)],
+            'sim_default': {'sources': [{'net': 'VBUS', 'value': 5.0}]},
+            'notes': ['USB-C power-only sink on a board edge: 5.1k Rd on CC1/CC2 (default USB power, 500 mA) and 10 uF on VBUS '
+                      '(the USB limit for a device at attach). This receptacle has no D+/D- pins; use usb_micro_b_data for USB data.']}
+
+
+def _usb_micro_b(p):
+    comps = [_c('J', 'USB_Micro_B', nc_pins=['4'])]
+    nets = {'VBUS': ['J.1'], 'USB_DN': ['J.2'], 'USB_DP': ['J.3'], 'GND': ['J.5', 'J.SH']}
+    return {'components': comps, 'nets': nets,
+            'ports': {'VBUS': 'VBUS', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'GND': 'GND'},
+            'notes': ['USB Micro-B (device): pin 1 VBUS, 2 D-, 3 D+, 4 ID (not connected), 5 GND, shell to GND. '
+                      'Name the data connections USB_DP / USB_DN so placement keeps them short. No ESD part is in the catalog yet.']}
+
+
+def _esp32_c3(p):
+    buttons = _flag(p, 'buttons')
+    comps = [_c('U', 'ESP32_C3_WROOM_02', 'ESP32-C3-WROOM-02'), _c('CB', 'C', '10u'), _c('CD', 'C', '100n', bypasses='U'),
+             _c('RE', 'R', '10k'), _c('CE', 'C', '1u'), _c('RB9', 'R', '10k'), _c('RB8', 'R', '10k'), _c('RB2', 'R', '10k')]
+    nets = {'3V3': ['U.1', 'CB.1', 'CD.1', 'RE.1', 'RB9.1', 'RB8.1', 'RB2.1'],
+            'GND': ['U.9', 'U.19', 'CB.2', 'CD.2', 'CE.2'],
+            'EN': ['U.2', 'RE.2', 'CE.1'], 'IO9': ['U.8', 'RB9.2'], 'IO8': ['U.7', 'RB8.2'], 'IO2': ['U.16', 'RB2.2'],
+            'TXD': ['U.12'], 'RXD': ['U.11'], 'USB_DN': ['U.13'], 'USB_DP': ['U.14'],
+            **{f'IO{n}': [f'U.{pin}'] for n, pin in ((0, 18), (1, 17), (3, 15), (4, 3), (5, 4), (6, 5), (7, 6), (10, 10))}}
+    cluster = {'CD': 3, 'CB': 5, 'RE': 6, 'CE': 6, 'RB9': 6, 'RB8': 6, 'RB2': 6}
+    notes = ['ESP32-C3-WROOM-02: 10 uF + 100 nF on 3V3, EN 10k pull-up with 1 uF to GND (power-on delay), '
+             '10k pull-ups on the IO2/IO8/IO9 strapping pins (IO9 low at reset = download mode). '
+             'TXD/RXD are UART0 (IO21/IO20); USB_DP/USB_DN are the native USB pins (IO19/IO18).',
+             'Keep the PCB antenna end at a board edge with no copper under it: auto-placement does not enforce the RF keep-out.']
+    if buttons:
+        comps += [_c('SWR', 'Button_Tactile_SMD'), _c('SWB', 'Button_Tactile_SMD')]
+        nets['EN'].append('SWR.1'); nets['IO9'].append('SWB.1'); nets['GND'] += ['SWR.2', 'SWB.2']
+        cluster.update(SWR=10, SWB=10)
+        notes.append('RESET button pulls EN low; BOOT button pulls IO9 low (hold BOOT, tap RESET to enter the ROM bootloader).')
+    gpio = {f'IO{n}': f'IO{n}' for n in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10)}
+    ports = {'3V3': '3V3', 'GND': 'GND', 'EN': 'EN', 'BOOT': 'IO9', 'TXD': 'TXD', 'RXD': 'RXD',
+             'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', **gpio}
+    return {'components': comps, 'nets': nets, 'ports': ports, 'clusters': [_cluster('U', **cluster)], 'notes': notes}
+
+
+def _ch340(p):
+    v = _num(p, 'supply_v', 3.0, 5.3)
+    if 3.6 < v < 4.0:
+        raise ValueError(f"param 'supply_v' must be 3.0-3.6 V (3.3 V mode) or 4.0-5.3 V (5 V mode), got {v:g}")
+    low = v <= 3.6
+    comps = [_c('U', 'CH340G', 'CH340G', nc_pins=['9', '10', '11', '12', '15']), _c('Y', 'Crystal_HC49', '12MHz'),
+             _c('CX1', 'C', '22p'), _c('CX2', 'C', '22p'), _c('CD', 'C', '100n', bypasses='U', bypass_pin='16')]
+    nets = {'VCC': ['U.16', 'CD.1'], 'GND': ['U.1', 'CD.2', 'CX1.2', 'CX2.2'],
+            'XI': ['U.7', 'Y.1', 'CX1.1'], 'XO': ['U.8', 'Y.2', 'CX2.1'],
+            'USB_DP': ['U.5'], 'USB_DN': ['U.6'], 'TXD': ['U.2'], 'RXD': ['U.3'], 'DTR': ['U.13'], 'RTS': ['U.14']}
+    cluster = {'Y': 3, 'CX1': 3, 'CX2': 3, 'CD': 3}
+    if low:
+        nets['VCC'].append('U.4')
+        mode = 'V3 is tied to VCC (3.3 V mode), so TXD/RXD use 3.3 V levels.'
+    else:
+        comps.append(_c('CV', 'C', '100n', bypasses='U', bypass_pin='4'))
+        nets['V3'] = ['U.4', 'CV.1']
+        nets['GND'].append('CV.2')
+        cluster['CV'] = 3
+        mode = 'V3 has its own 100 nF (5 V mode): TXD/RXD swing to 5 V, so do not wire them straight to a 3.3 V MCU.'
+    meta = {'VCC': {'min_voltage_v': 3.0 if low else 4.0, 'max_voltage_v': 3.6 if low else 5.3, 'expected_v': v}}
+    return {'components': comps, 'nets': nets,
+            'ports': {'VCC': 'VCC', 'GND': 'GND', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'TXD': 'TXD', 'RXD': 'RXD',
+                      'DTR': 'DTR', 'RTS': 'RTS'},
+            'port_meta': meta, 'clusters': [_cluster('U', **cluster)],
+            'notes': [f'CH340G USB-UART: 12 MHz crystal with 22 pF load caps, 100 nF on VCC. {mode} '
+                      'CTS/DSR/RI/DCD and R232 are left unconnected (internal pull-ups / pull-down). '
+                      'The crystal is the generic through-hole Crystal_HC49 (no LCSC code): pick an orderable 12 MHz part with a matching load capacitance.']}
+
+
+def _rp2040(p):
+    comps = [_c('U', 'RP2040_QFN56', 'RP2040'), _c('FL', 'W25Q32JV_SOIC8', 'W25Q32JV'),
+             _c('CFL', 'C', '100n', bypasses='FL'),
+             _c('Y', 'Crystal_HC49', '12MHz'), _c('RX', 'R', '1k'), _c('CX1', 'C', '22p'), _c('CX2', 'C', '22p'),
+             _c('RDP', 'R', '27'), _c('RDN', 'R', '27'), _c('RRUN', 'R', '10k'), _c('RBS', 'R', '1k'),
+             _c('SWB', 'Button_Tactile_SMD')]
+    v3 = ['U.1', 'U.10', 'U.22', 'U.33', 'U.42', 'U.49', 'U.48', 'U.43', 'U.44', 'FL.8', 'CFL.1', 'RRUN.1']
+    v11 = ['U.45', 'U.23', 'U.50']
+    gnd = ['U.57', 'U.19', 'FL.4', 'CFL.2', 'CX1.2', 'CX2.2', 'SWB.2']
+    cluster = {'FL': 6, 'CFL': 8, 'Y': 6, 'RX': 6, 'CX1': 6, 'CX2': 6, 'RDP': 8, 'RDN': 8, 'RRUN': 10, 'RBS': 10, 'SWB': 12}
+    for name, pin, value, rail in (('CIO1', '1', '100n', v3), ('CIO2', '10', '100n', v3), ('CIO3', '22', '100n', v3),
+                                   ('CIO4', '33', '100n', v3), ('CIO5', '42', '100n', v3), ('CIO6', '49', '100n', v3),
+                                   ('CUSB', '48', '100n', v3), ('CADC', '43', '100n', v3), ('CVI', '44', '1u', v3),
+                                   ('CDV1', '23', '100n', v11), ('CDV2', '50', '100n', v11), ('CVO', '45', '1u', v11)):
+        comps.append(_c(name, 'C', value, bypasses='U', bypass_pin=pin, max_distance_mm=RP2040_BYPASS_MM))
+        rail.append(f'{name}.1'); gnd.append(f'{name}.2')
+        cluster[name] = 5
+    nets = {'3V3': v3, '1V1': v11, 'GND': gnd,
+            'XIN': ['U.20', 'Y.1', 'CX1.1'], 'XOUT_R': ['U.21', 'RX.1'], 'XTAL2': ['RX.2', 'Y.2', 'CX2.1'],
+            'USB_DP_MCU': ['U.47', 'RDP.1'], 'USB_DN_MCU': ['U.46', 'RDN.1'], 'USB_DP': ['RDP.2'], 'USB_DN': ['RDN.2'],
+            'RUN': ['U.26', 'RRUN.2'], 'QSPI_SS': ['U.56', 'FL.1', 'RBS.1'], 'BOOTSEL': ['RBS.2', 'SWB.1'],
+            'QSPI_SD0': ['U.53', 'FL.5'], 'QSPI_SD1': ['U.55', 'FL.2'], 'QSPI_SD2': ['U.54', 'FL.3'],
+            'QSPI_SD3': ['U.51', 'FL.7'], 'QSPI_SCLK': ['U.52', 'FL.6'], 'SWCLK': ['U.24'], 'SWDIO': ['U.25']}
+    gpio_pins = [2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 27, 28, 29, 30, 31, 32, 34, 35, 36, 37, 38, 39, 40, 41]
+    for n, pin in enumerate(gpio_pins):
+        nets[f'GPIO{n}'] = [f'U.{pin}']
+    ports = {'3V3': '3V3', 'GND': 'GND', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'RUN': 'RUN', 'SWCLK': 'SWCLK',
+             'SWDIO': 'SWDIO', **{f'GPIO{n}': f'GPIO{n}' for n in range(30)}}
+    return {'components': comps, 'nets': nets, 'ports': ports, 'clusters': [_cluster('U', **cluster)],
+            'notes': ['RP2040 per the Raspberry Pi hardware design guide: W25Q32JV QSPI flash with BOOTSEL button (1k to QSPI_SS), '
+                      '12 MHz crystal with 1k on XOUT and 22 pF load caps, 27 R series on USB D+/D-, 100 nF on every IOVDD, DVDD, USB_VDD and ADC_AVDD, '
+                      '1 uF on VREG_VIN and VREG_VOUT (the internal 1.1 V regulator feeds DVDD), TESTEN to GND, 10k RUN pull-up.',
+                      'PARTIAL: the crystal is the generic through-hole Crystal_HC49 (no 12 MHz SMD crystal or LCSC code in the catalog); '
+                      'the QFN-56 exposed pad has no thermal vias yet and its 0.4 mm pitch needs a fabricator profile finer than the default clearance. '
+                      'Check the crystal load capacitance against the chosen part.']}
+
+
 BLOCKS = {
     'usb_c_power': {
         'title': 'USB-C 5 V power input', 'build': _usb_c_power, 'params': {},
@@ -592,6 +715,62 @@ BLOCKS = {
         'ports': {'VCC': _port('power_in', 'Divider supply', min_voltage_v=1.8, max_voltage_v=5.5, expected_v=5.0, draw_ma=0.3),
                   'OUT': _port('signal_out', 'Temperature voltage, high impedance (about 5k); feed a comparator or ADC', max_current_ma=0.1),
                   'GND': _port('ground', 'Ground')}},
+    'usb_c_power_in': {
+        'title': 'USB-C power input (clustered)', 'build': _usb_c_power_in, 'params': {},
+        'description': 'USB-C power-only receptacle with 5.1k Rd on CC1/CC2 and 10 uF on VBUS, placed as one cluster on a board edge. No USB data pins.',
+        'parts_used': ['USB_C_Receptacle_PowerOnly', 'R', 'C'],
+        'ports': {'VBUS': _port('power_out', 'USB VBUS, 5 V, up to 500 mA (default USB power)', voltage_v=5.0, max_current_ma=500),
+                  'GND': _port('ground', 'Ground')}},
+    'usb_micro_b_data': {
+        'title': 'USB Micro-B data connector', 'build': _usb_micro_b, 'params': {},
+        'description': 'USB Micro-B receptacle exposing VBUS, D+ and D- (ID unconnected). Use for USB data (CH340, ESP32-C3 or RP2040 native USB).',
+        'parts_used': ['USB_Micro_B'],
+        'ports': {'VBUS': _port('power_out', 'USB VBUS, 5 V, up to 500 mA; leave unconnected when another block powers the board',
+                                voltage_v=5.0, max_current_ma=500, optional=True),
+                  'USB_DP': _port('bidir', 'USB D+ (name the net USB_DP)'),
+                  'USB_DN': _port('bidir', 'USB D- (name the net USB_DN)'),
+                  'GND': _port('ground', 'Ground and shield')}},
+    'esp32_c3_core': {
+        'title': 'ESP32-C3 module core', 'build': _esp32_c3,
+        'params': {'buttons': {'default': True, 'unit': 'bool', 'description': 'Add RESET (EN) and BOOT (IO9) push buttons'}},
+        'description': 'ESP32-C3-WROOM-02 with 10 uF + 100 nF decoupling, EN RC (10k + 1 uF), 10k strapping pull-ups on IO2/IO8/IO9 and RESET/BOOT buttons, clustered around the module.',
+        'parts_used': ['ESP32_C3_WROOM_02', 'C', 'R', 'Button_Tactile_SMD'],
+        'ports': {'3V3': _port('power_in', 'Supply 3.0-3.6 V, about 350 mA peaks (WiFi TX)', min_voltage_v=3.0, max_voltage_v=3.6, draw_ma=350),
+                  'GND': _port('ground', 'Ground'),
+                  'EN': _port('bidir', 'Chip enable / reset (pulled up, RC delayed); for a USB-UART auto-reset circuit', optional=True),
+                  'BOOT': _port('bidir', 'IO9 strapping pin (pulled up); low at reset = download mode', optional=True),
+                  'TXD': _port('signal_out', 'UART0 TX (IO21), 3.3 V', optional=True, max_current_ma=20),
+                  'RXD': _port('signal_in', 'UART0 RX (IO20), 3.3 V max', optional=True, max_voltage_v=3.6),
+                  'USB_DP': _port('bidir', 'Native USB D+ (IO19)', optional=True),
+                  'USB_DN': _port('bidir', 'Native USB D- (IO18)', optional=True),
+                  **{f'IO{n}': _port('bidir', f'GPIO{n}' + (' (strapping pin, pulled up: keep high at boot)' if n in (2, 8) else ''),
+                                     optional=True, max_current_ma=40) for n in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10)}}},
+    'usb_uart_ch340': {
+        'title': 'CH340G USB-UART bridge', 'build': _ch340,
+        'params': {'supply_v': {'default': 3.3, 'unit': 'V', 'description': 'VCC: 3.0-3.6 V (V3 tied to VCC, 3.3 V logic) or 4.0-5.3 V (5 V logic)'}},
+        'description': 'CH340G with 12 MHz crystal and 22 pF load caps, 100 nF decoupling, clustered around the IC. Connect USB_DP/USB_DN to a USB data connector and TXD/RXD crossed to the MCU UART.',
+        'parts_used': ['CH340G', 'Crystal_HC49', 'C'],
+        'ports': {'VCC': _port('power_in', 'Supply (3.3 V or 5 V mode, see supply_v)', min_voltage_v=3.0, max_voltage_v=3.6, draw_ma=15),
+                  'GND': _port('ground', 'Ground'),
+                  'USB_DP': _port('bidir', 'USB D+ to the connector (name the net USB_DP)'),
+                  'USB_DN': _port('bidir', 'USB D- to the connector (name the net USB_DN)'),
+                  'TXD': _port('signal_out', 'UART TX: connect to the MCU RX', max_current_ma=4),
+                  'RXD': _port('signal_in', 'UART RX: connect to the MCU TX'),
+                  'DTR': _port('signal_out', 'DTR# modem output (auto-reset circuits)', optional=True, max_current_ma=4),
+                  'RTS': _port('signal_out', 'RTS# modem output (auto-reset circuits)', optional=True, max_current_ma=4)}},
+    'rp2040_core': {
+        'title': 'RP2040 microcontroller core (partial)', 'build': _rp2040, 'params': {},
+        'description': 'RP2040 with W25Q32JV QSPI flash, BOOTSEL button, 12 MHz crystal (generic HC49), 27 R USB series resistors and per-pin decoupling, clustered around the QFN. Partial: see notes.',
+        'parts_used': ['RP2040_QFN56', 'W25Q32JV_SOIC8', 'Crystal_HC49', 'C', 'R', 'Button_Tactile_SMD'],
+        'ports': {'3V3': _port('power_in', 'IOVDD / VREG_VIN supply 3.0-3.6 V', min_voltage_v=3.0, max_voltage_v=3.63, draw_ma=50),
+                  'GND': _port('ground', 'Ground'),
+                  'USB_DP': _port('bidir', 'USB D+ after the 27 R series resistor', optional=True),
+                  'USB_DN': _port('bidir', 'USB D- after the 27 R series resistor', optional=True),
+                  'RUN': _port('bidir', 'Reset (active low, 10k pull-up)', optional=True),
+                  'SWCLK': _port('signal_in', 'SWD clock', optional=True),
+                  'SWDIO': _port('bidir', 'SWD data', optional=True),
+                  **{f'GPIO{n}': _port('bidir', f'GPIO{n}' + (f' / ADC{n - 26}' if n >= 26 else ''), optional=True, max_current_ma=12)
+                     for n in range(30)}}},
 }
 
 EXAMPLES = {
@@ -663,6 +842,30 @@ EXAMPLES = {
         'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'mcu.VCC', 'hs.VIN']},
                         {'name': 'EN_LOAD', 'ports': ['mcu.PB0', 'hs.CTRL']},
                         {'name': 'LOAD_V', 'ports': ['hs.OUT', 'load.P1']}, {'name': 'GND', 'ports': ['load.P2']}]},
+    'esp32_c3_usb_uart': {
+        'description': 'Milestone MCU board: USB-C 5 V in -> AMS1117 3.3 V -> ESP32-C3 module with RESET/BOOT, CH340G USB-UART on a '
+                       'Micro-B data port crossed to UART0, and a status LED on IO4. Each subsystem is a placement cluster.',
+        'blocks': [{'block': 'usb_c_power_in', 'id': 'pwr'}, {'block': 'ldo_3v3', 'id': 'reg'},
+                   {'block': 'esp32_c3_core', 'id': 'mcu'}, {'block': 'usb_uart_ch340', 'id': 'uart', 'params': {'supply_v': 3.3}},
+                   {'block': 'usb_micro_b_data', 'id': 'usb'},
+                   {'block': 'led_indicator', 'id': 'led1', 'params': {'supply_v': 3.3, 'led_current_ma': 5}}],
+        'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'reg.VIN']},
+                        {'name': '3V3', 'ports': ['reg.VOUT', 'mcu.3V3', 'uart.VCC']},
+                        {'name': 'USB_DP', 'ports': ['usb.USB_DP', 'uart.USB_DP']},
+                        {'name': 'USB_DN', 'ports': ['usb.USB_DN', 'uart.USB_DN']},
+                        {'name': 'U0TX', 'ports': ['mcu.TXD', 'uart.RXD']},
+                        {'name': 'U0RX', 'ports': ['uart.TXD', 'mcu.RXD']},
+                        {'name': 'STATUS', 'ports': ['mcu.IO4', 'led1.IN']}]},
+    'rp2040_usb_board': {
+        'description': 'RP2040 core (partial: generic HC49 crystal) powered and programmed over USB Micro-B through an AP2112K 3.3 V LDO, with a status LED on GPIO25.',
+        'blocks': [{'block': 'usb_micro_b_data', 'id': 'usb'}, {'block': 'ldo_3v3_ap2112k', 'id': 'reg'},
+                   {'block': 'rp2040_core', 'id': 'mcu'},
+                   {'block': 'led_indicator', 'id': 'led1', 'params': {'supply_v': 3.3, 'led_current_ma': 5}}],
+        'connections': [{'name': '5V', 'ports': ['usb.VBUS', 'reg.VIN']},
+                        {'name': '3V3', 'ports': ['reg.VOUT', 'mcu.3V3']},
+                        {'name': 'USB_DP', 'ports': ['usb.USB_DP', 'mcu.USB_DP']},
+                        {'name': 'USB_DN', 'ports': ['usb.USB_DN', 'mcu.USB_DN']},
+                        {'name': 'STATUS', 'ports': ['mcu.GPIO25', 'led1.IN']}]},
 }
 
 
@@ -854,6 +1057,24 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
             refmap[(iid, comp['ref'])] = f'{prefix}{counters[prefix]}'
             new = {k: v for k, v in comp.items() if k != 'ref'}
             components.append({'ref': refmap[(iid, comp['ref'])], **new})
+    by_new_ref = {c['ref']: c for c in components}
+    clusters = []
+    for iid in order:
+        for comp in inst[iid]['built']['components']:
+            if 'bypasses' in comp:
+                by_new_ref[refmap[(iid, comp['ref'])]]['bypasses'] = refmap[(iid, comp['bypasses'])]
+        for cluster in inst[iid]['built'].get('clusters', []):
+            anchor = refmap[(iid, cluster['anchor'])]
+            members = []
+            for local, limit in cluster['members'].items():
+                ref = refmap[(iid, local)]
+                by_new_ref[ref].update(cluster=anchor, cluster_max_distance_mm=limit)
+                members.append({'ref': ref, 'max_distance_mm': limit})
+            clusters.append({'block': iid, 'anchor': anchor, 'members': members})
+    clustered = sum(1 + len(c['members']) for c in clusters)
+    if len(components) > FLAT_PART_LIMIT and clustered < len(components) / 2:
+        warnings.append(f'{len(components)} parts but only {clustered} are in placement clusters; prefer subsystem blocks with '
+                        'clusters (esp32_c3_core, usb_uart_ch340, rp2040_core, usb_c_power_in) so auto-placement keeps support parts local')
     nets = []
     for r, members in allroots.items():
         pins = []
@@ -892,8 +1113,9 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
 
     width, height = _board_size(components, nets, board_width_mm, board_height_mm, warnings)
     return {'status': 'success', 'components': components, 'nets': nets, 'board_width_mm': width, 'board_height_mm': height,
-            'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes,
-            'next_action': 'Call build_and_verify with components, nets, board size and sim_config'}
+            'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes, 'clusters': clusters,
+            'next_action': 'Call build_and_verify with components, nets, board size and sim_config '
+                           '(cluster fields on the components keep each block placed together)'}
 
 
 def _default_sim(inst, order, uf, final_name, connected, nets):

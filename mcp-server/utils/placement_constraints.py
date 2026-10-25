@@ -15,6 +15,9 @@ POWER_PAIRS = {
     'NE555': [('8', '1')], 'LM358': [('8', '4')],
     'ATtiny85_SOIC8': [('8', '4')], 'ESP32_C3_WROOM_02': [('1', '9'), ('1', '19')],
     'WS2812B': [('1', '3')], 'AMS1117_3V3': [('3', '1'), ('2', '1')],
+    'CH340G': [('16', '1'), ('4', '1')], 'W25Q32JV_SOIC8': [('8', '4')],
+    # IOVDD x6, DVDD x2, USB_VDD, ADC_AVDD, VREG_VIN, VREG_VOUT; a cap picks its pin with bypass_pin.
+    'RP2040_QFN56': [(pin, '57') for pin in ('1', '10', '22', '33', '42', '49', '23', '50', '48', '43', '44', '45')],
 }
 
 
@@ -37,6 +40,13 @@ def normalize_bypass_metadata(component, normalized):
         if capacitance_f(normalized['value']) is None:
             raise ValueError(f"{normalized['ref']} bypass capacitance must be a positive value such as 100n")
         normalized['bypasses'] = owner
+    if 'bypass_pin' in component:
+        pin = component['bypass_pin']
+        if owner is None:
+            raise ValueError(f"{normalized['ref']}.bypass_pin requires explicit bypasses owner")
+        if not isinstance(pin, str) or not re.fullmatch(r'[A-Za-z0-9_]{1,16}', pin):
+            raise ValueError(f"{normalized['ref']}.bypass_pin must be the owner's supply pin number")
+        normalized['bypass_pin'] = pin
     if 'max_distance_mm' in component:
         if owner is None:
             raise ValueError(f"{normalized['ref']}.max_distance_mm requires explicit bypasses owner")
@@ -95,8 +105,11 @@ def resolve_bypasses(components, nets):
             if owner is None:
                 raise ValueError(f"{cap['ref']}.bypasses references unknown component {cap['bypasses']}")
             candidates = matches(cap, owner)
+            if cap.get('bypass_pin') is not None:
+                candidates = [pair for pair in candidates if pair['owner_supply_pin'] == cap['bypass_pin']]
             if not candidates:
-                raise ValueError(f"{cap['ref']} must connect directly across a recognized supply and ground pair of {owner['ref']}")
+                at = f" at supply pin {cap['bypass_pin']}" if cap.get('bypass_pin') is not None else ''
+                raise ValueError(f"{cap['ref']} must connect directly across a recognized supply and ground pair of {owner['ref']}{at}")
             source = 'explicit'
         else:
             value = capacitance_f(cap['value'])
