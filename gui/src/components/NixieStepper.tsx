@@ -1,11 +1,17 @@
+import type { ReactNode } from "react";
 import ProgressGauge from "./ProgressGauge";
 import { STAGES, Telemetry } from "../types";
 const labels = ["Plan", "PCB", "Sim", "Route", "DRC", "Export"];
-export default function NixieStepper({ telemetry }: { telemetry: Telemetry }) {
+export default function NixieStepper({ telemetry, specs }: { telemetry: Telemetry; specs?: ReactNode }) {
   const states = STAGES.map((st) => telemetry.stages[st] ?? "pending");
   const done = states.filter((st) => st === "completed").length;
   return (
     <section className="instrument sequence">
+      {specs && (
+        <div className="board-specs" aria-label="Board fabrication">
+          {specs}
+        </div>
+      )}
       <ProgressGauge done={done} total={STAGES.length} failed={states.includes("failed")} />
       <div className="tubes">
         {STAGES.map((stage, i) => {

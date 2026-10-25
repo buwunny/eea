@@ -23,6 +23,17 @@ function tidy(v: number) {
   if (a >= 10) return (Math.round(v * 10) / 10).toString();
   return Number(v.toPrecision(2)).toString();
 }
+/** Round tick values (0, 500, 1000…) inside [min, max], so the axis never ends on 1987.5. */
+function niceTicks(min: number, max: number, count: number) {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return undefined;
+  const raw = (max - min) / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = ([1, 2, 2.5, 5, 10].find((m) => m * mag >= raw) ?? 10) * mag;
+  const ticks = [];
+  for (let t = Math.ceil(min / step) * step; t <= max + step * 1e-9; t += step)
+    ticks.push(Number(t.toPrecision(12)));
+  return ticks;
+}
 function CathodeRay({
   simulation,
   passed,
@@ -44,6 +55,23 @@ function CathodeRay({
       ) ?? [],
     [simulation],
   );
+  const xTicks = useMemo(() => {
+    const xs = simulation?.x_data ?? [];
+    return xs.length ? niceTicks(xs[0], xs[xs.length - 1], 4) : undefined;
+  }, [simulation]);
+  const yRange = useMemo(() => {
+    let lo = Infinity, hi = -Infinity;
+    for (const values of Object.values(simulation?.signals ?? {}))
+      for (const v of values) if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (lo > hi) return undefined;
+    if (hi - lo < 1e-9) { lo -= 1; hi += 1; }
+    const ticks = niceTicks(lo, hi, 3);
+    if (!ticks || ticks.length < 2) return undefined;
+    // Snap the range out to whole steps so the trace never touches the bezel.
+    const step = ticks[1] - ticks[0];
+    const domain: [number, number] = [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
+    return { domain, ticks: niceTicks(domain[0], domain[1], 3) };
+  }, [simulation]);
   return (
     <section className="instrument scope">
       <div className="panel-heading">
@@ -67,6 +95,7 @@ function CathodeRay({
                   dataKey="x"
                   type="number"
                   domain={["dataMin", "dataMax"]}
+                  ticks={xTicks}
                   tick={tickStyle}
                   tickFormatter={tidy}
                   tickLine={false}
@@ -74,6 +103,8 @@ function CathodeRay({
                   minTickGap={35}
                 />
                 <YAxis
+                  domain={yRange?.domain ?? ["auto", "auto"]}
+                  ticks={yRange?.ticks}
                   tick={tickStyle}
                   tickFormatter={tidy}
                   tickLine={false}

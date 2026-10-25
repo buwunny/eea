@@ -143,8 +143,11 @@ function NativeModel({ url }: { url: string }) {
   const glb = /\.glb(?:\?|$)/i.test(url);
   return glb ? <Glb url={url} /> : <Vrml url={url} />;
 }
-function CenterObject({ object }: { object: Object3D }) {
+function CenterObject({ object, zUp = false }: { object: Object3D; zUp?: boolean }) {
   const model = object.clone();
+  // KiCad's VRML is Z-up; three.js is Y-up, so stand the board flat before centering.
+  if (zUp) model.rotation.x = -Math.PI / 2;
+  model.updateMatrixWorld(true);
   const box = new Box3().setFromObject(model);
   const size = box.getSize(new Vector3());
   const center = box.getCenter(new Vector3());
@@ -161,7 +164,7 @@ function Glb({ url }: { url: string }) {
 }
 function Vrml({ url }: { url: string }) {
   const model = useLoader(VRMLLoader, url);
-  return <CenterObject object={model} />;
+  return <CenterObject object={model} zUp />;
 }
 class ModelBoundary extends Component<
   { children: ReactNode },
@@ -188,7 +191,7 @@ class ModelBoundary extends Component<
 
 export default function Board3D({ demo, modelUrl, design }: { demo: boolean; modelUrl: string | null; design: Design | null }) {
   return (
-          <Canvas camera={{ position: [4, 5, 6], fov: 42 }}>
+          <Canvas camera={{ position: [3.2, 4, 4.8], fov: 42 }}>
             <color attach="background" args={["#111710"]} />
             <ambientLight intensity={1.3} />
             <directionalLight position={[3, 7, 3]} intensity={2.5} />

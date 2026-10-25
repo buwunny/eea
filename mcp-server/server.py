@@ -168,7 +168,7 @@ def get_design_readiness() -> dict:
     from utils.telemetry import workspace_path
     def operation():
         readiness = update_readiness(workspace_path())
-        warnings = [f"{name}: {'; '.join(check.get('reasons', []))}" for name, check in readiness['checks'].items()
+        warnings = [f"{name}: {' '.join(r if r.rstrip().endswith(('.', '!', '?')) else r.rstrip() + '.' for r in check.get('reasons', []))}" for name, check in readiness['checks'].items()
                     if check['status'] != 'passed']
         return {'status': 'success', 'readiness': readiness, 'warnings': warnings,
                 'summary': 'Readiness refreshed: inspect individual checks and unresolved reviews'}

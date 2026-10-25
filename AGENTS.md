@@ -197,7 +197,7 @@ Every element should look like a 19th-century brass-and-mahogany laboratory inst
 3. **Center — AetherScope:** `[2D KiCanvas PCB] | [3D Interactive Spin]` (KiCanvasBoard keeps the old board visible while the new one loads; Board3D renders VRML/GLB or a procedural extrusion). Git time-travel slider at the bottom.
 4. **Right — HUD:** NixieStepper with ProgressGauge (stages); CathodeRay (Recharts signals + readouts, "APPROXIMATE MODELS" plaque for generic models, "NOT SIMULATED" for unmodeled parts); NixieCounter for DRC and unconnected counts; DrcInspector (click a violation to focus the board); ReadinessChecklist; PowerInspector; LedgerBOM (trust badges, MPN, "Prices are estimates from <date>", Gerber download).
 5. Panes are resizable via SplitView (keyboard and pointer). The HUD shows copper layer count and fabricator profile, including when browsing history; demo metadata stays 2-layer/conservative.
-6. **"Simulate Demo Flow"** replays the 555 self-healing sequence (unrouted → failed SPICE → fixed resistor → routed → 0 DRC) without the backend.
+6. **Demo replay** (hidden unless the URL has `?demo`, e.g. `http://localhost:5173/?demo`): a footer "Run demo" button replays the 555 self-healing sequence (unrouted → failed SPICE → fixed resistor → routed → 0 DRC) without the backend, as a backup when the toolchain is unavailable.
 
 Gotcha: LedgerBOM's `ROW_HEIGHT` constant must match `.ledger td` in `steampunk.css`.
 

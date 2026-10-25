@@ -182,6 +182,10 @@ a {
   flex-direction: column;
   padding: 14px 16px 0;
 }
+/* The footer only appears in ?demo mode; otherwise leave a bottom margin. */
+.forge > main:last-child {
+  padding-bottom: 16px;
+}
 .workbench-heading {
   flex: none;
   display: flex;
@@ -698,6 +702,7 @@ aside > .split-view {
 /* Nixie tubes — a showpiece */
 .sequence {
   flex: none;
+  position: relative;
 }
 .tubes {
   display: grid;
@@ -1062,7 +1067,7 @@ aside > .split-view {
   flex: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 5px 16px;
   font: italic 500 15px var(--serif);
@@ -1359,7 +1364,7 @@ aside > .split-view {
 .doctor-checks li > div { display: flex; justify-content: space-between; gap: 12px; }
 .doctor-checks small { display: block; color: var(--muted); margin-top: 4px; overflow-wrap: anywhere; }
 .verification { overflow: auto; }
-.verification .gauges { flex: 0 0 160px; }
+.verification .gauges { flex: 0 0 auto; padding: 14px 12px 6px; }
 .drc-inspector { padding: 0 12px 10px; }
 .drc-inspector > p { margin: 4px 0 8px; line-height: 1.4; }
 .drc-finding { display: flex; width: 100%; text-align: left; align-items: start; gap: 6px; padding: 6px; margin: 4px 0; }
@@ -1411,8 +1416,8 @@ aside > .split-view {
 }
 .nixie-counter { display: flex; gap: 6px; }
 .nixie-counter span {
-  font: 400 44px/1.2 var(--mono);
-  padding: 2px 8px;
+  font: 400 32px/1.15 var(--mono);
+  padding: 1px 6px;
   background: #0e0b09;
   border: 1px solid #8f7445;
   border-radius: 8px 8px 4px 4px;
@@ -1421,9 +1426,9 @@ aside > .split-view {
 .nixie-counter.idle span { color: var(--faint); }
 .nixie-counter.clear span { color: #ffa53d; text-shadow: 0 0 8px #ff8a2a; }
 .nixie-counter.fault span { color: #ff6a5a; text-shadow: 0 0 8px #d92b2b; }
-.counter-wrap label { font-size: 16px; color: var(--text); margin-top: 8px; }
+.counter-wrap label { font-size: 14px; color: var(--text); margin-top: 6px; }
 .counter-wrap small { font-size: 11px; color: var(--faint); margin-top: 2px; white-space: nowrap; }
-.progress-gauge { width: 84px; flex: none; margin: 0 auto 4px; }
+.progress-gauge { width: 96px; flex: none; margin: 0 auto 4px; }
 .progress-gauge svg { width: 100%; display: block; }
 .progress-gauge text { font-family: var(--serif); font-weight: 600; fill: #b8a685; }
 .progress-gauge .gauge-number { font: 400 13px var(--mono); fill: var(--text); }
@@ -1464,7 +1469,16 @@ aside > .split-view {
 .stamp.warn { color: var(--caution); }
 .stamp.info { color: var(--brass); }
 .stamp.ok { color: var(--ok); }
-.board-specs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; }
+.board-specs {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.board-specs .stamp { font-size: 10px; line-height: 14px; padding: 0 5px; }
 .ledger-note {
   flex: none;
   margin: 0;

@@ -18,6 +18,7 @@ interface Viewer {
   document?: unknown;
   loaded?: { isOpen: boolean };
   page_opacity?: number;
+  zone_opacity?: number;
   zoom_to_board: () => void;
   flip_view: () => void;
   draw: () => void;
@@ -55,6 +56,8 @@ function BoardFrame({
         if (app?.viewer?.document && app.viewer.loaded?.isOpen) {
           const readyViewer = app.viewer;
           readyViewer.page_opacity = 0;
+          // Keep ground pours from drowning out the tracks.
+          readyViewer.zone_opacity = 0.35;
           readyViewer.zoom_to_board();
           readyViewer.draw();
           // Reveal only after the fitted canvas has had a frame to paint.

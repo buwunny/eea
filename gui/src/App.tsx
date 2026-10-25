@@ -56,6 +56,9 @@ const PROFILE_LABELS: Record<string, string> = {
 };
 const profileLabel = (name: string) => PROFILE_LABELS[name] ?? name.replace(/_/g, " ").toUpperCase();
 
+// The sample-data replay is a backup for showing the GUI without a working toolchain; open with ?demo.
+const demoEnabled = new URLSearchParams(window.location.search).has("demo");
+
 export default function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const projectRef = useRef<ProjectInfo | null>(null);
@@ -63,7 +66,7 @@ export default function App() {
   const [exportReady, setExportReady] = useState(false);
   const [exportRequest, setExportRequest] = useState(0);
   const [compact, setCompact] = useState(window.innerWidth < 1050);
-  const [shortWindow, setShortWindow] = useState(window.innerHeight < 740);
+  const [shortWindow, setShortWindow] = useState(window.innerHeight < 820);
   const [activeInstrument, setActiveInstrument] = useState(0);
   const [activePane, setActivePane] = useState(1);
   const [inspectorTab, setInspectorTab] = useState<"checks" | "parts" | "power">(
@@ -71,7 +74,7 @@ export default function App() {
   );
   useEffect(() => {
     const query = matchMedia("(max-width: 1049px)");
-    const heightQuery = matchMedia("(max-height: 739px)");
+    const heightQuery = matchMedia("(max-height: 819px)");
     const change = () => setCompact(query.matches);
     const heightChange = () => setShortWindow(heightQuery.matches);
     query.addEventListener("change", change);
@@ -485,17 +488,21 @@ export default function App() {
               )}
             </div>
             <aside>
-              {shownDesign?.layer_count && (
-                <div className="board-specs" aria-label="Board fabrication">
-                  <span className="stamp info">{shownDesign.layer_count}-LAYER</span>
-                  {shownDesign.fabricator_profile && (
-                    <span className="stamp info" title={`fabricator_profile: ${shownDesign.fabricator_profile}`}>
-                      {profileLabel(shownDesign.fabricator_profile)}
-                    </span>
-                  )}
-                </div>
-              )}
-              <NixieStepper telemetry={telemetry} />
+              <NixieStepper
+                telemetry={telemetry}
+                specs={
+                  shownDesign?.layer_count ? (
+                    <>
+                      <span className="stamp info">{shownDesign.layer_count}-LAYER</span>
+                      {shownDesign.fabricator_profile && (
+                        <span className="stamp info" title={`fabricator_profile: ${shownDesign.fabricator_profile}`}>
+                          {profileLabel(shownDesign.fabricator_profile)}
+                        </span>
+                      )}
+                    </>
+                  ) : null
+                }
+              />
               {shortWindow && (
                 <nav className="instrument-nav" aria-label="Instruments">
                   {["Simulation", "Checks", "Parts", "Power"].map((label, i) => (
@@ -606,27 +613,25 @@ export default function App() {
           </SplitView>
         </div>
       </main>
-      <footer className="forge-footer">
-        <div>
-          <span className={`status-dot ${connected ? "online" : ""}`} />
-          <span>{isDemo ? "Demo · sample data" : "EEA"}</span>
-        </div>
-        <div className="demo-controls">
-          {isDemo && (
-            <button className="exit-demo" onClick={endDemo}>
-              <Square size={10} /> Exit demo
+      {demoEnabled && (
+        <footer className="forge-footer">
+          <div className="demo-controls">
+            {isDemo && (
+              <button className="exit-demo" onClick={endDemo}>
+                <Square size={10} /> Exit demo
+              </button>
+            )}
+            <button
+              className="demo-button"
+              onClick={startDemo}
+              disabled={demoRunning}
+            >
+              <FlaskConical size={14} />
+              {demoRunning ? "Running demo…" : "Run demo"}
             </button>
-          )}
-          <button
-            className="demo-button"
-            onClick={startDemo}
-            disabled={demoRunning}
-          >
-            <FlaskConical size={14} />
-            {demoRunning ? "Running demo…" : "Run demo"}
-          </button>
-        </div>
-      </footer>
+          </div>
+        </footer>
+      )}
     </div>
   );
 }
