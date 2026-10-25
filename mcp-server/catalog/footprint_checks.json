@@ -468,6 +468,23 @@
       ]
     }
   },
+  "Crystal_12MHz_3225": {
+    "lcsc": "C9002",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T04:08:25Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0001,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0001
+      ]
+    }
+  },
   "Crystal_16MHz": {
     "lcsc": "C13738",
     "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
@@ -1190,6 +1207,25 @@
       ]
     }
   },
+  "USBLC6_2SC6": {
+    "lcsc": "C7519",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T04:08:20Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.253,
+    "reasons": [
+      "6 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.253 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
   "USB_C_Receptacle_PowerOnly": {
     "lcsc": "C165948",
     "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
@@ -1200,6 +1236,18 @@
       "pad count/numbering differs: catalog has 12 pads, reference has 16",
       "pads only in catalog: ['A1', 'A12', 'A4', 'A9', 'B1', 'B12', 'B4', 'B9', 'S1', 'S2']",
       "pads only in reference: ['1', '2', '3', '4', 'A1B12', 'A4B9', 'A6', 'A7', 'A8', 'B1A12']"
+    ]
+  },
+  "USB_C_Receptacle_USB2": {
+    "lcsc": "C165948",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T04:08:23Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 20 pads, reference has 16",
+      "pads only in catalog: ['A1', 'A12', 'A4', 'A9', 'B1', 'B12', 'B4', 'B9', 'SH']",
+      "pads only in reference: ['1', '2', '3', '4', 'A1B12', 'A4B9', 'B1A12', 'B4A9']"
     ]
   },
   "USB_Micro_B": {

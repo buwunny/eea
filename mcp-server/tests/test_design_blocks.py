@@ -61,7 +61,7 @@ class BlockTests(unittest.TestCase):
 
     def test_listing(self):
         blocks = list_design_blocks()['blocks']
-        self.assertEqual(len(blocks), 25)
+        self.assertEqual(len(blocks), 26)
         for b in blocks:
             for port in b['ports'].values():
                 self.assertIn(port['direction'], ('power_in', 'power_out', 'signal_in', 'signal_out', 'ground', 'bidir'))

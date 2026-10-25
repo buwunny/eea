@@ -1342,6 +1342,83 @@
     "3": "E",
     "4": "C"
    }
+  },
+  {
+   "part_id": "USBLC6_2SC6",
+   "symbol": "Power_Protection:USBLC6-2SC6",
+   "footprint": "Package_TO_SOT_SMD:SOT-23-6",
+   "category": "protection",
+   "typical_application": "Two-line USB 2.0 ESD array (ST USBLC6-2SC6): D+ and D- each pass straight through between their two I/O pins (1-6 and 3-4), GND on pin 2 and VBUS on pin 5. Place it right next to the connector, before any series resistor, with the data traces routed through the pads.",
+   "required_support_parts": [
+    "Pin 2 to a short, low-inductance ground via/pour",
+    "Pin 5 to VBUS (the device clamps both lines to VBUS and GND)",
+    "Place within a few mm of the USB connector"
+   ],
+   "max_ratings": {
+    "standoff_v": 5.25,
+    "breakdown_v_min": 6,
+    "clamp_v_at_ipp": 17,
+    "peak_pulse_a": 5,
+    "line_capacitance_pf": 3.5,
+    "esd_iec61000_4_2_contact_kv": 8,
+    "esd_iec61000_4_2_air_kv": 15
+   },
+   "pin_names": {
+    "1": "IO1",
+    "2": "GND",
+    "3": "IO2",
+    "4": "IO2",
+    "5": "VBUS",
+    "6": "IO1"
+   }
+  },
+  {
+   "part_id": "USB_C_Receptacle_USB2",
+   "symbol": "Connector:USB_C_Receptacle_USB2.0_16P",
+   "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+   "category": "connector",
+   "typical_application": "USB Type-C receptacle with USB 2.0 data (HRO TYPE-C-31-M-12, 16 pin mid/SMD). A6/B6 are D+ and A7/B7 are D-; the plug orientation decides which pair is live, so join both D+ pins together and both D- pins together on the board. 5.1k Rd from each of CC1 and CC2 to GND makes a device (sink) that draws default USB power. SBU1/SBU2 are unused.",
+   "required_support_parts": [
+    "5.1k Rd from CC1 to GND and from CC2 to GND",
+    "10uF on VBUS",
+    "USB ESD array (USBLC6-2SC6) on D+/D-/VBUS next to the connector",
+    "Join A6+B6 (D+) and A7+B7 (D-) on the board"
+   ],
+   "max_ratings": {
+    "vbus_max_v": 5.5,
+    "current_default_a": 0.5,
+    "contact_current_a": 5,
+    "voltage_rating_v": 20
+   },
+   "pin_names": {
+    "A6": "D+",
+    "B6": "D+",
+    "A7": "D-",
+    "B7": "D-",
+    "SH": "SHIELD"
+   }
+  },
+  {
+   "part_id": "Crystal_12MHz_3225",
+   "symbol": "Device:Crystal_GND24",
+   "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+   "category": "clock",
+   "typical_application": "12 MHz SMD crystal (YXC X322512MSB4SI), load capacitance CL = 20 pF, ESR 80 ohm max, +/-10 ppm. The crystal is between pads 1 and 3; pads 2 and 4 are the case and go to ground. Each load capacitor C = 2*(CL - Cstray); with Cstray = 3 pF that is 34 pF, so use 33 pF (effective CL about 19.5 pF).",
+   "required_support_parts": [
+    "2 x 33pF load capacitors from pads 1 and 3 to GND (CL 20 pF, 3 pF stray assumed)",
+    "Pads 2 and 4 to GND"
+   ],
+   "max_ratings": {
+    "frequency_mhz": 12,
+    "load_capacitance_pf": 20,
+    "esr_ohm_max": 80
+   },
+   "pin_names": {
+    "1": "XTAL1",
+    "2": "GND",
+    "3": "XTAL2",
+    "4": "GND"
+   }
   }
  ],
  "auto": []

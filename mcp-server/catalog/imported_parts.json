@@ -3584,6 +3584,113 @@
    }
   }
  },
+ "Crystal_12MHz_3225": {
+  "part_id": "Crystal_12MHz_3225",
+  "tier": "imported",
+  "category": "clock",
+  "description": "Four pin crystal, GND on pins 2 and 4 (Crystal_SMD_3225-4Pin_3.2x2.5mm)",
+  "keywords": "quartz ceramic resonator oscillator",
+  "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+  "pins": [
+   {
+    "number": "1",
+    "name": "XTAL1",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "2",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "3",
+    "name": "XTAL2",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "4",
+    "name": "GND",
+    "function": "Passive terminal"
+   }
+  ],
+  "pads": [
+   {
+    "number": "1",
+    "x_mm": -1.1,
+    "y_mm": 0.85,
+    "width_mm": 1.4,
+    "height_mm": 1.2,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "2",
+    "x_mm": 1.1,
+    "y_mm": 0.85,
+    "width_mm": 1.4,
+    "height_mm": 1.2,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "3",
+    "x_mm": 1.1,
+    "y_mm": -0.85,
+    "width_mm": 1.4,
+    "height_mm": 1.2,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "4",
+    "x_mm": -1.1,
+    "y_mm": -0.85,
+    "width_mm": 1.4,
+    "height_mm": 1.2,
+    "through_hole": false,
+    "shape": "roundrect"
+   }
+  ],
+  "footprint_sexpr": "(footprint \"Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm\" (layer \"F.Cu\")\n  (fp_rect (start -2.1 -1.75) (end 2.1 1.75) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd roundrect (at -1.1 0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.208333))\n  (pad \"2\" smd roundrect (at 1.1 0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.208333))\n  (pad \"3\" smd roundrect (at 1.1 -0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.208333))\n  (pad \"4\" smd roundrect (at -1.1 -0.85) (size 1.4 1.2) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.208333))\n)",
+  "lcsc": "",
+  "price_usd": 0.0,
+  "spice_model": null,
+  "spice_pin_map": {},
+  "footprint_source": "KiCad library import: Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm with symbol Device:Crystal_GND24",
+  "typical_application": "12 MHz SMD crystal (YXC X322512MSB4SI), load capacitance CL = 20 pF, ESR 80 ohm max, +/-10 ppm. The crystal is between pads 1 and 3; pads 2 and 4 are the case and go to ground. Each load capacitor C = 2*(CL - Cstray); with Cstray = 3 pF that is 34 pF, so use 33 pF (effective CL about 19.5 pF).",
+  "required_support_parts": [
+   "2 x 33pF load capacitors from pads 1 and 3 to GND (CL 20 pF, 3 pF stray assumed)",
+   "Pads 2 and 4 to GND"
+  ],
+  "max_ratings": {
+   "frequency_mhz": 12,
+   "load_capacitance_pf": 20,
+   "esr_ohm_max": 80
+  },
+  "datasheet": "",
+  "footprint_review": {
+   "status": "unreviewed",
+   "source": "KiCad Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+   "manufacturer_drawing": null,
+   "reviewed_by": null,
+   "limitations": [
+    "Auto-imported from KiCad libraries: verify land pattern against the manufacturer drawing before fabrication",
+    "Courtyard and mechanical keepouts are not certified"
+   ]
+  },
+  "import": {
+   "symbol": "Device:Crystal_GND24",
+   "footprint": "Crystal:Crystal_SMD_3225-4Pin_3.2x2.5mm",
+   "kicad_symbol_library_version": "10.0",
+   "footprint_file_version": "20260206",
+   "footprint_generator": "kicad-footprint-generator",
+   "license": {
+    "spdx": "CC-BY-SA-4.0",
+    "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",
+    "notice": "catalog/NOTICE.md"
+   }
+  }
+ },
  "Crystal_HC49": {
   "part_id": "Crystal_HC49",
   "tier": "imported",
@@ -9844,6 +9951,465 @@
    "kicad_symbol_library_version": "10.0",
    "footprint_file_version": "20260206",
    "footprint_generator": "kicad-footprint-generator",
+   "license": {
+    "spdx": "CC-BY-SA-4.0",
+    "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",
+    "notice": "catalog/NOTICE.md"
+   }
+  }
+ },
+ "USBLC6_2SC6": {
+  "part_id": "USBLC6_2SC6",
+  "tier": "imported",
+  "category": "protection",
+  "description": "Very low capacitance ESD protection diode, 2 data-line, SOT-23-6 (SOT-23-6)",
+  "keywords": "usb ethernet video",
+  "footprint": "Package_TO_SOT_SMD:SOT-23-6",
+  "pins": [
+   {
+    "number": "1",
+    "name": "IO1",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "2",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "3",
+    "name": "IO2",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "4",
+    "name": "IO2",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "5",
+    "name": "VBUS",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "6",
+    "name": "IO1",
+    "function": "Passive terminal"
+   }
+  ],
+  "pads": [
+   {
+    "number": "1",
+    "x_mm": -1.1375,
+    "y_mm": -0.95,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "2",
+    "x_mm": -1.1375,
+    "y_mm": 0.0,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "3",
+    "x_mm": -1.1375,
+    "y_mm": 0.95,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "4",
+    "x_mm": 1.1375,
+    "y_mm": 0.95,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "5",
+    "x_mm": 1.1375,
+    "y_mm": 0.0,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "6",
+    "x_mm": 1.1375,
+    "y_mm": -0.95,
+    "width_mm": 1.325,
+    "height_mm": 0.6,
+    "through_hole": false,
+    "shape": "roundrect"
+   }
+  ],
+  "footprint_sexpr": "(footprint \"Package_TO_SOT_SMD:SOT-23-6\" (layer \"F.Cu\")\n  (fp_rect (start -2.05 -1.7) (end 2.05 1.7) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"1\" smd roundrect (at -1.1375 -0.95) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"2\" smd roundrect (at -1.1375 0) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"3\" smd roundrect (at -1.1375 0.95) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"4\" smd roundrect (at 1.1375 0.95) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"5\" smd roundrect (at 1.1375 0) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"6\" smd roundrect (at 1.1375 -0.95) (size 1.325 0.6) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n)",
+  "lcsc": "",
+  "price_usd": 0.0,
+  "spice_model": null,
+  "spice_pin_map": {},
+  "footprint_source": "KiCad library import: Package_TO_SOT_SMD:SOT-23-6 with symbol Power_Protection:USBLC6-2SC6",
+  "typical_application": "Two-line USB 2.0 ESD array (ST USBLC6-2SC6): D+ and D- each pass straight through between their two I/O pins (1-6 and 3-4), GND on pin 2 and VBUS on pin 5. Place it right next to the connector, before any series resistor, with the data traces routed through the pads.",
+  "required_support_parts": [
+   "Pin 2 to a short, low-inductance ground via/pour",
+   "Pin 5 to VBUS (the device clamps both lines to VBUS and GND)",
+   "Place within a few mm of the USB connector"
+  ],
+  "max_ratings": {
+   "standoff_v": 5.25,
+   "breakdown_v_min": 6,
+   "clamp_v_at_ipp": 17,
+   "peak_pulse_a": 5,
+   "line_capacitance_pf": 3.5,
+   "esd_iec61000_4_2_contact_kv": 8,
+   "esd_iec61000_4_2_air_kv": 15
+  },
+  "datasheet": "https://www.st.com/resource/en/datasheet/usblc6-2.pdf",
+  "footprint_review": {
+   "status": "unreviewed",
+   "source": "KiCad Package_TO_SOT_SMD:SOT-23-6",
+   "manufacturer_drawing": null,
+   "reviewed_by": null,
+   "limitations": [
+    "Auto-imported from KiCad libraries: verify land pattern against the manufacturer drawing before fabrication",
+    "Courtyard and mechanical keepouts are not certified"
+   ]
+  },
+  "import": {
+   "symbol": "Power_Protection:USBLC6-2SC6",
+   "footprint": "Package_TO_SOT_SMD:SOT-23-6",
+   "kicad_symbol_library_version": "10.0",
+   "footprint_file_version": "20260206",
+   "footprint_generator": "kicad-footprint-generator",
+   "license": {
+    "spdx": "CC-BY-SA-4.0",
+    "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",
+    "notice": "catalog/NOTICE.md"
+   }
+  }
+ },
+ "USB_C_Receptacle_USB2": {
+  "part_id": "USB_C_Receptacle_USB2",
+  "tier": "imported",
+  "category": "connector",
+  "description": "USB 2.0-only 16P Type-C Receptacle connector (USB_C_Receptacle_HRO_TYPE-C-31-M-12)",
+  "keywords": "usb universal serial bus type-C USB2.0",
+  "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+  "pins": [
+   {
+    "number": "A1",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "A4",
+    "name": "VBUS",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "A5",
+    "name": "CC1",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "A6",
+    "name": "D+",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "A7",
+    "name": "D-",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "A8",
+    "name": "SBU1",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "A9",
+    "name": "VBUS",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "A12",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "B1",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "B4",
+    "name": "VBUS",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "B5",
+    "name": "CC2",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "B6",
+    "name": "D+",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "B7",
+    "name": "D-",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "B8",
+    "name": "SBU2",
+    "function": "Bidirectional I/O"
+   },
+   {
+    "number": "B9",
+    "name": "VBUS",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "B12",
+    "name": "GND",
+    "function": "Passive terminal"
+   },
+   {
+    "number": "SH",
+    "name": "SHIELD",
+    "function": "Passive terminal"
+   }
+  ],
+  "pads": [
+   {
+    "number": "A1",
+    "x_mm": -3.25,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A4",
+    "x_mm": -2.45,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A5",
+    "x_mm": -1.25,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A6",
+    "x_mm": -0.25,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A7",
+    "x_mm": 0.25,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A8",
+    "x_mm": 1.25,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A9",
+    "x_mm": 2.45,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "A12",
+    "x_mm": 3.25,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B1",
+    "x_mm": 3.25,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B4",
+    "x_mm": 2.45,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B5",
+    "x_mm": 1.75,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B6",
+    "x_mm": 0.75,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B7",
+    "x_mm": -0.75,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B8",
+    "x_mm": -1.75,
+    "y_mm": -4.045,
+    "width_mm": 0.3,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B9",
+    "x_mm": -2.45,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "B12",
+    "x_mm": -3.25,
+    "y_mm": -4.045,
+    "width_mm": 0.6,
+    "height_mm": 1.45,
+    "through_hole": false,
+    "shape": "roundrect"
+   },
+   {
+    "number": "SH",
+    "x_mm": -4.32,
+    "y_mm": -3.13,
+    "width_mm": 1.0,
+    "height_mm": 2.1,
+    "through_hole": true,
+    "shape": "oval"
+   },
+   {
+    "number": "SH",
+    "x_mm": -4.32,
+    "y_mm": 1.05,
+    "width_mm": 1.0,
+    "height_mm": 1.6,
+    "through_hole": true,
+    "shape": "oval"
+   },
+   {
+    "number": "SH",
+    "x_mm": 4.32,
+    "y_mm": -3.13,
+    "width_mm": 1.0,
+    "height_mm": 2.1,
+    "through_hole": true,
+    "shape": "oval"
+   },
+   {
+    "number": "SH",
+    "x_mm": 4.32,
+    "y_mm": 1.05,
+    "width_mm": 1.0,
+    "height_mm": 1.6,
+    "through_hole": true,
+    "shape": "oval"
+   }
+  ],
+  "footprint_sexpr": "(footprint \"Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12\" (layer \"F.Cu\")\n  (fp_rect (start -5.32 -5.27) (end 5.32 4.15) (stroke (width 0.12) (type default)) (fill none) (layer \"F.Fab\"))\n  (pad \"\" np_thru_hole circle (at -2.89 -2.6) (size 0.65 0.65) (drill 0.65) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"\" np_thru_hole circle (at 2.89 -2.6) (size 0.65 0.65) (drill 0.65) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"A1\" smd roundrect (at -3.25 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A4\" smd roundrect (at -2.45 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A5\" smd roundrect (at -1.25 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A6\" smd roundrect (at -0.25 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A7\" smd roundrect (at 0.25 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A8\" smd roundrect (at 1.25 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A9\" smd roundrect (at 2.45 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"A12\" smd roundrect (at 3.25 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B1\" smd roundrect (at 3.25 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B4\" smd roundrect (at 2.45 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B5\" smd roundrect (at 1.75 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B6\" smd roundrect (at 0.75 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B7\" smd roundrect (at -0.75 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B8\" smd roundrect (at -1.75 -4.045) (size 0.3 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B9\" smd roundrect (at -2.45 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"B12\" smd roundrect (at -3.25 -4.045) (size 0.6 1.45) (layers \"F.Cu\" \"F.Paste\" \"F.Mask\") (roundrect_rratio 0.25))\n  (pad \"SH\" thru_hole oval (at -4.32 -3.13) (size 1 2.1) (drill oval 0.6 1.7) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"SH\" thru_hole oval (at -4.32 1.05) (size 1 1.6) (drill oval 0.6 1.2) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"SH\" thru_hole oval (at 4.32 -3.13) (size 1 2.1) (drill oval 0.6 1.7) (layers \"*.Cu\" \"*.Mask\"))\n  (pad \"SH\" thru_hole oval (at 4.32 1.05) (size 1 1.6) (drill oval 0.6 1.2) (layers \"*.Cu\" \"*.Mask\"))\n)",
+  "lcsc": "",
+  "price_usd": 0.0,
+  "spice_model": null,
+  "spice_pin_map": {},
+  "footprint_source": "KiCad library import: Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12 with symbol Connector:USB_C_Receptacle_USB2.0_16P",
+  "typical_application": "USB Type-C receptacle with USB 2.0 data (HRO TYPE-C-31-M-12, 16 pin mid/SMD). A6/B6 are D+ and A7/B7 are D-; the plug orientation decides which pair is live, so join both D+ pins together and both D- pins together on the board. 5.1k Rd from each of CC1 and CC2 to GND makes a device (sink) that draws default USB power. SBU1/SBU2 are unused.",
+  "required_support_parts": [
+   "5.1k Rd from CC1 to GND and from CC2 to GND",
+   "10uF on VBUS",
+   "USB ESD array (USBLC6-2SC6) on D+/D-/VBUS next to the connector",
+   "Join A6+B6 (D+) and A7+B7 (D-) on the board"
+  ],
+  "max_ratings": {
+   "vbus_max_v": 5.5,
+   "current_default_a": 0.5,
+   "contact_current_a": 5,
+   "voltage_rating_v": 20
+  },
+  "datasheet": "https://www.usb.org/sites/default/files/documents/usb_type-c.zip",
+  "footprint_review": {
+   "status": "unreviewed",
+   "source": "KiCad Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+   "manufacturer_drawing": null,
+   "reviewed_by": null,
+   "limitations": [
+    "Auto-imported from KiCad libraries: verify land pattern against the manufacturer drawing before fabrication",
+    "Courtyard and mechanical keepouts are not certified"
+   ]
+  },
+  "import": {
+   "symbol": "Connector:USB_C_Receptacle_USB2.0_16P",
+   "footprint": "Connector_USB:USB_C_Receptacle_HRO_TYPE-C-31-M-12",
+   "kicad_symbol_library_version": "10.0",
+   "footprint_file_version": "20260206",
+   "footprint_generator": "pcbnew",
    "license": {
     "spdx": "CC-BY-SA-4.0",
     "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",

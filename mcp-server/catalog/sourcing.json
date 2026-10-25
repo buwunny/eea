@@ -1016,6 +1016,46 @@
    "alternates": []
   }
  },
+ "Crystal_12MHz_3225": {
+  "lcsc": "C9002",
+  "price_usd": 0.0956,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "X322512MSB4SI",
+   "manufacturer": "YXC Crystal Oscillators",
+   "package": "SMD3225-4P",
+   "library_type": "base",
+   "stock": 134433,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.0956
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.0766
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.0668
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0587
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.05
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0481
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8756945081817948160",
+   "alternates": []
+  }
+ },
  "Crystal_16MHz": {
   "lcsc": "C13738",
   "price_usd": 0.0936,
@@ -2634,7 +2674,87 @@
    "alternates": []
   }
  },
+ "USBLC6_2SC6": {
+  "lcsc": "C7519",
+  "price_usd": 0.1781,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "USBLC6-2SC6",
+   "manufacturer": "STMicroelectronics",
+   "package": "SOT-23-6L",
+   "library_type": "expand",
+   "stock": 32269,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1781
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1371
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1171
+    },
+    {
+     "qty": 500,
+     "price_usd": 0.0992
+    },
+    {
+     "qty": 3000,
+     "price_usd": 0.0943
+    },
+    {
+     "qty": 6000,
+     "price_usd": 0.0913
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8579714554416455680",
+   "alternates": []
+  }
+ },
  "USB_C_Receptacle_PowerOnly": {
+  "lcsc": "C165948",
+  "price_usd": 0.1872,
+  "sourcing": {
+   "source": "jlcparts",
+   "mpn": "TYPE-C-31-M-12",
+   "manufacturer": "Korean Hroparts Elec",
+   "package": "SMD",
+   "library_type": "expand",
+   "stock": 367975,
+   "price_tiers": [
+    {
+     "qty": 1,
+     "price_usd": 0.1872
+    },
+    {
+     "qty": 50,
+     "price_usd": 0.1479
+    },
+    {
+     "qty": 150,
+     "price_usd": 0.1286
+    },
+    {
+     "qty": 1000,
+     "price_usd": 0.1043
+    },
+    {
+     "qty": 2000,
+     "price_usd": 0.0995
+    },
+    {
+     "qty": 5000,
+     "price_usd": 0.0968
+    }
+   ],
+   "datasheet": "https://jlcpcb.com/api/file/downloadByFileSystemAccessId/8550723676069908480",
+   "alternates": []
+  }
+ },
+ "USB_C_Receptacle_USB2": {
   "lcsc": "C165948",
   "price_usd": 0.1872,
   "sourcing": {

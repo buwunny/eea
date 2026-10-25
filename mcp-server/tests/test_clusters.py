@@ -17,7 +17,7 @@ from utils.pcb_builder import build_board, load_catalog, normalize_design, pad_p
 from utils.placement import DEFAULT_CLUSTER_DISTANCE_MM, _box_gap, body_box, is_usb_data_net
 from utils.placement_constraints import DEFAULT_BYPASS_DISTANCE_MM
 
-SUBSYSTEM_BLOCKS = ('usb_c_power_in', 'usb_micro_b_data', 'esp32_c3_core', 'usb_uart_ch340', 'rp2040_core')
+SUBSYSTEM_BLOCKS = ('usb_c_power_in', 'usb_c_data', 'usb_micro_b_data', 'esp32_c3_core', 'usb_uart_ch340', 'rp2040_core')
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -105,7 +105,7 @@ class ComposeClusterTests(unittest.TestCase):
         r, _ = milestone()
         self.assertEqual(r['warnings'], [])
         by_ref = {c['ref']: c for c in r['components']}
-        self.assertEqual({c['block'] for c in r['clusters']}, {'pwr', 'reg', 'mcu', 'uart'})
+        self.assertEqual({c['block'] for c in r['clusters']}, {'usb', 'reg', 'mcu', 'uart'})
         for cluster in r['clusters']:
             self.assertIn(cluster['anchor'], by_ref)
             self.assertNotIn('cluster', by_ref[cluster['anchor']])
@@ -162,8 +162,8 @@ class ClusterPlacementTests(unittest.TestCase):
     def test_usb_data_parts_end_up_near_the_connector(self):
         _, d = milestone()
         by_part = {c['part_id']: c['ref'] for c in d['components']}
-        for connector_pin, bridge_pin in (('3', '5'), ('2', '6')):  # D+ / D-
-            (jx, jy), = pad_xy(d, f"{by_part['USB_Micro_B']}.{connector_pin}")
+        for connector_pin, bridge_pin in (('A6', '5'), ('A7', '6')):  # D+ / D-
+            (jx, jy), = pad_xy(d, f"{by_part['USB_C_Receptacle_USB2']}.{connector_pin}")
             (ux, uy), = pad_xy(d, f"{by_part['CH340G']}.{bridge_pin}")
             self.assertLess(math.hypot(jx - ux, jy - uy), 20.0)
 
@@ -181,10 +181,11 @@ class ClusterPlacementTests(unittest.TestCase):
         assert_no_overlaps(self, d)
         self.assertTrue(all(c['ok'] for c in d['cluster_checks']['checks']), d['cluster_checks']['checks'])
         bypass = d['placement_checks']['checks']
+        rp_ref = next(c['ref'] for c in d['components'] if c['part_id'] == 'RP2040_QFN56')
         self.assertEqual(len(bypass), 13)  # 12 RP2040 supply pins + flash
         self.assertTrue(all(c['status'] == 'passed' for c in bypass), [(c['capacitor'], c['straight_line_distance_mm']) for c in bypass])
         # Each RP2040 cap is measured against its own supply pin, not all against pin 1.
-        self.assertEqual(len({c['owner_supply_pin'] for c in bypass if c['owner'] == 'U2'}), 12)
+        self.assertEqual(len({c['owner_supply_pin'] for c in bypass if c['owner'] == rp_ref}), 12)
 
     def test_fixed_anchor_keeps_members_close(self):
         comps = [{'ref': 'J1', 'part_id': 'PinHeader_1x04', 'x_mm': 4, 'y_mm': 15},

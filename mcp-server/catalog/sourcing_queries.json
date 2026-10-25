@@ -408,5 +408,24 @@
    "PC817C"
   ],
   "package": "DIP-4"
+ },
+ "USBLC6_2SC6": {
+  "mpn": [
+   "USBLC6-2SC6"
+  ],
+  "package": "SOT-23-6",
+  "manufacturer": "STMicro"
+ },
+ "USB_C_Receptacle_USB2": {
+  "mpn": [
+   "TYPE-C-31-M-12"
+  ],
+  "manufacturer": "Hroparts"
+ },
+ "Crystal_12MHz_3225": {
+  "mpn": [
+   "X322512MSB4SI"
+  ],
+  "manufacturer": "YXC"
  }
 }
