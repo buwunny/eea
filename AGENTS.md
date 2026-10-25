@@ -75,7 +75,7 @@ eea/
     ├── AGENTS.md                # instructions for the AI CLI in the GUI terminal
     ├── telemetry.json, project_spec.md
     ├── src/design.py, src/testbench.py
-    ├── build/                   # board.net, board.kicad_pcb, design.json, board_3d.*, sim_results.json, drc_report.json
+    ├── build/                   # board.net, board.kicad_pcb, board.kicad_pro (design rules + net classes), design.json, board_3d.*, sim_results.json, drc_report.json
     └── manufacturing/           # gerbers.zip, bom.csv, cpl.csv
 ```
 
@@ -151,14 +151,16 @@ Tool docstrings are what the AI CLI reads, so keep parameter details there, not 
 | Tool | What it does |
 |---|---|
 | `search_parts`, `get_part_details`, `list_curated_parts` | Catalog views across both tiers. No telemetry or commits. |
-| `synthesize_pcb(components, nets, board_width_mm, board_height_mm)` | SKiDL netlist → `build/board.net`; `pcb_builder` places embedded footprints, draws `Edge.Cuts`, assigns pad nets → `build/board.kicad_pcb`; exports 3D. |
+| `synthesize_pcb(components, nets, board_width_mm, board_height_mm, layer_count, stackup, fabricator_profile, netclasses)` | SKiDL netlist → `build/board.net`; `pcb_builder` places embedded footprints, draws `Edge.Cuts`, assigns pad nets → `build/board.kicad_pcb`, with design rules and net classes in `build/board.kicad_pro` (KiCad reads rules from the project file); exports 3D. `layer_count` 2 or 4 (inferred from `stackup`). |
 | `run_spice_simulation(components, nets, sim_config)` | `pyspice_sim.py.j2` → ngspice; Vpp, frequency, duty cycle, DC average → `build/sim_results.json`. Reuses `build/design.json` when components/nets are omitted; skips unmodeled parts. Fallback: raw `.cir` + `ngspice -b`. |
-| `autoroute_pcb(trace_width_mm, clearance_mm)` | pcbnew DSN export → Freerouting → SES import; GND pour on `B.Cu`; re-export 3D. Fallback: Python grid A* router. 6 passes for ≤30 pads (override with `max_passes`, `time_budget_s`, `EEA_ROUTER_MAX_PASSES`, `EEA_ROUTER_TIME_BUDGET_S`). |
+| `autoroute_pcb(trace_width_mm, clearance_mm, fabricator_profile, stitching)` | pcbnew DSN export → Freerouting → SES import, each net class with its own width/clearance/via (trace/clearance override the Default class); GND pour on `B.Cu`; on 4 layers GND/supply planes on In1/In2 (created before routing), thermal vias in exposed pads and GND edge stitching (`utils/vias.py`); re-export 3D. Fallback: Python grid A* router. 6 passes for ≤30 pads (override with `max_passes`, `time_budget_s`, `EEA_ROUTER_MAX_PASSES`, `EEA_ROUTER_TIME_BUDGET_S`). |
 | `run_drc_verification()` | `kicad-cli pcb drc` → `build/drc_report.json`; violations and unconnected items with coordinates and nets. |
 | `export_manufacturing_files()` | Gerbers, drill, pos → `workspace/manufacturing/`; JLCPCB `bom.csv` / `cpl.csv`; `gerbers.zip`. |
 | `build_and_verify(components, nets, ..., sim_config=None, export=False)` | synthesize → simulate → route → DRC (→ export), one telemetry stage and commit per step; stops at the first hard failure. |
 | `list_design_blocks`, `list_example_compositions`, `compose_design(blocks, connections)` | Pre-validated blocks with typed ports (`utils/design_blocks.py`). `compose_design` renumbers refs, merges nets, checks power/rating mistakes, estimates board size and builds a default `sim_config` from block `sim_default`s. Blocks may declare placement `clusters` (placed as one unit before the rest of the board). Subsystem blocks for MCU boards: `usb_c_power_in`, `usb_micro_b_data`, `esp32_c3_core`, `usb_uart_ch340`, `rp2040_core` (partial: needs 4 layers to route). Writes no files. Tests: `tests/test_design_blocks*.py`, `tests/test_clusters.py`. |
 | `calc_555_astable`, `calc_led_resistor`, `calc_voltage_divider` | Pure E24 calculators. No telemetry or commits. |
+
+**Fabricator profiles and net classes** (`utils/fab_profiles.py`, `utils/netclasses.py`): `conservative` (default), `jlcpcb_2l`, `jlcpcb_4l`, each value with its JLCPCB source and check date; the profile's limits are enforced by KiCad DRC. Net classes are optional input; otherwise `Power` (IPC-2221 width estimate), `USB` (matched width/clearance, no impedance claim) and `FinePitch` (nets on pads too fine for Default) are derived automatically. Fine-pitch parts such as the RP2040 need `jlcpcb_4l`.
 
 **Verification modes** (`simulation.VERIFICATION_RULE`): a design is `static_mcu` when a part in category `mcu`, `interface` or `memory` has no SPICE model, otherwise `full_simulation` (complete model coverage required; the 555 demo is unchanged). `static_mcu` readiness rests on DRC, the static checks in `utils/mcu_checks.py` (supply bypass, EN/RESET pull-up, strapping pins, USB data nets; every finding blocks) and a simulation of the modeled regulators only (`power_block_checks`, output within `regulation_tolerance_pct`, default 5 %). `readiness.verification` lists what was simulated and what covers each unsimulated part.
 

@@ -336,7 +336,9 @@ def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None
             via_report = {}
             if multilayer:
                 try:
-                    via_report = add_board_vias(board, pcbnew, design, planes, stitching)
+                    # Added vias use the Default class via, which the fabricator profile has already validated.
+                    via_report = add_board_vias(board, pcbnew, design, planes, stitching,
+                                                netclasses['Default']['via_drill_mm'], netclasses['Default']['via_dia_mm'])
                 except (AttributeError, TypeError, RuntimeError, ValueError) as error:
                     zone_warning.append(f'Thermal and stitching vias were not added: {error}')
             pcbnew.SaveBoard(str(build/'board.kicad_pcb'),board)
