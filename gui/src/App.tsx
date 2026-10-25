@@ -49,6 +49,13 @@ interface Snapshot {
   readiness: DesignReadiness | null;
 }
 
+const PROFILE_LABELS: Record<string, string> = {
+  conservative: "CONSERVATIVE",
+  jlcpcb_2l: "JLCPCB 2L",
+  jlcpcb_4l: "JLCPCB 4L",
+};
+const profileLabel = (name: string) => PROFILE_LABELS[name] ?? name.replace(/_/g, " ").toUpperCase();
+
 export default function App() {
   const [project, setProject] = useState<ProjectInfo | null>(null);
   const projectRef = useRef<ProjectInfo | null>(null);
@@ -481,7 +488,11 @@ export default function App() {
               {shownDesign?.layer_count && (
                 <div className="board-specs" aria-label="Board fabrication">
                   <span className="stamp info">{shownDesign.layer_count}-LAYER</span>
-                  {shownDesign.fabricator_profile && <span className="stamp info">{shownDesign.fabricator_profile}</span>}
+                  {shownDesign.fabricator_profile && (
+                    <span className="stamp info" title={`fabricator_profile: ${shownDesign.fabricator_profile}`}>
+                      {profileLabel(shownDesign.fabricator_profile)}
+                    </span>
+                  )}
                 </div>
               )}
               <NixieStepper telemetry={telemetry} />
@@ -580,7 +591,8 @@ export default function App() {
                       parts={telemetry.bom}
                       cost={telemetry.metrics.estimated_cost_usd}
                       sourcingDate={telemetry.sourcing_data_date}
-                      layerCount={shownDesign?.layer_count}
+                      // The BOM lists live parts, so its layer note follows the live design, not the browsed revision.
+                      layerCount={isDemo ? 2 : designAdvice?.layer_count}
                       canDownload={!isDemo && exportReady}
                       projectId={project?.id}
                       canExport={!isDemo && !!pcb && !!project && connected}
