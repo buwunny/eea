@@ -79,9 +79,10 @@ def get_part_details(part_id: str) -> dict:
 
 @mcp.tool()
 def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40,
-                     sim_config: dict | None = None, trace_width_mm: float = 0.25, clearance_mm: float = 0.2,
+                     sim_config: dict | None = None, trace_width_mm: float | None = None, clearance_mm: float | None = None,
                      export: bool = False, skip_simulation: bool = False, requirements: dict | None = None,
-                     layer_count: int = 2, stackup: str | None = None) -> dict:
+                     layer_count: int | None = None, stackup: str | None = None, netclasses: dict | None = None,
+                     fabricator_profile: str | None = None) -> dict:
     """FASTEST PATH: one call runs synthesize -> simulate -> autoroute -> DRC (-> export if export=True and DRC is clean).
     Prefer this over calling the individual tools. Stops at the first hard failure and returns
     {status, stages: {tool: short report}, failed_stage, next_action, summary}; fix the design and call again.
@@ -93,19 +94,31 @@ def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: f
     Component tolerance_pct enables conservative standard-555 RC corner estimates.
     sim_config also accepts source waveforms, loads and a sweep (see run_spice_simulation).
     layer_count=4 builds a Signal/GND/Power/Signal board (default stackup JLC04161H-7628) with GND on In1.Cu and the
-    main supply rail on In2.Cu as planes; it needs Freerouting (Java + vendor/freerouting.jar)."""
+    main supply rail on In2.Cu as planes; it needs Freerouting (Java + vendor/freerouting.jar). layer_count may be omitted
+    when stackup is given.
+    fabricator_profile: conservative (default) | jlcpcb_2l | jlcpcb_4l (4-layer only) sets the DRC minimums
+    (track, clearance, via, annular ring, hole, hole-to-hole, edge). netclasses is optional, e.g.
+    {"Power": {"track_mm": 0.5, "clearance_mm": 0.2, "via_dia_mm": 0.8, "via_drill_mm": 0.4, "nets": ["VBUS"]},
+    "Default": {"track_mm": 0.25, "clearance_mm": 0.2}}; values below the profile minimum are rejected. Nets you do not
+    list get automatic classes: Power for supply rails (IPC-2221 width), USB for USB data nets (matched width and
+    clearance, no impedance control) and FinePitch for nets on pads too fine for Default. trace_width_mm / clearance_mm
+    override the Default class. Pass compose_design's netclasses through unchanged."""
     return pipeline.build_and_verify(components, nets, board_width_mm, board_height_mm, sim_config,
                                      trace_width_mm, clearance_mm, export, skip_simulation, requirements,
-                                     layer_count, stackup)
+                                     layer_count, stackup, netclasses, fabricator_profile)
 
 
 @mcp.tool()
 def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40, requirements: dict | None = None,
-                   layer_count: int = 2, stackup: str | None = None) -> dict:
+                   layer_count: int | None = None, stackup: str | None = None, netclasses: dict | None = None,
+                   fabricator_profile: str | None = None) -> dict:
     """Validate structured connectivity and embed curated footprints in a board. Prefer build_and_verify, which also
     simulates, routes and runs DRC in one call. x_mm / y_mm may be omitted: the server auto-places components.
-    layer_count is 2 (default) or 4; stackup optionally names a preset (2L_1.6mm, JLC04161H-7628)."""
-    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm, requirements, layer_count, stackup))
+    layer_count is 2 (default) or 4 (inferred from stackup when omitted); stackup optionally names a preset
+    (2L_1.6mm, JLC04161H-7628). netclasses and fabricator_profile (conservative | jlcpcb_2l | jlcpcb_4l) are as in
+    build_and_verify; the resolved classes and DRC rules are written to build/board.kicad_pro."""
+    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm, requirements,
+                                                                            layer_count, stackup, netclasses, fabricator_profile))
 
 
 @mcp.tool()
@@ -129,13 +142,17 @@ def run_spice_simulation(components: list[dict] | None = None, nets: list[dict] 
 
 
 @mcp.tool()
-def autoroute_pcb(trace_width_mm: float = 0.25, clearance_mm: float = 0.2, max_passes: int | None = None, time_budget_s: float | None = None,
-                  stitching: bool = True) -> dict:
+def autoroute_pcb(trace_width_mm: float | None = None, clearance_mm: float | None = None, max_passes: int | None = None,
+                  time_budget_s: float | None = None, fabricator_profile: str | None = None, stitching: bool = True) -> dict:
     """Route with Freerouting or explicitly reported Python fallback. max_passes / time_budget_s are optional caps
     (defaults: 6 passes for small boards of <= 30 pads else 20; 180 s; env EEA_ROUTER_MAX_PASSES / EEA_ROUTER_TIME_BUDGET_S).
-    The passes and budget used are reported. On 4-layer boards, exposed pads on a plane net get thermal vias and,
-    unless stitching=False, GND stitching vias are placed along the board edge (thermal_vias / stitching_vias)."""
-    return execute('autoroute_pcb', 'AUTOROUTING', pipeline.autoroute_op(trace_width_mm, clearance_mm, max_passes, time_budget_s, stitching))
+    The passes and budget used are reported. Each synthesized net class is routed with its own width, clearance and via;
+    trace_width_mm / clearance_mm override the Default class (raised to the fabricator minimum if lower).
+    fabricator_profile defaults to the synthesized one; a different profile re-derives the net classes and DRC rules.
+    On 4-layer boards, exposed pads on a plane net get thermal vias and, unless stitching=False, GND stitching vias
+    are placed along the board edge (thermal_vias / stitching_vias)."""
+    return execute('autoroute_pcb', 'AUTOROUTING', pipeline.autoroute_op(trace_width_mm, clearance_mm, max_passes, time_budget_s,
+                                                                         fabricator_profile, stitching))
 
 
 @mcp.tool()
@@ -213,7 +230,8 @@ def compose_design(blocks: list[dict], connections: list[dict], board_width_mm: 
                    board_height_mm: float | None = None) -> dict:
     """Wire design blocks into one circuit. blocks: [{"block": "timer_555_astable", "id": "tmr", "params": {"freq_hz": 2}}];
     connections: [{"name": "VBUS", "ports": ["pwr.VBUS", "tmr.VCC"]}]. Unconnected GND ports join net GND.
-    Returns components, nets, board size, sim_config and electrical warnings to pass to build_and_verify.
+    Returns components, nets, board size, sim_config, block-declared netclasses (e.g. USB data nets) and electrical
+    warnings to pass to build_and_verify.
     No files are written."""
     return _calc(design_blocks.compose_design, blocks, connections, board_width_mm, board_height_mm)
 

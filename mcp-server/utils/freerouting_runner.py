@@ -28,14 +28,79 @@ def enforce_minimum_track_width(board, pcbnew):
     return changed
 
 
-def configure_native_rules(board, pcbnew, trace_width_mm, clearance_mm):
+def _apply_class(netclass, pcbnew, spec):
+    netclass.SetTrackWidth(int(pcbnew.FromMM(spec['track_mm'])))
+    netclass.SetClearance(int(pcbnew.FromMM(spec['clearance_mm'])))
+    netclass.SetViaDiameter(int(pcbnew.FromMM(spec['via_dia_mm'])))
+    netclass.SetViaDrill(int(pcbnew.FromMM(spec['via_drill_mm'])))
+
+
+def configure_native_rules(board, pcbnew, trace_width_mm=None, clearance_mm=None, netclasses=None, profile=None):
+    """Write fabricator rules and one pcbnew.NETCLASS per design net class into the loaded board.
+
+    Nets are assigned with exact-match net class patterns (KiCad 10 resolves a net's class from
+    the project's patterns; label assignments come from a schematic, and the SWIG binding cannot
+    pass their std::set). The effective class of every net is read back; returns the nets whose
+    class did not resolve (empty when all did). Without netclasses (legacy callers) every existing
+    class gets one width and clearance and (width_mm, clearance_mm) is returned.
+    """
     settings = board.GetDesignSettings()
-    width = max(settings.m_TrackMinWidth, pcbnew.FromMM(trace_width_mm))
-    clearance = max(getattr(settings, 'm_MinClearance', 0), pcbnew.FromMM(clearance_mm))
-    for netclass in board.GetAllNetClasses().values():
-        netclass.SetTrackWidth(width)
-        netclass.SetClearance(clearance)
-    return pcbnew.ToMM(width), pcbnew.ToMM(clearance)
+    if netclasses is None:
+        width = max(settings.m_TrackMinWidth, pcbnew.FromMM(trace_width_mm))
+        clearance = max(getattr(settings, 'm_MinClearance', 0), pcbnew.FromMM(clearance_mm))
+        for netclass in board.GetAllNetClasses().values():
+            netclass.SetTrackWidth(width)
+            netclass.SetClearance(clearance)
+        return pcbnew.ToMM(width), pcbnew.ToMM(clearance)
+    from .fab_profiles import apply_pcbnew_rules
+    from .pcb_builder import netclass_pattern
+    apply_pcbnew_rules(settings, pcbnew, profile)
+    net_settings = settings.m_NetSettings
+    _apply_class(net_settings.GetDefaultNetclass(), pcbnew, netclasses['Default'])
+    net_settings.ClearNetclassPatternAssignments()
+    for priority, (name, spec) in enumerate(netclasses.items()):
+        if name == 'Default':
+            continue
+        netclass = pcbnew.NETCLASS(name)
+        _apply_class(netclass, pcbnew, spec)
+        netclass.SetPriority(priority)
+        net_settings.SetNetclass(name, netclass)
+        for net in spec['nets']:
+            net_settings.SetNetclassPatternAssignment(netclass_pattern(net), name)
+    net_settings.ClearAllCaches()
+    board.SynchronizeNetsAndNetClasses(True)
+    expected = {net: name for name, spec in netclasses.items() for net in spec['nets']}
+    mismatched = []
+    for net_name, net in board.GetNetsByName().items():
+        name = str(net_name)
+        if name in expected and expected[name] not in str(net.GetNetClassName()).split(','):
+            mismatched.append(f'{name} (expected {expected[name]}, got {net.GetNetClassName()})')
+    return mismatched
+
+
+def dsn_net_rules(path):
+    """{net: (track_mm, clearance_mm)} from the (class ...) scopes of a KiCad Specctra DSN export."""
+    text = Path(path).read_text()
+    rules = {}
+    for match in re.finditer(r'\(class\s+("[^"]*"|\S+)\s+([^()]*)\(circuit.*?\(rule\s+\(width\s+([\d.]+)\)\s*\(clearance\s+([\d.]+)\)', text, re.S):
+        nets = re.findall(r'"[^"]*"|\S+', match[2])
+        for net in nets:
+            rules[net.strip('"')] = (float(match[3]) / 1000, float(match[4]) / 1000)
+    return rules
+
+
+def check_dsn_rules(path, netclasses):
+    """Nets whose DSN width / clearance differ from their design net class."""
+    rules = dsn_net_rules(path)
+    problems = []
+    for name, spec in netclasses.items():
+        for net in spec['nets']:
+            got = rules.get(net)
+            if got is None:
+                continue  # single-pad nets are not exported to the DSN
+            if abs(got[0] - spec['track_mm']) > 1e-4 or abs(got[1] - spec['clearance_mm']) > 1e-4:
+                problems.append(f'{net}: DSN {got[0]:g}/{got[1]:g} mm, class {name} {spec["track_mm"]:g}/{spec["clearance_mm"]:g} mm')
+    return problems
 
 
 def _astar(start, goal, blocked, width, height, deadline=None):
@@ -177,10 +242,50 @@ def resolve_router_limits(max_passes, time_budget_s, pad_count):
     return max_passes, time_budget_s, source
 
 
-def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None, stitching=True):
-    trace_width_mm=finite(trace_width_mm,'trace_width_mm',0.1,2)
-    clearance_mm=finite(clearance_mm,'clearance_mm',0.1,2)
+def resolve_route_rules(design, trace_width_mm=None, clearance_mm=None, fabricator_profile=None):
+    """(profile, net classes with the Default override, warnings, design_changed) for one routing run.
+
+    trace_width_mm / clearance_mm set the Default class (None keeps the synthesized one). A
+    fabricator_profile different from the synthesized one re-resolves the net classes.
+    """
+    from .fab_profiles import resolve_profile
+    from .netclasses import resolve, with_default
+    from .pcb_builder import load_catalog
+    trace_width_mm = None if trace_width_mm is None else finite(trace_width_mm, 'trace_width_mm', 0.05, 2)
+    clearance_mm = None if clearance_mm is None else finite(clearance_mm, 'clearance_mm', 0.05, 2)
+    profile = resolve_profile(fabricator_profile or design.get('fabricator_profile'), design.get('layer_count', 2))
+    changed = profile != design.get('fabricator_profile') or not design.get('netclasses')
+    warnings = []
+    if changed:
+        design['fabricator_profile'] = profile
+        design['netclasses'], warnings = resolve(design, load_catalog(), design.get('netclass_input'), profile)
+    netclasses, default_warnings = with_default(design['netclasses'], trace_width_mm, clearance_mm, profile)
+    return profile, netclasses, warnings + default_warnings, changed
+
+
+def routed_track_widths(board, netclasses):
+    """{class: sorted distinct routed track widths (mm)} read back from the routed board."""
+    owner = {net: name for name, spec in netclasses.items() for net in spec['nets']}
+    widths = {}
+    for track in board.GetTracks():
+        if track.GetClass() in ('PCB_TRACK', 'PCB_ARC'):
+            name = owner.get(str(track.GetNetname()), 'Default')
+            widths.setdefault(name, set()).add(round(track.GetWidth() / 1e6, 4))
+    return {name: sorted(values) for name, values in widths.items()}
+
+
+def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None, time_budget_s=None, fabricator_profile=None, stitching=True):
     workspace=Path(workspace); build=workspace/'build'; design=json.loads((build/'design.json').read_text())
+    profile, netclasses, warnings, changed = resolve_route_rules(design, trace_width_mm, clearance_mm, fabricator_profile)
+    if changed:
+        from .telemetry import atomic_json
+        atomic_json(build/'design.json', design)
+    from .pcb_builder import write_project
+    from .netclasses import summary as netclass_summary
+    # pcbnew.LoadBoard and kicad-cli DRC both read these rules and classes from the project file.
+    write_project(design, build/'board.kicad_pro', netclasses)
+    trace_width_mm, clearance_mm = netclasses['Default']['track_mm'], netclasses['Default']['clearance_mm']
+    rule_info = {'fabricator_profile': profile, 'netclasses': netclass_summary(netclasses)}
     (build/'drc_report.json').unlink(missing_ok=True)
     (workspace/'manufacturing/gerbers.zip').unlink(missing_ok=True)
     max_passes, time_budget_s, limits_source = resolve_router_limits(max_passes, time_budget_s, len(pad_positions(design)))
@@ -189,7 +294,6 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
     copper = copper_layers(design)
     layer_info = {'layer_count': len(copper), 'stackup': design.get('stackup')}
     multilayer = len(copper) > 2
-    warnings=[]
     jar=ROOT/'vendor/freerouting.jar'
     if not jar.exists() or not shutil.which('java'):
         warnings.append('Freerouting unavailable: Java and mcp-server/vendor/freerouting.jar are required')
@@ -197,7 +301,8 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
         try:
             import pcbnew
             board=pcbnew.LoadBoard(str(build/'board.kicad_pcb'))
-            effective_width, effective_clearance = configure_native_rules(board, pcbnew, trace_width_mm, clearance_mm)
+            mismatched = configure_native_rules(board, pcbnew, netclasses=netclasses, profile=profile)
+            rule_warnings = [f"Net class assignment did not resolve for {', '.join(mismatched[:5])}"] if mismatched else []
             corrected = enforce_minimum_track_width(board, pcbnew)
             planes, plane_warnings = [], []
             if multilayer:
@@ -207,6 +312,9 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
             if not pcbnew.ExportSpecctraDSN(board,str(build/'board.dsn')): raise RuntimeError('DSN export failed')
             if planes:
                 prepare_plane_dsn(build/'board.dsn', [p['layer'] for p in planes])
+            dsn_problems = check_dsn_rules(build/'board.dsn', netclasses)
+            if dsn_problems:
+                rule_warnings.append(f"Net class rules differ in the DSN read by Freerouting: {'; '.join(dsn_problems[:5])}")
             progress(workspace, f'Routing with Freerouting ({max_passes} passes, up to {time_budget_s:g} seconds)')
             (build/'board.ses').unlink(missing_ok=True)
             result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp',str(max_passes),'--gui.enabled=false','--router.automatic_neckdown=false'],capture_output=True,text=True,timeout=time_budget_s)
@@ -241,18 +349,20 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
                 if split:
                     zone_warning.append(f"{split} track segment(s) of other nets were routed on the {plane['net']} plane ({plane['layer']}) and cut it; review return paths or give the board more room")
             report = {'status':'success','backend':'freerouting','verified':False,**router_limits,**extra,
-                      'trace_width_mm':effective_width,'clearance_mm':effective_clearance,
+                      'trace_width_mm':trace_width_mm,'clearance_mm':clearance_mm,**rule_info,
+                      'dsn_rules_verified':not dsn_problems and not mismatched,
+                      'routed_track_widths':routed_track_widths(board, netclasses),
                       'minimum_track_width_mm':pcbnew.ToMM(board.GetDesignSettings().m_TrackMinWidth),
                       'corrected_narrow_segments':corrected,
-                      'warnings':['Run KiCad DRC to verify routing and clearances']+zone_warning,
-                      'artifacts':['build/board.dsn','build/board.ses','build/board.kicad_pcb']}
+                      'warnings':['Run KiCad DRC to verify routing and clearances']+warnings+rule_warnings+zone_warning,
+                      'artifacts':['build/board.dsn','build/board.ses','build/board.kicad_pcb','build/board.kicad_pro']}
             (build/'routes.json').write_text(json.dumps(report,indent=2)+'\n')
             return report
         except (ImportError,OSError,RuntimeError,AttributeError,TypeError,KeyError,subprocess.TimeoutExpired) as error: warnings.append(f'Native router unavailable: {error}')
     if multilayer:
         # The grid fallback is single-layer and has no planes; a "routed" result would mislead.
         reason = f'{len(copper)}-layer boards need Freerouting; install Java and mcp-server/vendor/freerouting.jar (and the KiCad pcbnew module)'
-        report = {'status':'failed','backend':'none','verified':False,**router_limits,**layer_info,'reason':reason,'error':reason,
+        report = {'status':'failed','backend':'none','verified':False,**router_limits,**layer_info,**rule_info,'reason':reason,'error':reason,
                   'unconnected_items':sum(max(0,len(n['connections'])-1) for n in design['nets']),'retryable_unchanged':False,
                   'next_action':f'{reason}, or synthesize the design with layer_count=2 to use the Python fallback router.',
                   'warnings':warnings+[reason],'artifacts':[]}
@@ -288,6 +398,6 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
     write_board(design,build/'board.kicad_pcb',segments)
     if time.monotonic() >= deadline:
         warnings.append(f'Python routing stopped at its {ROUTE_TIME_BUDGET_SECONDS}s time limit; remaining connections are reported as unrouted')
-    report={'status':'degraded','backend':'python-grid-astar','verified':False,**router_limits,'unconnected_items':len(unrouted),'retryable_unchanged':False,'next_action':'Run DRC once, then report remaining connections. Repeating routing with the same placement and rules will produce the same result; revise placement or install Freerouting before another attempt.','unrouted':unrouted,'segments':segments,'warnings':warnings+['Single-layer fallback routes are provisional; pad escape clearance and all geometry require KiCad DRC. No GND pour is claimed.']}
+    report={'status':'degraded','backend':'python-grid-astar','verified':False,**router_limits,'trace_width_mm':trace_width_mm,'clearance_mm':clearance_mm,**rule_info,'unconnected_items':len(unrouted),'retryable_unchanged':False,'next_action':'Run DRC once, then report remaining connections. Repeating routing with the same placement and rules will produce the same result; revise placement or install Freerouting before another attempt.','unrouted':unrouted,'segments':segments,'warnings':warnings+['Single-layer fallback routes are provisional; pad escape clearance and all geometry require KiCad DRC. No GND pour is claimed.']+(['The Python fallback routes every net with the Default class; per-class widths need Freerouting'] if len(netclasses) > 1 else [])}
     (build/'routes.json').write_text(json.dumps(report,indent=2)+'\n')
     return {k:v for k,v in report.items() if k!='segments'}

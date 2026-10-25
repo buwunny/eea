@@ -73,8 +73,12 @@ def finite(value, name, minimum=None, maximum=None):
     return n
 
 def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None, requirements=None,
-                     layer_count=2, stackup=None):
+                     layer_count=None, stackup=None, netclasses=None, fabricator_profile=None):
     """Validate and normalize a design.
+
+    layer_count defaults to the stackup's copper count (2 when neither is given).
+    netclasses (optional) and fabricator_profile (default 'conservative') resolve to
+    design['netclasses'] (see utils/netclasses.py) and the KiCad design rules in board.kicad_pro.
 
     auto_place: None (default) auto-places only components missing x_mm or y_mm (or with
     null coordinates); components with explicit coordinates stay fixed and act as
@@ -85,6 +89,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     from .placement import auto_place as _auto_place, normalize_cluster_metadata, resolve_clusters, inspect_clusters
     from .stackups import resolve_stackup
     layer_count, stackup = resolve_stackup(layer_count, stackup)
+    from .fab_profiles import resolve_profile
+    fabricator_profile = resolve_profile(fabricator_profile, layer_count)
     width = finite(board_width_mm, 'board_width_mm', 5, 300)
     height = finite(board_height_mm, 'board_height_mm', 5, 300)
     if not isinstance(components, list) or not 1 <= len(components) <= 200:
@@ -181,6 +187,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
         if 'max_current_ma' in net:
             normalized_net['max_current_ma'] = finite(net['max_current_ma'], f'{name}.max_current_ma', 0, 1e6)
         ns.append(normalized_net)
+    from .netclasses import validate_input
+    netclass_input = validate_input(netclasses, names)
     for c in cs:
         for pin in cat[c['part_id']]['pins']:
             canonical = f"{c['ref']}.{pin['number']}"
@@ -228,6 +236,11 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     design['electrical_checks'], design['power_budget'] = inspect_electrical(design, cat)
     design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], 'cross_check': (checks.get(c['part_id']) or {}).get('status', 'missing'), **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]
     warnings.extend(item['message'] for item in design['electrical_checks']['issues'])
+    from .netclasses import resolve as resolve_netclasses
+    design['fabricator_profile'] = fabricator_profile
+    design['netclass_input'] = netclass_input
+    design['netclasses'], netclass_warnings = resolve_netclasses(design, cat, design['netclass_input'], fabricator_profile)
+    warnings.extend(netclass_warnings)
     return design
 
 def pad_positions(design):
@@ -292,6 +305,36 @@ def write_board(design, destination, segments=None, zones=''):
     lines.extend([zones, ')'])
     _atomic_bytes(destination, ('\n'.join(lines)+'\n').encode('utf-8'))
 
+def netclass_pattern(net):
+    """Exact-match KiCad net class pattern: KiCad tries each pattern as an anchored regex and as a
+    wildcard, so regex metacharacters allowed in net names (+ and .) are escaped."""
+    return re.sub(r'([+.])', r'\\\1', net)
+
+
+def project_settings(design, netclasses=None):
+    """board.kicad_pro content: fabricator rules and net classes (read by pcbnew and kicad-cli DRC)."""
+    from .fab_profiles import kicad_rules
+    from .netclasses import resolve as resolve_netclasses
+    if netclasses is None:
+        netclasses = design.get('netclasses') or resolve_netclasses(design, load_catalog(), None, design.get('fabricator_profile'))[0]
+    classes, patterns = [], []
+    for priority, (name, spec) in enumerate(netclasses.items()):
+        classes.append({'name': name, 'track_width': spec['track_mm'], 'clearance': spec['clearance_mm'],
+                        'via_diameter': spec['via_dia_mm'], 'via_drill': spec['via_drill_mm'],
+                        'priority': 2147483647 if name == 'Default' else priority})
+        if name != 'Default':
+            patterns += [{'netclass': name, 'pattern': netclass_pattern(net)} for net in spec['nets']]
+    return {'meta': {'filename': 'board.kicad_pro', 'version': 3},
+            'board': {'design_settings': {'rules': kicad_rules(design.get('fabricator_profile'))}},
+            'net_settings': {'meta': {'version': 5}, 'classes': classes, 'netclass_assignments': {},
+                             'netclass_patterns': patterns}}
+
+
+def write_project(design, destination, netclasses=None):
+    """Deterministic KiCad project file next to the board; replaces any copy pcbnew saved earlier."""
+    _atomic_bytes(destination, (json.dumps(project_settings(design, netclasses), indent=2) + '\n').encode('utf-8'))
+
+
 def write_netlist(design, path):
     root = ET.Element('export', version='D')
     components = ET.SubElement(root,'components')
@@ -325,10 +368,13 @@ def build_board(design, build_dir):
     # Revalidate even callers passing a handcrafted normalized design.
     auto_placed = list(design.get('auto_placed') or [])
     design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'], requirements=design.get('requirements'),
-                              layer_count=design.get('layer_count', 2), stackup=design.get('stackup'))
+                              layer_count=design.get('layer_count'), stackup=design.get('stackup'),
+                              netclasses=design.get('netclass_input'), fabricator_profile=design.get('fabricator_profile'))
     design['auto_placed'] = auto_placed or design['auto_placed']
     atomic_json(build/'design.json', design)
     write_board(design,build/'board.kicad_pcb')
+    write_project(design, build/'board.kicad_pro')
+    (build/'board.kicad_prl').unlink(missing_ok=True)
     write_netlist(design,build/'board.net')
     progress(build.parent, 'Generating netlist with SKiDL')
     script = render_template('skidl_pcb.py.j2', design_literal=repr(design), catalog_literal=repr({pid: load_catalog()[pid] for pid in {c['part_id'] for c in design['components']}}))
@@ -349,4 +395,5 @@ def build_board(design, build_dir):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
     if backend!='skidl':
         write_netlist(design,build/'board.net')
-    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'layer_count':design['layer_count'],'stackup':design['stackup'],'bom':design['bom'],'placement_checks':design['placement_checks'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}
+    from .netclasses import summary as netclass_summary
+    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'layer_count':design['layer_count'],'stackup':design['stackup'],'fabricator_profile':design['fabricator_profile'],'netclasses':netclass_summary(design['netclasses']),'bom':design['bom'],'placement_checks':design['placement_checks'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.kicad_pro','build/board.net','build/design.json'],'verified':False}

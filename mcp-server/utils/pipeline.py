@@ -15,9 +15,11 @@ from .freerouting_runner import autoroute
 from .kicad_runner import verify_drc, export_manufacturing, export_3d
 
 
-def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40, requirements=None, layer_count=2, stackup=None):
+def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40, requirements=None, layer_count=None, stackup=None,
+                  netclasses=None, fabricator_profile=None):
     def operation():
-        design = normalize_design(components, nets, board_width_mm, board_height_mm, layer_count=layer_count, stackup=stackup)
+        design = normalize_design(components, nets, board_width_mm, board_height_mm, layer_count=layer_count, stackup=stackup,
+                                  netclasses=netclasses, fabricator_profile=fabricator_profile)
         if requirements is not None:
             design['requirements'] = normalize_requirements(requirements, board_width_mm, board_height_mm)
         workspace = workspace_path()
@@ -33,9 +35,9 @@ def simulate_op(components=None, nets=None, sim_config=None):
     return lambda: simulate(components, nets, sim_config, workspace_path())
 
 
-def autoroute_op(trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None, stitching=True):
+def autoroute_op(trace_width_mm=None, clearance_mm=None, max_passes=None, time_budget_s=None, fabricator_profile=None, stitching=True):
     def operation():
-        report = autoroute(workspace_path(), trace_width_mm, clearance_mm, max_passes, time_budget_s, stitching)
+        report = autoroute(workspace_path(), trace_width_mm, clearance_mm, max_passes, time_budget_s, fabricator_profile, stitching)
         report['three_d'] = export_3d(workspace_path())
         return report
     return operation
@@ -113,6 +115,12 @@ def compact(report, limit=5):
             messages = [issue.get('message', '') for issue in check.get('issues', [])]
             messages += [str(check['reason'])] if check.get('reason') else []
             out[field]['messages'] = [str(message)[:220] for message in messages[:2]]
+    if isinstance(report.get('netclasses'), dict):
+        # "track/clearance mm, net count"; get the full classes from build/design.json or the stage tool.
+        out['netclasses'] = {name: f"{spec.get('track_mm')}/{spec.get('clearance_mm')} mm, {spec.get('net_count')} nets"
+                             for name, spec in report['netclasses'].items() if isinstance(spec, dict)}
+    if isinstance(report.get('routed_track_widths'), dict) and len(report.get('netclasses') or {}) <= 1:
+        out.pop('routed_track_widths', None)  # one class: trace_width_mm already says it
     if isinstance(report.get('three_d'), dict):
         out['three_d'] = report['three_d'].get('status') or report['three_d'].get('summary')
     return out
@@ -136,9 +144,10 @@ def _stage_ok(name, report):
 
 @workspace_operation
 def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, sim_config=None,
-                     trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False, requirements=None,
-                     layer_count=2, stackup=None):
-    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm, requirements, layer_count, stackup))]
+                     trace_width_mm=None, clearance_mm=None, export=False, skip_simulation=False, requirements=None,
+                     layer_count=None, stackup=None, netclasses=None, fabricator_profile=None):
+    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm, requirements, layer_count, stackup,
+                                                                  netclasses, fabricator_profile))]
     if not skip_simulation:
         # Reuses build/design.json just written by synthesize.
         steps.append(('run_spice_simulation', 'SIMULATION', simulate_op(None, None, sim_config)))

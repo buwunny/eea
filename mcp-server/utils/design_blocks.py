@@ -447,6 +447,7 @@ def _usb_micro_b(p):
     nets = {'VBUS': ['J.1'], 'USB_DN': ['J.2'], 'USB_DP': ['J.3'], 'GND': ['J.5', 'J.SH']}
     return {'components': comps, 'nets': nets,
             'ports': {'VBUS': 'VBUS', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'GND': 'GND'},
+            'netclasses': {'USB': ['USB_DP', 'USB_DN']},
             'sim_default': {'sources': [{'net': 'VBUS', 'value': 5.0}]},
             'notes': ['USB Micro-B (device): pin 1 VBUS, 2 D-, 3 D+, 4 ID (not connected), 5 GND, shell to GND. '
                       'Name the data connections USB_DP / USB_DN so placement keeps them short. No ESD part is in the catalog yet.']}
@@ -474,7 +475,8 @@ def _esp32_c3(p):
     gpio = {f'IO{n}': f'IO{n}' for n in (0, 1, 2, 3, 4, 5, 6, 7, 8, 10)}
     ports = {'3V3': '3V3', 'GND': 'GND', 'EN': 'EN', 'BOOT': 'IO9', 'TXD': 'TXD', 'RXD': 'RXD',
              'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', **gpio}
-    return {'components': comps, 'nets': nets, 'ports': ports, 'clusters': [_cluster('U', **cluster)], 'notes': notes}
+    return {'components': comps, 'nets': nets, 'ports': ports, 'clusters': [_cluster('U', **cluster)], 'notes': notes,
+            'netclasses': {'USB': ['USB_DP', 'USB_DN']}}
 
 
 def _ch340(p):
@@ -501,7 +503,7 @@ def _ch340(p):
     return {'components': comps, 'nets': nets,
             'ports': {'VCC': 'VCC', 'GND': 'GND', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'TXD': 'TXD', 'RXD': 'RXD',
                       'DTR': 'DTR', 'RTS': 'RTS'},
-            'port_meta': meta, 'clusters': [_cluster('U', **cluster)],
+            'port_meta': meta, 'clusters': [_cluster('U', **cluster)], 'netclasses': {'USB': ['USB_DP', 'USB_DN']},
             'notes': [f'CH340G USB-UART: 12 MHz crystal with 22 pF load caps, 100 nF on VCC. {mode} '
                       'CTS/DSR/RI/DCD and R232 are left unconnected (internal pull-ups / pull-down). '
                       'The crystal is the generic through-hole Crystal_HC49 (no LCSC code): pick an orderable 12 MHz part with a matching load capacitance.']}
@@ -536,6 +538,7 @@ def _rp2040(p):
     ports = {'3V3': '3V3', 'GND': 'GND', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'RUN': 'RUN', 'SWCLK': 'SWCLK',
              'SWDIO': 'SWDIO', **{f'GPIO{n}': f'GPIO{n}' for n in range(30)}}
     return {'components': comps, 'nets': nets, 'ports': ports, 'clusters': [_cluster('U', **cluster)],
+            'netclasses': {'USB': ['USB_DP', 'USB_DN', 'USB_DP_MCU', 'USB_DN_MCU']},
             'notes': ['RP2040 per the Raspberry Pi hardware design guide: W25Q32JV QSPI flash with BOOTSEL button (1k to QSPI_SS), '
                       '12 MHz crystal with 1k on XOUT and 22 pF load caps, 27 R series on USB D+/D-, 100 nF on every IOVDD, DVDD, USB_VDD and ADC_AVDD, '
                       '1 uF on VREG_VIN and VREG_VOUT (the internal 1.1 V regulator feeds DVDD), TESTEN to GND, 10k RUN pull-up.',
@@ -1114,10 +1117,24 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
         notes += [f'{iid} ({inst[iid]["block"]}): {n}' for n in inst[iid]['built'].get('notes', [])]
 
     width, height = _board_size(components, nets, board_width_mm, board_height_mm, warnings)
-    return {'status': 'success', 'components': components, 'nets': nets, 'board_width_mm': width, 'board_height_mm': height,
-            'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes, 'clusters': clusters,
-            'next_action': 'Call build_and_verify with components, nets, board size and sim_config '
-                           '(cluster fields on the components keep each block placed together)'}
+    # Net classes declared by blocks (internal net names) mapped to the final net names. They carry no
+    # dimensions: synthesis sizes them for the fabricator profile and the pads they reach.
+    out_names, declared = {n['name'] for n in nets}, {}
+    for iid in order:
+        for cls, internal in (inst[iid]['built'].get('netclasses') or {}).items():
+            for net in internal:
+                if net in inst[iid]['built']['nets']:
+                    name = final_name[uf.find((iid, net))]
+                    if name in out_names and all(name not in v for v in declared.values()):
+                        declared.setdefault(cls, []).append(name)
+    result = {'status': 'success', 'components': components, 'nets': nets, 'board_width_mm': width, 'board_height_mm': height,
+              'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes, 'clusters': clusters,
+              'next_action': 'Call build_and_verify with components, nets, board size and sim_config '
+                             '(cluster fields on the components keep each block placed together)'}
+    if declared:
+        result['netclasses'] = {cls: {'nets': sorted(names)} for cls, names in declared.items()}
+        result['next_action'] += ' and netclasses'
+    return result
 
 
 def _default_sim(inst, order, uf, final_name, connected, nets):
