@@ -8,16 +8,22 @@ import copy
 import math
 import re
 
-from .calculators import calc_555_astable, calc_led_resistor
+from .calculators import (calc_555_astable, calc_led_resistor, calc_voltage_divider, nearest_standard,
+                          next_higher_standard)
 from .pcb_builder import load_catalog, normalize_design
 
 LED_VF = 2.0
+LM317_MAX_W = 0.8   # SOT-223 on a small board
 USB_GND = ['J.A1', 'J.A12', 'J.B1', 'J.B12', 'J.S1', 'J.S2']
 USB_VBUS = ['J.A4', 'J.A9', 'J.B4', 'J.B9']
 DIRECTIONS = ('power_in', 'power_out', 'signal_in', 'signal_out', 'ground', 'bidir')
 PREFIX = {'R': 'R', 'C': 'C', 'Capacitor_Electrolytic': 'C', 'NE555': 'U', 'AMS1117_3V3': 'U', 'ATtiny85_SOIC8': 'U',
           'LED': 'D', 'WS2812B': 'D', '1N4148': 'D', '2N7002': 'Q', 'USB_C_Receptacle_PowerOnly': 'J',
-          'PinHeader_1x04': 'J', 'Buzzer_Magnetic': 'BZ', 'Crystal_16MHz': 'Y', 'Button_Tactile_SMD': 'SW'}
+          'PinHeader_1x04': 'J', 'Buzzer_Magnetic': 'BZ', 'Crystal_16MHz': 'Y', 'Button_Tactile_SMD': 'SW',
+          'AP2112K_3V3': 'U', 'LM317_SOT223': 'U', 'MCP6002_SOIC8': 'U', 'Optocoupler_PC817': 'U',
+          'AO3400A': 'Q', 'AO3401A': 'Q', 'BC817_SOT23': 'Q', 'BSS138_SOT23': 'Q',
+          '1N4007': 'D', 'SS14_SMA': 'D', 'SMAJ5_0A': 'D', 'Polyfuse_1206': 'F',
+          'Conn_1x02_Header': 'J', 'NTC_10k_0805': 'RT'}
 
 
 def fmt(value):
@@ -63,12 +69,14 @@ def _usb_c_power(p):
     nets = {'GND': USB_GND + ['RC1.2', 'RC2.2'], 'VBUS': list(USB_VBUS),
             'CC1': ['J.A5', 'RC1.1'], 'CC2': ['J.B5', 'RC2.1']}
     return {'components': comps, 'nets': nets, 'ports': {'VBUS': 'VBUS', 'GND': 'GND'},
+            'sim_default': {'sources': [{'net': 'VBUS', 'value': 5.0}]},
             'notes': ['USB-C connector is auto-placed on a board edge; 5.1k Rd resistors on CC1/CC2 request default USB power (500 mA).']}
 
 
 def _header_power(p):
     return {'components': [_c('J', 'PinHeader_1x04')], 'nets': {'VBUS': ['J.1'], 'GND': ['J.2']},
             'ports': {'VBUS': 'VBUS', 'GND': 'GND'},
+            'sim_default': {'sources': [{'net': 'VBUS', 'value': 5.0}]},
             'notes': ['header_power header pins: 1 = 5V in, 2 = GND, 3 and 4 unused.']}
 
 
@@ -160,6 +168,253 @@ def _header_io(p):
             'ports': {f'P{i}': f'P{i}' for i in range(1, 5)}, 'notes': ['1x04 breakout header, pin N = port PN.']}
 
 
+def _flag(params, key):
+    v = params[key]
+    if not isinstance(v, bool):
+        raise ValueError(f'param {key!r} must be true or false, got {v!r}')
+    return v
+
+
+def _choice(params, key, options):
+    v = params[key]
+    if v not in options:
+        raise ValueError(f'param {key!r} must be one of {", ".join(options)}, got {v!r}')
+    return v
+
+
+def _dc_input(p):
+    v = _num(p, 'supply_v', 3, 30)
+    return {'components': [_c('J', 'Conn_1x02_Header')], 'nets': {'VIN': ['J.1'], 'GND': ['J.2']},
+            'ports': {'VIN': 'VIN', 'GND': 'GND'},
+            'port_meta': {'VIN': {'voltage_v': v}},
+            'sim_default': {'sources': [{'net': 'VIN', 'value': v}]},
+            'notes': [f'2-pin DC header: pin 1 = +{v:g} V, pin 2 = GND. No reverse-polarity or surge protection; use reverse_polarity_and_tvs_input for 5 V inputs.']}
+
+
+def _ldo_ap2112k(p):
+    mode = _choice(p, 'en_mode', ('tied', 'port'))
+    comps = [_c('U', 'AP2112K_3V3'), _c('CI', 'C', '1u'), _c('CO', 'C', '2.2u')]
+    nets = {'VIN': ['U.1', 'CI.1'], 'GND': ['U.2', 'CI.2', 'CO.2'], 'VOUT': ['U.5', 'CO.1']}
+    if mode == 'tied':
+        nets['VIN'].append('U.3')
+        ports = {'VIN': 'VIN', 'VOUT': 'VOUT', 'GND': 'GND', 'EN': 'VIN'}
+        meta = {'EN': {'description': 'EN is tied to VIN in this configuration; do not connect this port'}}
+        note = 'EN is tied to VIN (always on).'
+    else:
+        nets['EN'] = ['U.3']
+        ports = {'VIN': 'VIN', 'VOUT': 'VOUT', 'GND': 'GND', 'EN': 'EN'}
+        meta = {'EN': {'description': 'Enable input: high (>= 1.2 V, up to VIN) = on, low (<= 0.4 V) = off; do not leave floating',
+                       'optional': False}}
+        note = 'EN is exposed as a port; drive it from a GPIO or tie it to VIN.'
+    return {'components': comps, 'nets': nets, 'ports': ports, 'port_meta': meta,
+            'sim_default': {'sources': [{'net': 'VIN', 'value': 5.0}], 'probes': ['VOUT']},
+            'notes': [f'AP2112K-3.3 with 1 uF on VIN and 2.2 uF on VOUT (stable with ceramics). {note}']}
+
+
+def _lm317(p):
+    vout, vin = _num(p, 'vout_v', 1.5, 30), _num(p, 'vin_v', 3.5, 40)
+    if vin < vout + 2.0:
+        raise ValueError(f"param 'vin_v' ({vin:g} V) must be at least vout_v + 2 V dropout ({vout + 2:g} V)")
+    r1 = 240.0
+    ideal = r1 * (vout / 1.25 - 1)
+    r2 = nearest_standard(ideal)
+    actual = 1.25 * (1 + r2 / r1)
+    max_ma = min(1500.0, round(LM317_MAX_W / max(vin - actual, 0.1) * 1000))
+    calc = {'r1_ohms': r1, 'r2_ideal_ohms': round(ideal, 1), 'r2_ohms': r2, 'actual_vout': round(actual, 3),
+            'error_pct': round(100 * (actual - vout) / vout, 2), 'thermal_max_current_ma': max_ma,
+            'formula': 'Vout = 1.25 * (1 + R2/R1), R1 = 240 R from VO to ADJ'}
+    notes = [f'LM317: R1 = 240 R, R2 = {fmt(r2)} (ideal {ideal:.0f} R) gives {actual:.2f} V '
+             f'({calc["error_pct"]:+.1f}% from the {vout:g} V target; ADJ pin current adds about +0.04 V). '
+             f'R1 also provides the 5 mA minimum load. Dropout is about 2 V, so VIN must be at least {actual + 2:.1f} V.',
+             f'From {vin:g} V the SOT-223 dissipates {vin - actual:.1f} V x I; limited to {max_ma:g} mA at 0.8 W on a small board.']
+    comps = [_c('U', 'LM317_SOT223'), _c('R1', 'R', '240'), _c('R2', 'R', fmt(r2)), _c('CI', 'C', '10u'), _c('CO', 'C', '1u')]
+    nets = {'VIN': ['U.3', 'CI.1'], 'VOUT': ['U.2', 'R1.1', 'CO.1'], 'ADJ': ['U.1', 'R1.2', 'R2.1'],
+            'GND': ['R2.2', 'CI.2', 'CO.2']}
+    return {'components': comps, 'nets': nets, 'ports': {'VIN': 'VIN', 'VOUT': 'VOUT', 'GND': 'GND'},
+            'port_meta': {'VIN': {'min_voltage_v': round(actual + 2.0, 2), 'expected_v': vin},
+                          'VOUT': {'voltage_v': round(actual, 3), 'max_current_ma': max_ma}},
+            'calc': {'lm317': calc}, 'notes': notes,
+            'sim_default': {'sources': [{'net': 'VIN', 'value': vin}], 'probes': ['VOUT']}}
+
+
+def _comparator(p):
+    vcc, thr, hyst = _num(p, 'supply_v', 2, 6), _num(p, 'threshold_v', 0.1, 5.9), _num(p, 'hysteresis_v', 0.01, 3)
+    if hyst < 0.005 * vcc:
+        raise ValueError(f"param 'hysteresis_v' must be at least {0.005 * vcc:g} V for supply_v {vcc:g} V")
+    rin = 10000.0
+    rf = nearest_standard(rin * vcc / hyst)
+    k = rin / rf
+    vh = vcc * k
+    vref_ideal = (thr + vh / 2) / (1 + k)
+    if not 0.05 <= vref_ideal <= vcc - 0.05 or thr - vh / 2 < 0.05 or thr + vh / 2 > vcc - 0.05:
+        raise ValueError(f'threshold {thr:g} V +/- {hyst / 2:g} V does not fit inside 0..{vcc:g} V; lower hysteresis_v or move threshold_v')
+    div = calc_voltage_divider(vcc, vref_ideal, 100000)
+    upper = div['actual_vout'] * (1 + k)
+    lower = upper - vh
+    calc = {'r_in_ohms': rin, 'r_feedback_ohms': rf, 'r_ref_top_ohms': div['r_top'], 'r_ref_bottom_ohms': div['r_bottom'],
+            'vref_v': div['actual_vout'], 'upper_threshold_v': round(upper, 3), 'lower_threshold_v': round(lower, 3),
+            'center_v': round((upper + lower) / 2, 3), 'hysteresis_v': round(vh, 3),
+            'formula': 'Vupper = Vref*(1+Rin/Rf), Vhyst = Vcc*Rin/Rf'}
+    comps = [_c('U', 'MCP6002_SOIC8'), _c('CD', 'C', '100n'), _c('RIN', 'R', '10k'), _c('RF', 'R', fmt(rf)),
+             _c('RT', 'R', fmt(div['r_top'])), _c('RB', 'R', fmt(div['r_bottom']))]
+    nets = {'VCC': ['U.8', 'CD.1', 'RT.1'], 'GND': ['U.4', 'CD.2', 'RB.2', 'U.5'], 'REF': ['U.2', 'RT.2', 'RB.1'],
+            'IN': ['RIN.1'], 'PLUS': ['U.3', 'RIN.2', 'RF.1'], 'OUT': ['U.1', 'RF.2'], 'CH2': ['U.6', 'U.7']}
+    return {'components': comps, 'nets': nets, 'ports': {'VCC': 'VCC', 'IN': 'IN', 'OUT': 'OUT', 'GND': 'GND'},
+            'port_meta': {'VCC': {'expected_v': vcc}, 'OUT': {'switching_levels_v': [0.0, vcc]}},
+            'calc': {'comparator_hysteresis': calc},
+            'sim_default': {'sources': [{'net': 'VCC', 'value': vcc}, {'net': 'IN', 'value': max(round(lower - 0.2, 3), 0.0)}],
+                            'probes': ['OUT']},
+            'notes': [f'Non-inverting comparator: OUT goes high when IN rises above {upper:.2f} V and low when it falls below {lower:.2f} V '
+                      f'(centre {calc["center_v"]:g} V, hysteresis {vh:.2f} V). Output swings rail to rail. Unused op-amp B is a follower tied to GND.']}
+
+
+def _lowside_switch(p):
+    inductive = _flag(p, 'inductive')
+    amps = _num(p, 'load_current_ma', 1, 1000 if inductive else 3000)
+    load_v = _num(p, 'load_v', 3, 30)
+    comps = [_c('Q', 'AO3400A'), _c('RG', 'R', '100'), _c('RP', 'R', '10k'), _c('J', 'Conn_1x02_Header')]
+    nets = {'CTRL': ['RG.1'], 'GATE': ['RG.2', 'Q.1', 'RP.1'], 'GND': ['Q.2', 'RP.2'],
+            'DRAIN': ['Q.3', 'J.2'], 'VLOAD': ['J.1']}
+    notes = ['AO3400A low-side switch (30 V, 5.7 A, fully on from 2.5 V gate drive): 100 R gate series, 10k gate pull-down. '
+             'Load header: pin 1 = load supply (VLOAD), pin 2 = switched return (drain).']
+    if inductive:
+        comps.append(_c('DF', '1N4007'))
+        nets['DRAIN'].append('DF.2')
+        nets['VLOAD'].append('DF.1')
+        notes.append('1N4007 flyback diode across the load (cathode to VLOAD), 1 A / 1000 V; use inductive=false for resistive loads.')
+    return {'components': comps, 'nets': nets, 'ports': {'CTRL': 'CTRL', 'VLOAD': 'VLOAD', 'GND': 'GND'},
+            'port_meta': {'VLOAD': {'draw_ma': amps, 'expected_v': load_v}},
+            'sim_default': {'sources': [{'net': 'VLOAD', 'value': load_v}, {'net': 'CTRL', 'value': 3.3}], 'probes': ['DRAIN']},
+            'notes': notes}
+
+
+def _highside_switch(p):
+    vs = _num(p, 'supply_v', 2.5, 12)
+    amps = _num(p, 'load_current_ma', 1, 3000)
+    shift = _flag(p, 'level_shift')
+    comps = [_c('Q', 'AO3401A'), _c('RP', 'R', '10k')]
+    nets = {'VIN': ['Q.2', 'RP.2'], 'OUT': ['Q.3'], 'GATE': ['Q.1', 'RP.1'], 'GND': []}
+    if shift:
+        comps += [_c('QN', 'BC817_SOT23'), _c('RB', 'R', '10k'), _c('RBE', 'R', '100k'), _c('RC', 'R', '100')]
+        nets['GATE'].append('RC.2')
+        nets['GC'] = ['RC.1', 'QN.3']
+        nets['CTRL'] = ['RB.1']
+        nets['BASE'] = ['RB.2', 'QN.1', 'RBE.1']
+        nets['GND'] = ['QN.2', 'RBE.2']
+        ctrl = _port('signal_in', 'On/off input: logic high turns the switch on (any level above about 1.5 V works at any supply_v)', draw_ma=0.3, max_voltage_v=12.0)
+        sim_ctrl = 3.3
+        note = 'BC817 level shifter (10k base, 100k base pull-down, 100 R collector-to-gate) pulls the gate low when CTRL is high.'
+    else:
+        ctrl = _port('signal_in', f'Gate drive, ACTIVE LOW: low turns the switch on; must be driven up to {vs:g} V (VIN) to turn it off',
+                     draw_ma=0.1, max_voltage_v=vs)
+        sim_ctrl = 0.0
+        note = f'No level shifter: the gate is driven directly, so the driver must swing to the {vs:g} V rail to turn it off (open-drain or same-rail driver).'
+    return {'components': comps, 'nets': nets,
+            'ports': {'VIN': 'VIN', 'OUT': 'OUT', 'CTRL': 'CTRL' if shift else 'GATE', 'GND': 'GND'},
+            'port_meta': {'VIN': {'draw_ma': amps, 'expected_v': vs}, 'OUT': {'voltage_v': vs}, 'CTRL': ctrl},
+            'sim_default': {'sources': [{'net': 'VIN', 'value': vs}, {'net': 'CTRL', 'value': sim_ctrl}], 'probes': ['OUT']},
+            'notes': [f'AO3401A high-side P-FET switch (30 V, 4 A), 10k gate pull-up to VIN keeps it off by default. {note} '
+                      'Vgs is limited to 12 V, hence supply_v up to 12 V.']}
+
+
+def _level_shifter(p):
+    lv, hv = _num(p, 'lv_v', 2, 5.5), _num(p, 'hv_v', 2.5, 12)
+    if hv < lv:
+        raise ValueError(f"param 'hv_v' ({hv:g} V) must be at least lv_v ({lv:g} V)")
+    rp = _num(p, 'pullup_ohms', 1000, 100000)
+    comps, nets = [], {'LV': [], 'HV': []}
+    warnings = []
+    for i in (1, 2):
+        comps += [_c(f'Q{i}', 'BSS138_SOT23'), _c(f'RL{i}', 'R', fmt(rp)), _c(f'RH{i}', 'R', fmt(rp))]
+        nets['LV'] += [f'Q{i}.1', f'RL{i}.1']
+        nets['HV'].append(f'RH{i}.1')
+        nets[f'LV{i}'] = [f'Q{i}.2', f'RL{i}.2']
+        nets[f'HV{i}'] = [f'Q{i}.3', f'RH{i}.2']
+    nets['GND'] = []
+    sink = hv / rp * 1000
+    if sink > 3.0:
+        warnings.append(f'Pull-ups of {fmt(rp)} sink {sink:.1f} mA at {hv:g} V, above the 3 mA I2C limit; raise pullup_ohms')
+    rise_ns = round(0.8473 * rp * 50e-12 * 1e9)
+    ports = {'LV': 'LV', 'HV': 'HV', 'GND': 'GND', 'LV1': 'LV1', 'LV2': 'LV2', 'HV1': 'HV1', 'HV2': 'HV2'}
+    return {'components': comps, 'nets': nets, 'ports': ports,
+            'port_meta': {'LV': {'expected_v': lv, 'draw_ma': round(2 * lv / rp * 1000, 2)},
+                          'HV': {'expected_v': hv, 'draw_ma': round(2 * hv / rp * 1000, 2)}},
+            'warnings': warnings,
+            'sim_default': {'sources': [{'net': 'LV', 'value': lv}, {'net': 'HV', 'value': hv}], 'probes': ['LV1', 'HV1']},
+            'notes': [f'2-channel BSS138 bidirectional shifter ({lv:g} V <-> {hv:g} V): gate to LV, source to the LV signal, drain to the HV signal, '
+                      f'{fmt(rp)} pull-up on each side (about {rise_ns} ns rise time into 50 pF; I2C fast mode needs under 300 ns). '
+                      'Do not use for signals faster than about 1 MHz.']}
+
+
+def _opto_input(p):
+    vin, ma = _num(p, 'input_v', 3, 24), _num(p, 'led_current_ma', 1, 20)
+    vcc = _num(p, 'supply_v', 2, 24)
+    led = calc_led_resistor(vin, 1.2, ma)
+    i_led = led['actual_current_ma']
+    given = p.get('pullup_ohms')
+    if given is None:
+        rp = next_higher_standard(vcc / (i_led * 0.25 / 1000))   # 50 % minimum CTR with 2x margin
+    else:
+        rp = _num(p, 'pullup_ohms', 470, 1000000)
+    warnings = []
+    if not led['recommended_package_ok']:
+        warnings.append(f"LED resistor {fmt(led['r_ohms'])} dissipates {led['power_mw']:g} mW, above half of an 0805's rating; lower input_v or use a parallel pair")
+    if vcc / rp * 1000 > i_led * 0.5 * 0.5 * 1.01:
+        warnings.append(f'Pull-up {fmt(rp)} needs {vcc / rp * 1000:.2f} mA but a 50 % CTR PC817 passes only {i_led * 0.25:.2f} mA at {i_led:g} mA LED current; the output may not pull fully low')
+    comps = [_c('U', 'Optocoupler_PC817'), _c('RL', 'R', fmt(led['r_ohms'])), _c('RP', 'R', fmt(rp))]
+    nets = {'INP': ['RL.1'], 'LED': ['RL.2', 'U.1'], 'INN': ['U.2'], 'VCC': ['RP.1'], 'OUT': ['RP.2', 'U.4'], 'GND': ['U.3']}
+    return {'components': comps, 'nets': nets, 'ports': {'INP': 'INP', 'INN': 'INN', 'VCC': 'VCC', 'OUT': 'OUT', 'GND': 'GND'},
+            'port_meta': {'INP': {'draw_ma': i_led}, 'VCC': {'expected_v': vcc, 'draw_ma': round(vcc / rp * 1000, 2)},
+                          'OUT': {'max_current_ma': round(vcc / rp * 1000, 2)}},
+            'calc': {'led_resistor': led, 'pullup_ohms': rp}, 'warnings': warnings,
+            'sim_default': {'sources': [{'net': 'INP', 'value': vin}, {'net': 'INN', 'value': 0.0}, {'net': 'VCC', 'value': vcc}],
+                            'probes': ['OUT']},
+            'notes': [f'PC817 input: {fmt(led["r_ohms"])} LED resistor gives {i_led:g} mA from {vin:g} V (Vf 1.2 V); output is open-collector with a {fmt(rp)} pull-up '
+                      f'to VCC, so OUT is LOW while the input is on. INN (input return) is galvanically isolated from GND: do not connect them. '
+                      'The PCB layout does not enforce an isolation gap; rated isolation needs a creepage slot and keep-out.']}
+
+
+def _protected_input(p):
+    v = _num(p, 'supply_v', 3, 5)
+    mode = _choice(p, 'protection', ('schottky', 'pfet'))
+    comps = [_c('J', 'Conn_1x02_Header'), _c('F', 'Polyfuse_1206'), _c('D', 'SMAJ5_0A')]
+    nets = {'VEXT': ['J.1', 'F.1'], 'GND': ['J.2', 'D.2'], 'VOUT': ['D.1']}
+    if mode == 'schottky':
+        comps.append(_c('DS', 'SS14_SMA'))
+        nets['VPF'] = ['F.2', 'DS.2']
+        nets['VOUT'].append('DS.1')
+        out_v, note = round(v - 0.45, 2), 'SS14 Schottky in series blocks reversed polarity at the cost of about 0.45 V.'
+    else:
+        comps += [_c('Q', 'AO3401A'), _c('RG', 'R', '10k')]
+        nets['VPF'] = ['F.2', 'Q.3']
+        nets['VOUT'].append('Q.2')
+        nets['GATE'] = ['Q.1', 'RG.1']
+        nets['GND'].append('RG.2')
+        out_v, note = v, 'AO3401A in the positive rail (drain to input, source to output, gate to GND) blocks reversed polarity with almost no drop.'
+    return {'components': comps, 'nets': nets, 'ports': {'VOUT': 'VOUT', 'GND': 'GND'},
+            'port_meta': {'VOUT': {'voltage_v': out_v, 'max_current_ma': 500}},
+            'sim_default': {'sources': [{'net': 'VEXT', 'value': v}], 'probes': ['VOUT']},
+            'notes': [f'External input header (pin 1 = +, pin 2 = GND) -> 0.5 A polyfuse -> reverse-polarity protection -> SMAJ5.0A TVS to GND. {note} '
+                      'The 5.0 V standoff TVS is only for rails up to 5 V; it clamps near 9.2 V.']}
+
+
+def _ntc_divider(p):
+    vcc, trip = _num(p, 'vcc_v', 1.8, 5.5), _num(p, 'trip_c', -20, 120)
+    r_fixed = 10000.0
+    r_trip = 10000.0 * math.exp(3950 * (1 / (trip + 273.15) - 1 / 298.15))
+    v_trip = vcc * r_fixed / (r_fixed + r_trip)
+    calc = {'ntc_ohms_at_trip': round(r_trip), 'trip_v': round(v_trip, 3), 'v_at_25c': round(vcc / 2, 3), 'r_fixed_ohms': r_fixed,
+            'formula': 'R(T) = 10k*exp(3950*(1/T - 1/298.15)); Vout = Vcc*Rfixed/(Rfixed+Rntc)'}
+    return {'components': [_c('NT', 'NTC_10k_0805', '10k'), _c('RF', 'R', '10k')],
+            'nets': {'VCC': ['NT.1'], 'OUT': ['NT.2', 'RF.1'], 'GND': ['RF.2']},
+            'ports': {'VCC': 'VCC', 'OUT': 'OUT', 'GND': 'GND'},
+            'port_meta': {'VCC': {'expected_v': vcc, 'draw_ma': round(vcc / 2 / 10, 2)}, 'OUT': {'trip_v': round(v_trip, 3)}},
+            'calc': {'ntc_divider': calc},
+            'sim_default': {'sources': [{'net': 'VCC', 'value': vcc}], 'probes': ['OUT']},
+            'notes': [f'10k NTC (B = 3950) over 10k: OUT is {vcc / 2:.2f} V at 25 C and rises with temperature; at {trip:g} C the NTC is {r_trip:.0f} R and OUT = {v_trip:.2f} V '
+                      '(use that as the comparator threshold_v). For simulation, set the NTC value to its resistance at the temperature to test.']}
+
+
 def _gpio(n):
     return {f'PB{i}': _port('bidir', f'ATtiny85 pin PB{i} (GPIO)', optional=True, max_current_ma=40) for i in range(n)}
 
@@ -236,6 +491,107 @@ BLOCKS = {
         'description': 'Generic 1x04 header; pin N is port PN. Use for external signals, power taps or ground.',
         'parts_used': ['PinHeader_1x04'],
         'ports': {f'P{i}': _port('bidir', f'Header pin {i}', optional=True) for i in range(1, 5)}},
+    'dc_input_header': {
+        'title': 'DC power input header (3-30 V)', 'build': _dc_input,
+        'params': {'supply_v': {'default': 9.0, 'unit': 'V', 'description': 'Nominal external supply voltage (3-30 V)'}},
+        'description': '1x02 header: pin 1 = +V, pin 2 = GND. Source for 9-24 V designs; no protection (see reverse_polarity_and_tvs_input for 5 V).',
+        'parts_used': ['Conn_1x02_Header'],
+        'ports': {'VIN': _port('power_out', 'External supply entering the board', voltage_v=9.0, max_current_ma=1000),
+                  'GND': _port('ground', 'Ground')}},
+    'ldo_3v3_ap2112k': {
+        'title': 'AP2112K 3.3 V regulator', 'build': _ldo_ap2112k,
+        'params': {'en_mode': {'default': 'tied', 'unit': 'tied|port', 'description': "'tied' ties EN to VIN (always on); 'port' exposes EN as a signal_in port"}},
+        'description': 'AP2112K-3.3 600 mA LDO (SOT-23-5) with 1 uF input and 2.2 uF output capacitors; EN tied to VIN or exposed.',
+        'parts_used': ['AP2112K_3V3', 'C'],
+        'ports': {'VIN': _port('power_in', 'Input 3.55-6 V (3.3 V + 0.25 V dropout)', min_voltage_v=3.55, max_voltage_v=6.0),
+                  'VOUT': _port('power_out', 'Regulated 3.3 V, up to 600 mA', voltage_v=3.3, max_current_ma=600),
+                  'GND': _port('ground', 'Ground'),
+                  'EN': _port('signal_in', 'Enable (only used when en_mode is port)', optional=True, max_voltage_v=6.0, draw_ma=0.01)}},
+    'lm317_adjustable': {
+        'title': 'LM317 adjustable regulator', 'build': _lm317,
+        'params': {'vout_v': {'default': 5.0, 'unit': 'V', 'description': 'Target output voltage (1.5-30 V); R2 is rounded to E24'},
+                   'vin_v': {'default': 9.0, 'unit': 'V', 'description': 'Expected input voltage (at least vout_v + 2 V); sets the thermal current limit'}},
+        'description': 'LM317 (SOT-223) with R1 = 240 R and R2 from calc E24 rounding, 10 uF input and 1 uF output capacitors. Output current is limited by dissipation at 0.8 W.',
+        'parts_used': ['LM317_SOT223', 'R', 'C'],
+        'ports': {'VIN': _port('power_in', 'Input, at least Vout + 2 V, up to 40 V', min_voltage_v=7.0, max_voltage_v=40.0, expected_v=9.0),
+                  'VOUT': _port('power_out', 'Regulated output, thermally limited (<= 1.5 A)', voltage_v=5.0, max_current_ma=1500),
+                  'GND': _port('ground', 'Ground')}},
+    'opamp_comparator_hysteresis': {
+        'title': 'MCP6002 comparator with hysteresis', 'build': _comparator,
+        'params': {'threshold_v': {'default': 2.5, 'unit': 'V', 'description': 'Centre of the switching window on IN'},
+                   'hysteresis_v': {'default': 0.3, 'unit': 'V', 'description': 'Width of the window (upper minus lower threshold)'},
+                   'supply_v': {'default': 5.0, 'unit': 'V', 'description': 'Supply voltage (2-6 V); also the output high level'}},
+        'description': 'Rail-to-rail op-amp as a non-inverting Schmitt comparator: reference divider, 10k input and positive-feedback resistor sized from the threshold and hysteresis, 100 nF decoupling.',
+        'parts_used': ['MCP6002_SOIC8', 'R', 'C'],
+        'ports': {'VCC': _port('power_in', 'Supply 2-6 V', min_voltage_v=2.0, max_voltage_v=6.0, expected_v=5.0, draw_ma=0.5),
+                  'IN': _port('signal_in', 'Signal input, must stay within 0..VCC', max_voltage_v=6.0, draw_ma=0.05),
+                  'OUT': _port('signal_out', 'High above the upper threshold, low below the lower one; +/-6 mA', max_current_ma=6),
+                  'GND': _port('ground', 'Ground')}},
+    'lowside_mosfet_switch': {
+        'title': 'AO3400A low-side switch with load header', 'build': _lowside_switch,
+        'params': {'load_v': {'default': 12.0, 'unit': 'V', 'description': 'Load supply voltage (3-30 V)'},
+                   'load_current_ma': {'default': 500, 'unit': 'mA', 'description': 'Load current (<= 1000 mA with flyback diode, 3000 mA without)'},
+                   'inductive': {'default': True, 'unit': 'bool', 'description': 'Fit the 1N4007 flyback diode (relays, motors, solenoids)'}},
+        'description': 'AO3400A N-FET low-side switch with 100 R gate resistor, 10k pull-down, optional 1N4007 flyback diode and a 1x02 load header (pin 1 = VLOAD, pin 2 = switched return).',
+        'parts_used': ['AO3400A', 'R', '1N4007', 'Conn_1x02_Header'],
+        'ports': {'CTRL': _port('signal_in', 'Gate drive: logic high (>= 2.5 V) turns the load on', max_voltage_v=12.0, draw_ma=0.1),
+                  'VLOAD': _port('power_in', 'Load supply, up to 30 V', max_voltage_v=30.0, draw_ma=500, expected_v=12.0),
+                  'GND': _port('ground', 'Ground (source)')}},
+    'highside_pmos_switch': {
+        'title': 'AO3401A high-side switch', 'build': _highside_switch,
+        'params': {'supply_v': {'default': 5.0, 'unit': 'V', 'description': 'Switched rail voltage (2.5-12 V, limited by Vgs)'},
+                   'load_current_ma': {'default': 500, 'unit': 'mA', 'description': 'Load current (<= 3000 mA)'},
+                   'level_shift': {'default': True, 'unit': 'bool', 'description': 'Add a BC817 NPN so a logic-level CTRL (high = on) can switch any rail'}},
+        'description': 'AO3401A P-FET in the positive rail with 10k gate pull-up and an optional BC817 level-shifting NPN (10k base, 100k base pull-down, 100 R gate series).',
+        'parts_used': ['AO3401A', 'BC817_SOT23', 'R'],
+        'ports': {'VIN': _port('power_in', 'Rail to be switched, 2.5-12 V', min_voltage_v=2.5, max_voltage_v=12.0, draw_ma=500, expected_v=5.0),
+                  'OUT': _port('power_out', 'Switched rail, up to 3 A', voltage_v=5.0, max_current_ma=3000),
+                  'CTRL': _port('signal_in', 'On/off input (high = on with level_shift)', draw_ma=0.3, max_voltage_v=12.0),
+                  'GND': _port('ground', 'Ground (used by the level shifter)')}},
+    'bss138_level_shifter': {
+        'title': 'BSS138 2-channel bidirectional level shifter', 'build': _level_shifter,
+        'params': {'lv_v': {'default': 3.3, 'unit': 'V', 'description': 'Low-side logic voltage (2-5.5 V)'},
+                   'hv_v': {'default': 5.0, 'unit': 'V', 'description': 'High-side logic voltage (lv_v up to 12 V)'},
+                   'pullup_ohms': {'default': 4700, 'unit': 'ohm', 'description': 'Pull-up on every line (I2C: 1k-10k)'}},
+        'description': 'Two BSS138 channels (gate to LV, source on the LV line, drain on the HV line) with pull-ups on both sides; suited to I2C and slow open-drain/push-pull logic.',
+        'parts_used': ['BSS138_SOT23', 'R'],
+        'ports': {'LV': _port('power_in', 'Low-side logic supply 2-5.5 V (also the gate bias)', min_voltage_v=2.0, max_voltage_v=5.5, expected_v=3.3, draw_ma=2),
+                  'HV': _port('power_in', 'High-side logic supply', min_voltage_v=2.5, max_voltage_v=12.0, expected_v=5.0, draw_ma=2),
+                  'GND': _port('ground', 'Ground'),
+                  'LV1': _port('bidir', 'Low-side channel 1 (e.g. SDA)', optional=True, max_voltage_v=5.5),
+                  'LV2': _port('bidir', 'Low-side channel 2 (e.g. SCL)', optional=True, max_voltage_v=5.5),
+                  'HV1': _port('bidir', 'High-side channel 1', optional=True, max_voltage_v=12.0),
+                  'HV2': _port('bidir', 'High-side channel 2', optional=True, max_voltage_v=12.0)}},
+    'opto_isolated_input': {
+        'title': 'PC817 isolated digital input', 'build': _opto_input,
+        'params': {'input_v': {'default': 12.0, 'unit': 'V', 'description': 'Field input voltage (3-24 V); sizes the LED resistor'},
+                   'led_current_ma': {'default': 5.0, 'unit': 'mA', 'description': 'Target LED current (1-20 mA)'},
+                   'supply_v': {'default': 5.0, 'unit': 'V', 'description': 'Output-side pull-up supply (2-24 V)'},
+                   'pullup_ohms': {'default': None, 'unit': 'ohm', 'description': 'Output pull-up (auto-sized for a 50 % CTR when omitted)'}},
+        'description': 'PC817 optocoupler: LED resistor from calc_led_resistor (Vf 1.2 V) and an open-collector output with pull-up. OUT is low while the input is driven.',
+        'parts_used': ['Optocoupler_PC817', 'R'],
+        'ports': {'INP': _port('signal_in', 'Field input (+) through the LED resistor, 3-24 V', max_voltage_v=24.0, draw_ma=5),
+                  'INN': _port('bidir', 'Field input return; isolated from GND (do not tie it to GND)'),
+                  'VCC': _port('power_in', 'Output-side supply 2-24 V', min_voltage_v=2.0, max_voltage_v=24.0, expected_v=5.0, draw_ma=0.5),
+                  'OUT': _port('signal_out', 'Inverting open-collector output with pull-up', max_current_ma=1),
+                  'GND': _port('ground', 'Output-side ground (emitter)')}},
+    'reverse_polarity_and_tvs_input': {
+        'title': 'Protected 5 V input (fuse, reverse polarity, TVS)', 'build': _protected_input,
+        'params': {'supply_v': {'default': 5.0, 'unit': 'V', 'description': 'Nominal input voltage (3-5 V; the TVS stands off 5 V)'},
+                   'protection': {'default': 'schottky', 'unit': 'schottky|pfet', 'description': "'schottky' = SS14 in series (-0.45 V), 'pfet' = AO3401A ideal-diode style (no drop)"}},
+        'description': 'Input header (pin 1 = +, pin 2 = GND), 0.5 A polyfuse, SS14 or AO3401A reverse-polarity protection and an SMAJ5.0A TVS across the protected rail.',
+        'parts_used': ['Conn_1x02_Header', 'Polyfuse_1206', 'SS14_SMA', 'AO3401A', 'SMAJ5_0A', 'R'],
+        'ports': {'VOUT': _port('power_out', 'Protected rail, up to 500 mA (polyfuse hold current)', voltage_v=4.55, max_current_ma=500),
+                  'GND': _port('ground', 'Ground')}},
+    'ntc_divider': {
+        'title': '10k NTC temperature divider', 'build': _ntc_divider,
+        'params': {'vcc_v': {'default': 5.0, 'unit': 'V', 'description': 'Supply voltage of the divider (1.8-5.5 V)'},
+                   'trip_c': {'default': 50.0, 'unit': 'C', 'description': 'Temperature whose divider voltage is reported as trip_v'}},
+        'description': '10k NTC (B 3950) over a 10k resistor; OUT rises with temperature. Reports the OUT voltage at trip_c to use as a comparator threshold.',
+        'parts_used': ['NTC_10k_0805', 'R'],
+        'ports': {'VCC': _port('power_in', 'Divider supply', min_voltage_v=1.8, max_voltage_v=5.5, expected_v=5.0, draw_ma=0.3),
+                  'OUT': _port('signal_out', 'Temperature voltage, high impedance (about 5k); feed a comparator or ADC', max_current_ma=0.1),
+                  'GND': _port('ground', 'Ground')}},
 }
 
 EXAMPLES = {
@@ -259,6 +615,54 @@ EXAMPLES = {
                    {'block': 'led_indicator', 'id': 'led1', 'params': {'supply_v': 5.0, 'led_current_ma': 5}}],
         'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'mcu.VCC']},
                         {'name': 'BLINK', 'ports': ['mcu.PB0', 'led1.IN']}]},
+    'usb_c_ap2112k_3v3_breakout': {
+        'description': 'USB-C to AP2112K 3.3 V (EN tied) with a header breaking out 5V, 3V3 and GND, plus a power LED.',
+        'blocks': [{'block': 'usb_c_power', 'id': 'pwr'}, {'block': 'ldo_3v3_ap2112k', 'id': 'reg'},
+                   {'block': 'pin_header_io', 'id': 'out'},
+                   {'block': 'led_indicator', 'id': 'pled', 'params': {'supply_v': 3.3, 'led_current_ma': 5}}],
+        'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'reg.VIN', 'out.P1']},
+                        {'name': '3V3', 'ports': ['reg.VOUT', 'out.P2', 'pled.IN']},
+                        {'name': 'GND', 'ports': ['out.P3']}]},
+    'thermostat_fan_9v': {
+        'board_width_mm': 54, 'board_height_mm': 35,
+        'description': '9 V in -> LM317 5 V -> NTC divider -> MCP6002 comparator (50 C trip, 0.3 V hysteresis) -> AO3400A low-side switch driving a 9 V fan on a header.',
+        'blocks': [{'block': 'dc_input_header', 'id': 'pwr', 'params': {'supply_v': 9.0}},
+                   {'block': 'lm317_adjustable', 'id': 'reg', 'params': {'vout_v': 5.0, 'vin_v': 9.0}},
+                   {'block': 'ntc_divider', 'id': 'ntc', 'params': {'vcc_v': 5.0, 'trip_c': 50}},
+                   {'block': 'opamp_comparator_hysteresis', 'id': 'cmp', 'params': {'threshold_v': 3.65, 'hysteresis_v': 0.3, 'supply_v': 5.0}},
+                   {'block': 'lowside_mosfet_switch', 'id': 'fan', 'params': {'load_v': 9.0, 'load_current_ma': 150, 'inductive': True}}],
+        'connections': [{'name': '9V', 'ports': ['pwr.VIN', 'reg.VIN', 'fan.VLOAD']},
+                        {'name': '5V', 'ports': ['reg.VOUT', 'ntc.VCC', 'cmp.VCC']},
+                        {'name': 'TEMP', 'ports': ['ntc.OUT', 'cmp.IN']},
+                        {'name': 'FAN_ON', 'ports': ['cmp.OUT', 'fan.CTRL']}]},
+    'protected_5v_to_3v3_i2c_shifter': {
+        'board_width_mm': 44, 'board_height_mm': 38,
+        'description': 'Protected 5 V input (fuse, P-FET reverse protection, TVS) -> AP2112K 3.3 V; BSS138 shifter between a 3.3 V I2C header and a 5 V I2C header.',
+        'blocks': [{'block': 'reverse_polarity_and_tvs_input', 'id': 'pwr', 'params': {'supply_v': 5.0, 'protection': 'pfet'}},
+                   {'block': 'ldo_3v3_ap2112k', 'id': 'reg'},
+                   {'block': 'bss138_level_shifter', 'id': 'ls', 'params': {'lv_v': 3.3, 'hv_v': 5.0}},
+                   {'block': 'pin_header_io', 'id': 'lvio'}, {'block': 'pin_header_io', 'id': 'hvio'}],
+        'connections': [{'name': '5V', 'ports': ['pwr.VOUT', 'reg.VIN', 'ls.HV', 'hvio.P1']},
+                        {'name': '3V3', 'ports': ['reg.VOUT', 'ls.LV', 'lvio.P1']},
+                        {'name': 'SDA_LV', 'ports': ['ls.LV1', 'lvio.P2']}, {'name': 'SCL_LV', 'ports': ['ls.LV2', 'lvio.P3']},
+                        {'name': 'SDA_HV', 'ports': ['ls.HV1', 'hvio.P2']}, {'name': 'SCL_HV', 'ports': ['ls.HV2', 'hvio.P3']},
+                        {'name': 'GND', 'ports': ['lvio.P4', 'hvio.P4']}]},
+    'opto_isolated_input_12v': {
+        'description': '12 V field input through a PC817 to a 5 V logic output on a header (output is low while the input is on).',
+        'blocks': [{'block': 'header_power', 'id': 'pwr'},
+                   {'block': 'opto_isolated_input', 'id': 'iso', 'params': {'input_v': 12.0, 'led_current_ma': 5, 'supply_v': 5.0}},
+                   {'block': 'pin_header_io', 'id': 'field'}, {'block': 'pin_header_io', 'id': 'logic'}],
+        'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'iso.VCC']},
+                        {'name': 'FIELD_P', 'ports': ['iso.INP', 'field.P1']}, {'name': 'FIELD_N', 'ports': ['iso.INN', 'field.P2']},
+                        {'name': 'DI', 'ports': ['iso.OUT', 'logic.P1']}, {'name': 'GND', 'ports': ['logic.P2']}]},
+    'attiny_highside_switch': {
+        'description': 'ATtiny85 on USB-C switching a 5 V load (header) through an AO3401A high-side switch with BC817 level shifter.',
+        'blocks': [{'block': 'usb_c_power', 'id': 'pwr'}, {'block': 'attiny85_core', 'id': 'mcu'},
+                   {'block': 'highside_pmos_switch', 'id': 'hs', 'params': {'supply_v': 5.0, 'load_current_ma': 300}},
+                   {'block': 'pin_header_io', 'id': 'load'}],
+        'connections': [{'name': '5V', 'ports': ['pwr.VBUS', 'mcu.VCC', 'hs.VIN']},
+                        {'name': 'EN_LOAD', 'ports': ['mcu.PB0', 'hs.CTRL']},
+                        {'name': 'LOAD_V', 'ports': ['hs.OUT', 'load.P1']}, {'name': 'GND', 'ports': ['load.P2']}]},
 }
 
 
@@ -317,11 +721,15 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
         built = spec['build'](merged)
         ports = {}
         for port, meta in spec['ports'].items():
+            if port not in built['ports']:
+                continue
             ports[port] = {**meta, **(built.get('port_meta') or {}).get(port, {})}
         inst[iid] = {'block': name, 'params': merged, 'built': built, 'ports': ports}
         order.append(iid)
 
     warnings, notes, calcs = [], [], {}
+    for iid in order:
+        warnings += [f'{iid} ({inst[iid]["block"]}): {w}' for w in inst[iid]['built'].get('warnings', [])]
     uf = _UF()
     for iid in order:
         for net in inst[iid]['built']['nets']:
@@ -475,6 +883,8 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
                    'target_freq_hz': s['target_freq_hz'], 'end_time_ms': round(5 * period_ms, 3),
                    'step_time_ms': round(period_ms / 400, 6), 'supply_voltage_v': supply_v}
             break
+    if sim is None:
+        sim = _default_sim(inst, order, uf, final_name, connected, nets)
     for iid in order:
         for k, v in (inst[iid]['built'].get('calc') or {}).items():
             calcs[f'{iid}.{k}'] = v
@@ -484,6 +894,47 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
     return {'status': 'success', 'components': components, 'nets': nets, 'board_width_mm': width, 'board_height_mm': height,
             'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes,
             'next_action': 'Call build_and_verify with components, nets, board size and sim_config'}
+
+
+def _default_sim(inst, order, uf, final_name, connected, nets):
+    """DC operating-point config from the blocks' sim_default hints (supplies and static inputs nothing else drives)."""
+    out_names = {n['name'] for n in nets}
+
+    def resolve(iid, name):
+        built = inst[iid]['built']
+        internal = built['ports'].get(name, name)
+        if internal not in built['nets']:
+            return None, None
+        root = uf.find((iid, internal))
+        return (final_name[root] if final_name[root] in out_names else None), root
+
+    sources, probes, sourced = [], [], set()
+    for iid in order:
+        for s in inst[iid]['built'].get('sim_default', {}).get('sources', []):
+            name, root = resolve(iid, s['net'])
+            if name is None or root in sourced:
+                continue
+            driven = any(jid != iid and meta['direction'] in ('power_out', 'signal_out') and (jid, port) in connected
+                         and uf.find((jid, inst[jid]['built']['ports'][port])) == root
+                         for jid in order for port, meta in inst[jid]['ports'].items())
+            if driven:
+                continue
+            source = {'name': f'V{len(sources) + 1}', 'kind': 'voltage', 'positive_net': name,
+                      'negative_net': '0', 'value': s['value']}
+            if s.get('negative_net'):
+                neg, _ = resolve(iid, s['negative_net'])
+                if neg is None:
+                    continue
+                source['negative_net'] = neg
+            sources.append(source)
+            sourced.add(root)
+        for probe in inst[iid]['built'].get('sim_default', {}).get('probes', []):
+            name, _ = resolve(iid, probe)
+            if name and name not in probes and len(probes) < 8:
+                probes.append(name)
+    if not sources or not probes:
+        return None
+    return {'analysis_type': 'transient', 'end_time_ms': 1, 'step_time_ms': 0.01, 'probe_nets': probes, 'sources': sources}
 
 
 def _board_size(components, nets, width, height, warnings):

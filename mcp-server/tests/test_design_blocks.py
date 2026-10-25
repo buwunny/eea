@@ -12,6 +12,9 @@ from utils.pcb_builder import normalize_design, build_board
 
 def compose_example(name, **kw):
     e = copy.deepcopy(EXAMPLES[name])
+    for key in ('board_width_mm', 'board_height_mm'):
+        if key in e:
+            kw.setdefault(key, e[key])
     return compose_design(e['blocks'], e['connections'], **kw)
 
 
@@ -29,11 +32,11 @@ def assert_clean(test, design, report):
 class BlockTests(unittest.TestCase):
     def test_listing(self):
         blocks = list_design_blocks()['blocks']
-        self.assertEqual(len(blocks), 10)
+        self.assertEqual(len(blocks), 20)
         for b in blocks:
             for port in b['ports'].values():
                 self.assertIn(port['direction'], ('power_in', 'power_out', 'signal_in', 'signal_out', 'ground', 'bidir'))
-        self.assertEqual(len(list_example_compositions()['examples']), 3)
+        self.assertEqual(len(list_example_compositions()['examples']), 8)
 
     def test_every_example_composes_and_builds(self):
         for name in EXAMPLES:
@@ -43,7 +46,8 @@ class BlockTests(unittest.TestCase):
                 self.assertEqual(r['status'], 'success')
                 design, report = build(r, d)
                 assert_clean(self, design, report)
-                self.assertEqual(sum(c['part_id'] == 'USB_C_Receptacle_PowerOnly' for c in r['components']), 1)
+                if any(b['block'] == 'usb_c_power' for b in EXAMPLES[name]['blocks']):
+                    self.assertEqual(sum(c['part_id'] == 'USB_C_Receptacle_PowerOnly' for c in r['components']), 1)
 
     def test_555_calculation_and_sim_config(self):
         r = compose_example('flasher_555_usb_c')

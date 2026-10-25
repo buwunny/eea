@@ -186,7 +186,8 @@ def calc_voltage_divider(vin_v: float, vout_v: float, r_total_ohms: float = 1000
 
 @mcp.tool()
 def list_design_blocks() -> dict:
-    """Fastest way to design: pre-validated circuit blocks (power, regulator, 555 timer, LED, MOSFET switch,
+    """Fastest way to design: pre-validated circuit blocks (power inputs, LDO and LM317 regulators, 555 timer, LED,
+    comparator with hysteresis, NTC divider, low/high-side MOSFET switches, BSS138 level shifter, opto input,
     buzzer, WS2812 chain, ATtiny85 core, header I/O) with typed ports and limits. Pick blocks, wire their ports
     with compose_design, then call build_and_verify."""
     return _calc(design_blocks.list_design_blocks)
