@@ -33,6 +33,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(project.read_text(), "User design requirements")
             self.assertEqual((workspace / 'GEMINI.md').read_text(), 'Custom CLI instructions')
             self.assertIn('retryable_unchanged', (workspace / 'AGENTS.md').read_text())
+            self.assertIn('fabricator_profile to build_and_verify', (workspace / 'AGENTS.md').read_text())
             top = subprocess.check_output(["git", "-C", str(workspace), "rev-parse", "--show-toplevel"], text=True).strip()
             self.assertEqual(top, str(workspace))
             self.assertEqual(len(json.loads((workspace / "telemetry.json").read_text())["stages"]), 6)
