@@ -7,7 +7,7 @@ import { wsUrl } from "../api";
 const prompts = [
   ["555 Flasher", "Build a USB-C 555 LED flasher at 2 Hz, ready to manufacture."],
   ["Fan Thermostat", "Build a 9 V fan controller that turns on at 50 °C."],
-  ["ESP32-C3 Board", "Build an ESP32-C3 board with USB-C, on 4 layers."],
+  ["ESP32-C3", "Build an ESP32-C3 board with USB-C, on 4 layers."],
 ];
 export default function TelegraphTerm({
   workspacePath,

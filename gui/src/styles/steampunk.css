@@ -399,6 +399,13 @@ h1 {
   color: var(--text);
   background: var(--surface);
 }
+/* One line only: a wrapped label shrinking to "Copied" would resize the terminal. */
+.prompt-chips button span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .prompt-chips button svg {
   flex: none;
   color: var(--faint);
