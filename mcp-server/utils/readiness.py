@@ -44,6 +44,68 @@ def _cross_check_reasons(footprints):
     return [f"{labels.get(status, status)} {', '.join(sorted(refs))}" for status, refs in sorted(groups.items(), key=lambda g: g[0] != 'mismatch')]
 
 
+def _verification_plan(design, catalog):
+    """Which readiness mode applies (see simulation.VERIFICATION_RULE); None when the design cannot be read."""
+    if not design.get('components'):
+        return None
+    try:
+        from .simulation import verification_plan
+        return verification_plan(design, catalog)
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _static_power_state(plan, simulation, sim_fresh):
+    """static_mcu mode: modeled power blocks need fresh, native, in-band simulation; digital ICs need none."""
+    details = {'fresh': sim_fresh, 'mode': 'static_mcu', 'simulated_components': plan['simulated_components'],
+               'unsimulated_components': plan['unsimulated_components'], 'power_blocks': [b['ref'] for b in plan['power_blocks']]}
+    uncovered = plan['uncovered_components']
+    gap = (f"No SPICE model and no static coverage for {', '.join(uncovered)}; their function is unverified."
+           if uncovered else None)
+    blocks = plan['power_blocks']
+    failed_run = sim_fresh and simulation.get('verified') is True and simulation.get('sim_passed') is False
+    if not blocks:
+        if failed_run:
+            return _state('needs_attention', 'The current simulation failed; see sim_results.json warnings.', **details)
+        if gap:
+            return _state('incomplete', gap, **details)
+        return _state('passed', 'No modeled power blocks to simulate; unmodeled digital ICs rely on DRC and static electrical checks.',
+                      **details)
+    names = ', '.join(b['ref'] for b in blocks)
+    if not sim_fresh:
+        return _state('incomplete', f'Simulate the modeled power blocks ({names}) for the current saved design; '
+                      'unmodeled parts are skipped automatically.', *([gap] if gap else []), **details)
+    rows = simulation.get('power_block_checks') or []
+    details['checks'] = rows
+    if simulation.get('verified') is not True or simulation.get('verification_mode') != 'static_mcu':
+        return _state('incomplete', 'Power-block regulation needs a native ngspice run of the current design.', *([gap] if gap else []), **details)
+    if simulation.get('power_blocks_verified') is False or simulation.get('sim_passed') is False:
+        return _state('needs_attention', 'Simulated power-block behaviour failed; see power_block_checks and warnings.', **details)
+    if simulation.get('power_blocks_verified') is not True:
+        pending = [f"{r['component']}: {r.get('reason', r['status'])}" for r in rows if r.get('status') != 'passed']
+        return _state('incomplete', 'Power-block regulation not fully evaluated: ' + ('; '.join(pending) or 'no regulator rows'),
+                      *([gap] if gap else []), **details)
+    if gap:
+        return _state('incomplete', gap, **details)
+    return _state('passed', f'Modeled power blocks ({names}) regulate within tolerance; digital ICs were not simulated.', **details)
+
+
+def _static_electrical_state(design, catalog):
+    """static_mcu mode: catalog-driven electrical checks stand in for simulating the digital ICs; every finding counts."""
+    try:
+        from .electrical import inspect_electrical
+        electrical, _ = inspect_electrical(design, catalog)
+    except (KeyError, TypeError, ValueError) as error:
+        return _state('incomplete', f'Electrical checks could not be evaluated: {error}')
+    issues = electrical.get('issues', [])
+    checks = electrical.get('static_checks', [])
+    if issues:
+        return _state('needs_attention', f"{len(issues)} electrical finding(s): {issues[0]['message']}",
+                      issues=issues, checks=checks, verified=False)
+    return _state('passed', 'Supply bypass, EN/RESET, strapping and USB data checks found no issues (static, not functional, evidence).',
+                  checks=checks, verified=False)
+
+
 def update_readiness(workspace):
     """Read current artifacts and atomically save readiness; no tool runs or commits."""
     workspace = Path(workspace)
@@ -68,7 +130,15 @@ def update_readiness(workspace):
     else:
         physical = _state('passed', fresh=True)
 
-    if not sim_fresh:
+    from .pcb_builder import load_catalog
+    catalog = load_catalog()
+    plan = _verification_plan(design, catalog)
+    static_mode = bool(plan and plan['mode'] == 'static_mcu')
+    static_electrical = None
+    if static_mode:
+        nominal = _static_power_state(plan, simulation, sim_fresh)
+        static_electrical = _static_electrical_state(design, catalog)
+    elif not sim_fresh:
         nominal = _state('incomplete', 'Run simulation for the current saved design.', fresh=False)
     elif not simulation.get('nominal_verified', simulation.get('functional_verified', False)):
         nominal = _state('needs_attention' if simulation.get('verified') else 'incomplete',
@@ -133,8 +203,6 @@ def update_readiness(workspace):
         placement_state['limitations'] = routing_review.get('limitations', [])
 
     # No per-design or per-component "reviewed" claim can promote these statuses.
-    from .pcb_builder import load_catalog
-    catalog = load_catalog()
     footprints = []
     cross_checks = load_footprint_checks()
     for component in design.get('components', []):
@@ -184,9 +252,17 @@ def update_readiness(workspace):
               'manufacturing_ready': files_ready, 'fabrication_files_ready': files_ready,
               'fabrication_review_ready': reviewed,
               'assembly_ready': bool(reviewed and sourcing_state['status'] == 'passed' and nominal['status'] == 'passed'
+                                     and (static_electrical is None or static_electrical['status'] == 'passed')
                                      and criteria['status'] == 'passed' and (timing is None or timing['status'] == 'passed')),
               'limitations': ['Readiness describes separate checks; available Gerbers do not establish footprint, sourcing or functional correctness.']}
     if timing is not None:
         result['checks']['timing_tolerance'] = timing
+    if static_electrical is not None:
+        result['checks']['static_electrical'] = static_electrical
+    if plan is not None:
+        result['verification'] = {key: plan[key] for key in ('mode', 'rule', 'trigger_components', 'simulated_components',
+                                                             'unsimulated_components', 'uncovered_components')}
+        result['verification']['power_blocks'] = [{'component': b['ref'], 'part_id': b['part_id'], 'output_net': b['output_net'],
+                                                   'expected_v': b['expected_v']} for b in plan['power_blocks']]
     atomic_json(build / 'readiness.json', result)
     return result

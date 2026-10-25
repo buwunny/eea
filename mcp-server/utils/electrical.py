@@ -105,6 +105,11 @@ def inspect_electrical(design, catalog):
                 if rating is not None and abs(positive - negative) > rating:
                     issue('capacitor_voltage_rating', ref, pin(c, '1'), f'{ref} identified voltage exceeds its {rating:g} V catalog rating')
 
+    # Catalog-driven MCU/digital-board checks: supply-pin bypass, EN/RESET pull-up, strap levels, USB data topology.
+    from .mcu_checks import inspect_mcu
+    mcu_issues, static_checks = inspect_mcu(design, catalog, rails)
+    issues.extend(mcu_issues)
+
     # Sum declared draws plus resistors across known voltages. Other dynamic loads stay unknown.
     rail_rows = []
     passive_power = []
@@ -152,5 +157,5 @@ def inspect_electrical(design, catalog):
         output = next((r for r in rail_rows if r['net'] == pin(c, '2')), None)
         regulators.append({'component': c['ref'], 'input_net': pin(c, '3'), 'output_net': pin(c, '2'), 'known_load_dissipation_w': max(0, vin-vout)*output['known_current_ma']/1000 if vin is not None and vout is not None and output else None, 'provenance': 'known_loads_only; excludes quiescent current and unknown loads'})
     unknown_refs = sorted(c['ref'] for c in components if c['part_id'] not in ('R', 'C', 'Capacitor_Electrolytic', '1N4148', 'Crystal_16MHz') and 'current_draw_ma' not in c)
-    return ({'verified': False, 'issues': issues, 'error_count': sum(i['severity'] == 'error' for i in issues), 'warning_count': len(issues), 'limitations': ['Advisory connectivity checks; not ERC or functional verification', 'Net-name voltages and regulator outputs are nominal hints, not measurements']},
+    return ({'verified': False, 'issues': issues, 'error_count': sum(i['severity'] == 'error' for i in issues), 'warning_count': len(issues), 'static_checks': static_checks, 'limitations': ['Advisory connectivity checks; not ERC or functional verification', 'Net-name voltages and regulator outputs are nominal hints, not measurements']},
             {'verified': False, 'complete': False, 'rails': rail_rows, 'resistor_dissipation': passive_power, 'regulators': regulators, 'unknown_loads': unknown_refs, 'limitations': ['Known DC loads only; dynamic loads, regulator input current and quiescent current are not solved', 'Catalog current limits are not treated as operating consumption']})

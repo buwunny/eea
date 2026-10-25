@@ -62,6 +62,118 @@ def simulation_coverage(design):
             'unmodeled_components': unmodeled, 'generic_model_components': generic}
 
 
+# Verification mode rule (see verification_plan): a design switches from full-simulation readiness to
+# static readiness only when it contains a part of one of these categories that has no SPICE model.
+# Their behaviour is firmware/protocol-defined, so a SPICE model would not verify it anyway.
+STATIC_VERIFICATION_CATEGORIES = ('mcu', 'interface', 'memory')
+# Unmodeled support parts whose role on such a board is covered by the static checks or is mechanical.
+STATIC_SUPPORT_CATEGORIES = ('clock', 'switch')
+VERIFICATION_RULE = ('static_mcu when at least one component has no SPICE model and catalog category mcu, interface or memory; '
+                     'otherwise full_simulation (complete model coverage and a passing nominal simulation are required)')
+REGULATION_TOLERANCE_PCT = 5.0
+
+
+def _regulator_terminals(component, part):
+    """(output pad, ground pad or None, input pad, nominal output volts or None) for a modeled regulator."""
+    model = part.get('spice_model') or {}
+    if component['part_id'] == 'AMS1117_3V3':
+        return '2', '1', '3', 3.3
+    if spice_models.is_generic(model) and model['template'] == 'ldo':
+        roles = model['roles']
+        return str(roles['vout']), str(roles['gnd']), str(roles['vin']), float(model.get('params', {}).get('vout', 3.3))
+    if spice_models.is_generic(model) and model['template'] == 'adjustable_reg':
+        roles = model['roles']
+        return str(roles['vout']), None, str(roles['vin']), None
+    return None
+
+
+def verification_plan(design, catalog=None):
+    """Decide how a design is verified and which parts are (not) simulated, with reasons.
+
+    mode 'full_simulation': unchanged behaviour, every functional part must be modeled.
+    mode 'static_mcu': digital ICs without models are covered by DRC and the static electrical checks; only the
+    modeled power blocks (regulators) need simulation evidence, judged by power_block_checks."""
+    catalog = catalog or load_catalog()
+    lookup = {conn: net['name'] for net in design.get('nets', []) for conn in net['connections']}
+    nets = {net['name']: net for net in design.get('nets', [])}
+    simulated, unsimulated, triggers, blocks = [], [], [], []
+    for component in design['components']:
+        part = catalog[component['part_id']]
+        category = part.get('category')
+        entry = {'ref': component['ref'], 'part_id': component['part_id'], 'category': category}
+        if has_spice_model(component['part_id'], part):
+            simulated.append(component['ref'])
+            terminals = _regulator_terminals(component, part) if category == 'power' else None
+            if terminals:
+                out_pad, gnd_pad, in_pad, nominal = terminals
+                out_net = lookup.get(f"{component['ref']}.{out_pad}")
+                expected = nominal
+                if out_net and 'voltage_v' in nets.get(out_net, {}):
+                    expected = nets[out_net]['voltage_v']
+                elif expected is None and out_net:
+                    from .electrical import named_voltage
+                    expected = named_voltage(out_net)
+                blocks.append({**entry, 'output_net': out_net, 'input_net': lookup.get(f"{component['ref']}.{in_pad}"),
+                               'ground_net': lookup.get(f"{component['ref']}.{gnd_pad}") if gnd_pad else None,
+                               'expected_v': expected})
+            continue
+        if category == 'connector':
+            entry['covered_by'] = 'connector_boundary'
+        elif category in STATIC_VERIFICATION_CATEGORIES:
+            entry['covered_by'] = 'static_checks'
+            triggers.append(entry)
+        elif category in STATIC_SUPPORT_CATEGORIES:
+            entry['covered_by'] = 'support_part'
+        else:
+            entry['covered_by'] = None
+        unsimulated.append(entry)
+    mode = 'static_mcu' if triggers else 'full_simulation'
+    if mode == 'full_simulation':
+        # Same meaning as simulation_coverage: only connectors are acceptable omissions.
+        for entry in unsimulated:
+            if entry['covered_by'] != 'connector_boundary':
+                entry['covered_by'] = None
+    return {'mode': mode, 'rule': VERIFICATION_RULE, 'trigger_components': [e['ref'] for e in triggers],
+            'simulated_components': simulated, 'unsimulated_components': unsimulated,
+            'uncovered_components': [e['ref'] for e in unsimulated if e['covered_by'] is None],
+            'power_blocks': blocks}
+
+
+def power_block_checks(plan, config, xs, signals, verified, tolerance_pct=REGULATION_TOLERANCE_PCT):
+    """Regulator outputs must stay within tolerance of their nominal over the settled window."""
+    rows = []
+    end = xs[-1] if xs else None
+    start = config.get('measurement_start_ms', end / 2 if end is not None else None)
+    for block in plan['power_blocks']:
+        row = {'component': block['ref'], 'part_id': block['part_id'], 'output_net': block['output_net'],
+               'expected_v': block['expected_v'], 'tolerance_pct': tolerance_pct}
+        values = signals.get(f"V({block['output_net']})") if block['output_net'] else None
+        if not verified:
+            row['status'] = 'not_simulated'
+        elif config.get('analysis_type') != 'transient':
+            row['status'] = 'not_evaluated'
+            row['reason'] = 'Regulation is judged on a transient run (e.g. a load step), not a DC sweep'
+        elif block['expected_v'] is None:
+            row['status'] = 'unknown_expected'
+            row['reason'] = f"Declare voltage_v on {block['output_net']} to state the intended output"
+        elif block['ground_net'] is not None and block['ground_net'].upper() not in ('GND', '0'):
+            row['status'] = 'not_evaluated'
+            row['reason'] = 'Regulator ground is not the simulation reference'
+        elif not values:
+            row['status'] = 'not_probed'
+            row['reason'] = f"Add {block['output_net']} to sim_config.probe_nets"
+        else:
+            window = [v for x, v in zip(xs, values) if x >= start] or values[-1:]
+            low, high = min(window), max(window)
+            band = abs(block['expected_v']) * tolerance_pct / 100
+            row.update(min_v=low, max_v=high, final_v=values[-1], window_start_ms=start,
+                       status='passed' if low >= block['expected_v'] - band and high <= block['expected_v'] + band else 'failed')
+        rows.append(row)
+    statuses = [row['status'] for row in rows]
+    verdict = None if not rows else (False if 'failed' in statuses else True if all(s == 'passed' for s in statuses) else None)
+    return rows, verdict
+
+
 SUPPLY_NAMES = ('VBUS', 'VIN', 'VCC', 'VDD', '5V', '+5V')
 
 
@@ -411,6 +523,12 @@ def default_sim_config(design):
             config.update(end_time_ms=round(5 * period_ms, 6), step_time_ms=round(period_ms / 400, 9), target_freq_hz=m['frequency_hz'])
         except (ValueError, KeyError, ZeroDivisionError):
             config.update(end_time_ms=1000, step_time_ms=0.5)
+    if not ne555:
+        plan = verification_plan(design)
+        if plan['mode'] == 'static_mcu' and plan['power_blocks']:
+            # Only the power blocks are meaningful to simulate: probe regulator outputs, then inputs.
+            rails = [b['output_net'] for b in plan['power_blocks']] + [b['input_net'] for b in plan['power_blocks']]
+            probes = list(dict.fromkeys(n for n in rails if n and n.upper() not in ('GND', '0')))[:16] or probes
     if probes:
         config['probe_nets'] = probes
     return config
@@ -464,6 +582,7 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
     config['probe_nets']=config.get('probe_nets',['OUT','THR'])
     if not isinstance(config['probe_nets'],list) or not 1<=len(config['probe_nets'])<=16 or any(p not in {n['name'] for n in design['nets']} for p in config['probe_nets']): raise ValueError('probe_nets must contain 1 to 16 existing nets')
     config['frequency_tolerance_pct']=finite(config.get('frequency_tolerance_pct',10),'frequency_tolerance_pct',0,100)
+    config['regulation_tolerance_pct']=finite(config.get('regulation_tolerance_pct',REGULATION_TOLERANCE_PCT),'regulation_tolerance_pct',0.1,50)
     if 'target_freq_hz' in config: config['target_freq_hz']=finite(config['target_freq_hz'],'target_freq_hz',1e-9,1e9)
     if requirements.get('supply_net') and 'sources' not in config:
         config['sources'] = [{'name': 'VSUPPLY', 'kind': 'voltage', 'positive_net': requirements['supply_net'],
@@ -534,6 +653,8 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
             warnings.append(f'{native_backend} unavailable or failed: {error}')
     if not verified and config['analysis_type']=='dc':
         report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,'nominal_verified':False,**coverage,**provenance,'requirements_met':None,'requirements_report':evaluate_requirements(requirements,source_design,sources,None,False),'tolerance_analysis':tolerance_555(design,requirements,sources),'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
+        plan = verification_plan(design)
+        report.update(_verification_fields(plan, *(power_block_checks(plan, config, [], {}, False) if plan['mode'] == 'static_mcu' else ([], None))))
         if persist: atomic_json(build/'sim_results.json', report)
         return report
     if not verified:
@@ -551,17 +672,35 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
         if measurement_net != output_net or start is not None or end is not None:
             metrics = measurements(xs, signals, f'V({measurement_net})', start, end)
         warnings.append('Analytical 555 timing estimate only; not a SPICE-verified waveform')
+    plan = verification_plan(design)
+    power_rows, power_verdict = (power_block_checks(plan, config, xs, signals, verified, config['regulation_tolerance_pct'])
+                                 if plan['mode'] == 'static_mcu' else ([], None))
+    if power_verdict is False:
+        warnings.append('Power block regulation failed: ' + ', '.join(
+            f"{r['component']} {r['output_net']} {r['min_v']:.3g}-{r['max_v']:.3g} V (expected {r['expected_v']:g} V)"
+            for r in power_rows if r['status'] == 'failed'))
     frequency=metrics.get('frequency_hz'); target=config.get('target_freq_hz')
     # No target: a settled (non-oscillating) result is fine, e.g. comparators or regulators.
     target_met=True if target is None else bool(frequency and abs(frequency-target)/target<=config.get('frequency_tolerance_pct',10)/100)
     requirement_report = evaluate_requirements(requirements, source_design, sources, frequency, verified)
     tolerance_report = tolerance_555(design, requirements, sources)
-    passed=verified and (target_met if config['analysis_type']=='transient' else True) and requirement_report['requirements_met'] is not False
+    passed=verified and (target_met if config['analysis_type']=='transient' else True) and requirement_report['requirements_met'] is not False and power_verdict is not False
     nominal_verified = verified and (target_met if config['analysis_type']=='transient' else True) and coverage['coverage_complete'] and bool(sources)
     summary=f'{backend}: DC sweep completed' if config['analysis_type']=='dc' else (f'{backend}: {frequency:.3g} Hz' if frequency else (f'{backend}: settled; ' + ', '.join(f'{k}={v[-1]:.3g} V' for k, v in signals.items() if v) if target is None else f'{backend}: insufficient cycles for frequency measurement'))
     report={'status':'success' if passed else ('failed' if verified else 'degraded'),'backend':backend,'verified':verified,'sim_passed':passed,'functional_verified':passed and coverage['coverage_complete'] and bool(sources),'nominal_verified':nominal_verified,**coverage,**provenance,'requirements_met':requirement_report['requirements_met'],'requirements_report':requirement_report,'tolerance_analysis':tolerance_report,'target_met':target_met,'sources':sources,'loads':config['loads'],'measurement_net':measurement_net,'sim_summary':summary,'warnings':warnings,'measurements':metrics,'analysis_type':config['analysis_type'],'x_axis_label':'Time (ms)' if config['analysis_type']=='transient' else 'Supply voltage (V)','x_data':xs,'signals':signals}
+    report.update(_verification_fields(plan, power_rows, power_verdict))
+    if power_verdict is False:
+        report['next_action'] = 'A regulator output left its tolerance band: check the input source (sim_config.sources), dropout, load and output capacitance.'
     if persist: atomic_json(build/'sim_results.json', report)
     return report
+
+
+def _verification_fields(plan, power_rows, power_verdict):
+    fields = {'verification_mode': plan['mode'], 'simulated_components': plan['simulated_components'],
+              'unsimulated_components': plan['unsimulated_components']}
+    if plan['mode'] == 'static_mcu':
+        fields.update(power_block_checks=power_rows, power_blocks_verified=power_verdict)
+    return fields
 
 
 SWEEPABLE_VALUE_PARTS = {'R', 'C', 'Capacitor_Electrolytic', 'NTC_10k_0805', 'LDR_GL5528', 'Potentiometer_10k'}
@@ -641,6 +780,7 @@ def simulate(components, nets, sim_config, workspace):
         first = first or report
         rows.append({'value': point['value'], 'status': report['status'], 'verified': report['verified'],
                      'sim_passed': report['sim_passed'], 'measurements': report['measurements'],
+                     **({'power_blocks_verified': report['power_blocks_verified']} if 'power_blocks_verified' in report else {}),
                      'final': {name: round(values[-1], 6) for name, values in report['signals'].items() if values}})
     first = dict(first)
     return _merge_sweep(first, rows, kind, target, workspace)
@@ -655,6 +795,9 @@ def _merge_sweep(first, rows, kind, target, workspace):
                   functional_verified=report['functional_verified'] and passed,
                   nominal_verified=report['nominal_verified'] and passed,
                   status='success' if passed else ('failed' if verified else 'degraded'))
+    if 'power_blocks_verified' in report:
+        verdicts = [r.get('power_blocks_verified') for r in rows]
+        report['power_blocks_verified'] = False if False in verdicts else True if all(v is True for v in verdicts) else None
     failing = [str(r['value']) for r in rows if not r['sim_passed']]
     if failing:
         report['warnings'] = list(report['warnings']) + [f'Sweep points not passing: {target}={", ".join(failing)}']

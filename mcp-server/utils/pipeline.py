@@ -69,6 +69,13 @@ def compact_readiness(report):
             if isinstance(check.get(field), list):
                 decision[field + '_count'] = len(check[field])
         out['checks'][name] = decision
+    verification = report.get('verification')
+    if isinstance(verification, dict):
+        unsimulated = verification.get('unsimulated_components', [])
+        out['verification'] = {'mode': verification.get('mode'),
+                               'unsimulated': [f"{u['ref']} ({u['part_id']}): {u.get('covered_by') or 'NOT COVERED'}" for u in unsimulated[:8]]
+                               + ([f'... {len(unsimulated) - 8} more'] if len(unsimulated) > 8 else []),
+                               'power_blocks': [b['component'] for b in verification.get('power_blocks', [])]}
     return out
 
 
@@ -188,6 +195,8 @@ def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, si
     if drc_exclusions:
         warnings.append(f'Native DRC has {drc_exclusions} excluded findings; review get_drc_findings(severity="exclusion")')
     result['design_review_complete'] = all(check['status'] == 'passed' for check in result['readiness']['checks'].values())
+    if result['readiness'].get('verification', {}).get('mode') == 'static_mcu':
+        warnings.append('Unmodeled MCU/interface ICs: readiness uses DRC, static electrical checks and power-block simulation instead of full simulation')
     if failed is None and not result['design_review_complete']:
         result['next_action'] += ' Design review remains incomplete; inspect get_design_readiness and resolve its findings before calling this build-ready.'
     if skipped:

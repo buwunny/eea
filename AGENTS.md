@@ -160,6 +160,8 @@ Tool docstrings are what the AI CLI reads, so keep parameter details there, not 
 | `list_design_blocks`, `list_example_compositions`, `compose_design(blocks, connections)` | Pre-validated blocks with typed ports (`utils/design_blocks.py`). `compose_design` renumbers refs, merges nets, checks power/rating mistakes, estimates board size and builds a default `sim_config` from block `sim_default`s. Writes no files. Block tests: `tests/test_design_blocks*.py`. |
 | `calc_555_astable`, `calc_led_resistor`, `calc_voltage_divider` | Pure E24 calculators. No telemetry or commits. |
 
+**Verification modes** (`simulation.VERIFICATION_RULE`): a design is `static_mcu` when a part in category `mcu`, `interface` or `memory` has no SPICE model, otherwise `full_simulation` (complete model coverage required; the 555 demo is unchanged). `static_mcu` readiness rests on DRC, the static checks in `utils/mcu_checks.py` (supply bypass, EN/RESET pull-up, strapping pins, USB data nets; every finding blocks) and a simulation of the modeled regulators only (`power_block_checks`, output within `regulation_tolerance_pct`, default 5 %). `readiness.verification` lists what was simulated and what covers each unsimulated part.
+
 **DRC loop:** never finish a board while DRC reports errors or unconnected items. Follow `next_action`, adjust placement, board size or clearance, and rerun. Stop after 5 attempts, or 2 without fewer errors, and report what remains. `lib_footprint_issues` and `silk_over_copper` are expected on this self-contained board: mention them, don't chase them. Fix other warnings only when within your control, otherwise list each with a reason.
 
 ---
