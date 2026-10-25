@@ -8,6 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 from .telemetry import atomic_json
+from .footprint_check import load_footprint_checks
 
 
 def _read(path):
@@ -27,6 +28,19 @@ def _digest(path):
 
 def _state(status, *reasons, **details):
     return {'status': status, 'reasons': list(reasons), **details}
+
+
+def _cross_check_reasons(footprints):
+    """Machine pad cross-check against the sourced part: evidence only, never a substitute for review."""
+    groups = {}
+    for item in footprints:
+        if item['status'] != 'reviewed':
+            groups.setdefault(item['cross_check'], []).append(item['component'])
+    labels = {'mismatch': 'WARNING: pads differ from the sourced part footprint for',
+              'pass': 'Pads match the sourced part footprint (machine check, not a review) for',
+              'no_reference': 'No reference footprint for the sourced part for', 'error': 'Footprint cross-check failed for',
+              'missing': 'No footprint cross-check recorded for'}
+    return [f"{labels.get(status, status)} {', '.join(sorted(refs))}" for status, refs in sorted(groups.items(), key=lambda g: g[0] != 'mismatch')]
 
 
 def update_readiness(workspace):
@@ -121,6 +135,7 @@ def update_readiness(workspace):
     from .pcb_builder import load_catalog
     catalog = load_catalog()
     footprints = []
+    cross_checks = load_footprint_checks()
     for component in design.get('components', []):
         part = catalog.get(component.get('part_id'), {})
         review = part.get('footprint_review') or {}
@@ -129,9 +144,11 @@ def update_readiness(workspace):
                     and bool(review.get('review_evidence')))
         footprints.append({'component': component.get('ref'), 'part_id': component.get('part_id'),
                            'status': 'reviewed' if reviewed else 'unreviewed',
-                           'manufacturer_drawing': review.get('manufacturer_drawing')})
+                           'manufacturer_drawing': review.get('manufacturer_drawing'),
+                           'cross_check': (cross_checks.get(component.get('part_id')) or {}).get('status', 'missing')})
     footprint_state = (_state('passed', components=footprints) if footprints and all(p['status'] == 'reviewed' for p in footprints)
-                       else _state('incomplete', 'Footprint dimensions and pin mapping require manufacturer-drawing review.', components=footprints))
+                       else _state('incomplete', 'Footprint dimensions and pin mapping require manufacturer-drawing review.',
+                                   *_cross_check_reasons(footprints), components=footprints))
     bom = {item.get('ref'): item for item in design.get('bom', [])}
     sourcing = []
     for component in design.get('components', []):

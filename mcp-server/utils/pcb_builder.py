@@ -196,6 +196,12 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     imported = sorted({c['part_id'] for c in cs if cat[c['part_id']].get('tier') == 'imported'})
     if imported:
         warnings.append(f"Imported KiCad parts {imported} are not hand-reviewed: verify pinout, footprint and ratings against the datasheet")
+    from .footprint_check import load_footprint_checks
+    checks = load_footprint_checks()
+    mismatched = sorted({c['part_id'] for c in cs if (checks.get(c['part_id']) or {}).get('status') == 'mismatch'})
+    if mismatched:
+        worst = ', '.join(f"{pid} ({checks[pid]['worst_delta_mm']} mm)" if checks[pid].get('worst_delta_mm') is not None else pid for pid in mismatched)
+        warnings.append(f"Footprint of {mismatched} differs from the footprint of its sourced LCSC part (worst pad delta: {worst}); compare the land pattern with the exact part's drawing")
     unsourced = sorted({c['part_id'] for c in cs if c['part_id'] not in ('R', 'C') and not cat[c['part_id']].get('lcsc')})
     if unsourced:
         warnings.append(f"No LCSC code for {unsourced}: choose an orderable part matching the value and footprint before assembly (BOM cost excludes them)")
@@ -211,7 +217,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     warnings.extend(item['message'] for item in design['placement_checks']['issues'])
     from .electrical import inspect_electrical
     design['electrical_checks'], design['power_budget'] = inspect_electrical(design, cat)
-    design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]
+    design['footprint_reviews'] = [{'component': c['ref'], 'part_id': c['part_id'], 'cross_check': (checks.get(c['part_id']) or {}).get('status', 'missing'), **cat[c['part_id']].get('footprint_review', {'status': 'unreviewed', 'manufacturer_drawing': None})} for c in cs]
     warnings.extend(item['message'] for item in design['electrical_checks']['issues'])
     return design
 

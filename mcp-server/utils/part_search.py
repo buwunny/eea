@@ -2,6 +2,7 @@
 from __future__ import annotations
 import re
 from .pcb_builder import load_catalog
+from .footprint_check import describe_check
 
 DETAIL_FIELDS = ('typical_application', 'required_support_parts', 'max_ratings', 'datasheet')
 
@@ -73,6 +74,8 @@ def part_details(part_id: str) -> dict:
               'pins': [f"{p['number']} {p['name']}: {p.get('function', '')}".rstrip(': ') for p in part['pins']],
               'pad_count': len(part['pads']), 'footprint_review': review.get('status', 'unreviewed'),
               **{f: part[f] for f in DETAIL_FIELDS if part.get(f)}}
+    if part.get('lcsc') or tier == 'imported':
+        detail['footprint_cross_check'] = describe_check(part_id)
     sourcing = part.get('sourcing') or {}
     if sourcing.get('mpn'):
         detail['sourcing'] = {k: sourcing.get(k) for k in ('mpn', 'manufacturer', 'package', 'library_type', 'stock', 'price_tiers', 'alternates') if sourcing.get(k) is not None}

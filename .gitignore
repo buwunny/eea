@@ -9,3 +9,4 @@ mcp-server/vendor/*.jar
 gui/src-tauri/target/
 gui/src-tauri/gen/
 *.tsbuildinfo
+.cache/

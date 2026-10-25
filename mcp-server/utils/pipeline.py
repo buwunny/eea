@@ -92,7 +92,8 @@ def compact(report, limit=5):
                                'rail_count': len(power.get('rails', [])), 'unknown_load_count': len(power.get('unknown_loads', []))}
     if isinstance(report.get('footprint_reviews'), list):
         reviews = report['footprint_reviews']
-        out['footprint_reviews'] = {'total': len(reviews), 'unreviewed': sum(item.get('status') != 'reviewed' for item in reviews)}
+        out['footprint_reviews'] = {'total': len(reviews), 'unreviewed': sum(item.get('status') != 'reviewed' for item in reviews),
+                                      'cross_check_mismatch': sum(item.get('cross_check') == 'mismatch' for item in reviews)}
     if isinstance(report.get('electrical_checks'), dict):
         check = report['electrical_checks']
         out['electrical_checks'] = {key: check[key] for key in ('verified', 'error_count', 'warning_count') if key in check}

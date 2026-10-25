@@ -1,0 +1,1263 @@
+{
+  "_meta": {
+    "note": "Machine cross-check of catalog pads against the sourced LCSC part footprint; evidence only, never a review. Regenerate with scripts/check_footprints.py.",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)"
+  },
+  "1N4007": {
+    "lcsc": "C106903",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.73,
+    "reasons": [
+      "2 pad(s) off by more than 0.1 mm (worst pad 1: 0.73 mm)",
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -100.3935,
+        -76.2
+      ]
+    }
+  },
+  "1N4148": {
+    "lcsc": "C81598",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:09Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.3379,
+        -761.365
+      ]
+    }
+  },
+  "2N7002": {
+    "lcsc": "C8545",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:07Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.4,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "AMS1117_3V3": {
+    "lcsc": "C6186",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:02Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 4 pads, reference has 4",
+      "pads only in reference: ['4']"
+    ]
+  },
+  "AO3400A": {
+    "lcsc": "C20917",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.475,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.475 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0208,
+        762.0
+      ]
+    }
+  },
+  "AO3401A": {
+    "lcsc": "C15127",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.475,
+    "reasons": [
+      "3 pad(s) off by more than 0.1 mm (worst pad 3: 0.2833 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.475 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        100.4708,
+        77.0357
+      ]
+    }
+  },
+  "AP2112K_3V3": {
+    "lcsc": "C51118",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2201,
+    "reasons": [
+      "5 pad(s) off by more than 0.1 mm (worst pad 4: 0.195 mm)",
+      "5 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.2201 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        761.5245,
+        -1015.8731
+      ]
+    }
+  },
+  "AT24C256_SOIC8": {
+    "lcsc": "C411625",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2301,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.2301 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "ATmega328P_TQFP32": {
+    "lcsc": "C14877",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.219,
+    "reasons": [
+      "32 pad(s) off by more than 0.1 mm (worst pad 10: 0.219 mm)",
+      "32 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.175 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -108.1913,
+        -90.424
+      ]
+    }
+  },
+  "ATtiny13A_SOIC8": {
+    "lcsc": "C14075",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.15,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1249 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "ATtiny85_SOIC8": {
+    "lcsc": "C615549",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:19Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.625,
+    "reasons": [
+      "8 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.625 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "BAT54_SOD323F": {
+    "lcsc": "C130415",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.23,
+    "reasons": [
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.23 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0
+      ]
+    }
+  },
+  "BC807_SOT23": {
+    "lcsc": "C57316",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.475,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.475 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0208,
+        762.0
+      ]
+    }
+  },
+  "BC817_SOT23": {
+    "lcsc": "C52801",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.405,
+    "reasons": [
+      "3 pad(s) off by more than 0.1 mm (worst pad 3: 0.3967 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.405 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0993,
+        762.0
+      ]
+    }
+  },
+  "BSS138_SOT23": {
+    "lcsc": "C82045",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.405,
+    "reasons": [
+      "3 pad(s) off by more than 0.1 mm (worst pad 3: 0.3967 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.405 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0993,
+        762.0
+      ]
+    }
+  },
+  "BZX84C5V1": {
+    "lcsc": "C47075",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.475,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.475 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0208,
+        762.0
+      ]
+    }
+  },
+  "Buzzer_Magnetic": {
+    "lcsc": "C360615",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:14Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2,
+    "reasons": [
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.2 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1013.3428,
+        -760.857
+      ]
+    }
+  },
+  "C": {
+    "lcsc": "C49678",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:52Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.41,
+    "reasons": [
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.41 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0
+      ]
+    }
+  },
+  "CD4017_SOIC16": {
+    "lcsc": "C11349",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2606,
+    "reasons": [
+      "16 pad(s) off by more than 0.1 mm (worst pad 1: 0.2606 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "CH340G": {
+    "lcsc": "C14267",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2606,
+    "reasons": [
+      "16 pad(s) off by more than 0.1 mm (worst pad 1: 0.2606 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "CP2102N_QFN28": {
+    "lcsc": "C964632",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "pass",
+    "worst_delta_mm": 0.105,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0
+      ]
+    }
+  },
+  "Capacitor_Electrolytic": {
+    "lcsc": "C696189",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:21Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.4,
+    "reasons": [
+      "2 pad(s) off by more than 0.1 mm (worst pad 1: 0.1301 mm)",
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1015.2508,
+        -764.0165
+      ]
+    }
+  },
+  "Conn_1x02_Header": {
+    "lcsc": "C124375",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        762.889,
+        -1013.841
+      ]
+    }
+  },
+  "Conn_1x03_Header": {
+    "lcsc": "C124376",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:32Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1252,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        -81.28,
+        -360.934
+      ]
+    }
+  },
+  "Conn_1x06_Header": {
+    "lcsc": "C124380",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:35Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        762.0,
+        -1009.65
+      ]
+    }
+  },
+  "Crystal_16MHz": {
+    "lcsc": "C13738",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:12Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0001,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0001
+      ]
+    }
+  },
+  "DRV8833PW": {
+    "lcsc": "C544801",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:37Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2565,
+    "reasons": [
+      "16 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.2565 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0002,
+        -1016.0
+      ]
+    }
+  },
+  "DS18B20_TO92": {
+    "lcsc": "C9753",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:39Z",
+    "status": "pass",
+    "worst_delta_mm": 0.15,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        -1012.698,
+        -761.111
+      ]
+    }
+  },
+  "IRF540N_TO220": {
+    "lcsc": "C2566",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:41Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.6,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.6 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1013.3331,
+        -762.0033
+      ]
+    }
+  },
+  "IRLML6402": {
+    "lcsc": "C2593",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:44Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.405,
+    "reasons": [
+      "3 pad(s) off by more than 0.1 mm (worst pad 3: 0.3967 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.405 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0993,
+        762.0
+      ]
+    }
+  },
+  "JST_PH_2": {
+    "lcsc": "C131337",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:46Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.4,
+    "reasons": [
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        1017.365,
+        761.238
+      ]
+    }
+  },
+  "L293D_DIP16": {
+    "lcsc": "C12340",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:49Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        765.81,
+        -1007.11
+      ]
+    }
+  },
+  "L7805_TO220": {
+    "lcsc": "C111887",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:51Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.6,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.6 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1013.3331,
+        -762.0033
+      ]
+    }
+  },
+  "LDR_GL5528": {
+    "lcsc": "C10081",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:31Z",
+    "status": "pass",
+    "worst_delta_mm": 0.024,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 270,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        163.322,
+        368.681
+      ]
+    }
+  },
+  "LED": {
+    "lcsc": "C2295",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:55Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.1003,
+    "reasons": [
+      "2 pad(s) off by more than 0.1 mm (worst pad 1: 0.1003 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        101.5835,
+        76.1987
+      ]
+    }
+  },
+  "LM317_SOT223": {
+    "lcsc": "C347367",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:53Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 4 pads, reference has 4",
+      "pads only in reference: ['4']"
+    ]
+  },
+  "LM324_SOIC14": {
+    "lcsc": "C71035",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:56Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.144,
+    "reasons": [
+      "14 pad(s) off by more than 0.1 mm (worst pad 1: 0.144 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "LM358": {
+    "lcsc": "C7950",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:26:27Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2301,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.2301 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "LM393_SOIC8": {
+    "lcsc": "C7955",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:04:58Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2301,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.2301 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "MCP1700_3V3_SOT23": {
+    "lcsc": "C39051",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:05:00Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.405,
+    "reasons": [
+      "3 pad(s) off by more than 0.1 mm (worst pad 3: 0.3967 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.405 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0993,
+        762.0
+      ]
+    }
+  },
+  "MCP2551_SOIC8": {
+    "lcsc": "C7376",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:05:03Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.15,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1249 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "MCP6002_SOIC8": {
+    "lcsc": "C7377",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:05:05Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.15,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1249 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "MMBT3904": {
+    "lcsc": "C20526",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:26Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.4,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "MMBT3906": {
+    "lcsc": "C53444",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:05:08Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.475,
+    "reasons": [
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.475 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0208,
+        762.0
+      ]
+    }
+  },
+  "NE555": {
+    "lcsc": "C7593",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:09:58Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.25,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1001 mm)",
+      "8 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.25 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "NTC_10k_0805": {
+    "lcsc": "C51597",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:28Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1325,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0
+      ]
+    }
+  },
+  "Optocoupler_PC817": {
+    "lcsc": "C20612594",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:05:10Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2,
+    "reasons": [
+      "4 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.2 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        765.7605,
+        -1014.7861
+      ]
+    }
+  },
+  "PCF8574_SOIC16": {
+    "lcsc": "C7605",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:12Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.3505,
+    "reasons": [
+      "16 pad(s) off by more than 0.1 mm (worst pad 1: 0.1003 mm)",
+      "16 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.3505 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "PinHeader_1x04": {
+    "lcsc": "C124378",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:05Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        762.0,
+        -1008.38
+      ]
+    }
+  },
+  "Polyfuse_1206": {
+    "lcsc": "C19193043",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:15Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0599,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -101.6,
+        -76.2
+      ]
+    }
+  },
+  "Potentiometer_10k": {
+    "lcsc": "C719176",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:33Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0001,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "pad1",
+      "offset_mm": [
+        1015.9,
+        761.8999
+      ]
+    }
+  },
+  "R": {
+    "lcsc": "C17414",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:50Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1325,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0,
+        -762.0
+      ]
+    }
+  },
+  "RP2040_QFN56": {
+    "lcsc": "C2040",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:17Z",
+    "status": "pass",
+    "worst_delta_mm": 0.1,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1012.0,
+        -765.3002
+      ]
+    }
+  },
+  "Relay_SPDT_5V": {
+    "lcsc": "C35449",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:20Z",
+    "status": "mismatch",
+    "worst_delta_mm": 4.5277,
+    "reasons": [
+      "5 pad(s) off by more than 0.1 mm (worst pad 5: 4.5277 mm)",
+      "5 pad(s) differ in size by more than 0.15 mm (worst pad 2: 0.294 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -437.034,
+        -190.6005
+      ]
+    }
+  },
+  "SMAJ5_0A": {
+    "lcsc": "C19077523",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:22Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.4536,
+    "reasons": [
+      "2 pad(s) off by more than 0.1 mm (worst pad 1: 0.4041 mm)",
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4536 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1016.0001,
+        -762.0
+      ]
+    }
+  },
+  "SN65HVD230": {
+    "lcsc": "C12084",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:24Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.15,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1249 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "SN74HC00_SOIC14": {
+    "lcsc": "C10090",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:26Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.144,
+    "reasons": [
+      "14 pad(s) off by more than 0.1 mm (worst pad 1: 0.144 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "SN74HC14_SOIC14": {
+    "lcsc": "C6820",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:29Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.144,
+    "reasons": [
+      "14 pad(s) off by more than 0.1 mm (worst pad 1: 0.144 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "SN74HC595_SOIC16": {
+    "lcsc": "C10092",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:31Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2606,
+    "reasons": [
+      "16 pad(s) off by more than 0.1 mm (worst pad 1: 0.2606 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "SS14_SMA": {
+    "lcsc": "C2480",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:33Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.98,
+    "reasons": [
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.98 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1015.5174,
+        -762.635
+      ]
+    }
+  },
+  "STM32F103C8T6": {
+    "lcsc": "C8734",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:36Z",
+    "status": "pass",
+    "worst_delta_mm": 0.0874,
+    "reasons": [],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -57.6707,
+        -150.114
+      ]
+    }
+  },
+  "Switch_Slide_SPDT": {
+    "lcsc": "C431540",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:35Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 7 pads, reference has 7",
+      "pads only in catalog: ['SH']",
+      "pads only in reference: ['4']"
+    ]
+  },
+  "TL072_SOIC8": {
+    "lcsc": "C67473",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:38Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.2301,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.2301 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        76.5871,
+        -101.424
+      ]
+    }
+  },
+  "TMP36_SOIC8": {
+    "lcsc": "C691115",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:40Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.15,
+    "reasons": [
+      "8 pad(s) off by more than 0.1 mm (worst pad 1: 0.1249 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "USB_C_Receptacle_PowerOnly": {
+    "lcsc": "C165948",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:00Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 12 pads, reference has 16",
+      "pads only in catalog: ['A1', 'A12', 'A4', 'A9', 'B1', 'B12', 'B4', 'B9', 'S1', 'S2']",
+      "pads only in reference: ['1', '2', '3', '4', 'A1B12', 'A4B9', 'A6', 'A7', 'A8', 'B1A12']"
+    ]
+  },
+  "USB_Micro_B": {
+    "lcsc": "C132563",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:43Z",
+    "status": "mismatch",
+    "worst_delta_mm": null,
+    "reasons": [
+      "pad count/numbering differs: catalog has 13 pads, reference has 9",
+      "pads only in catalog: ['SH']",
+      "pads only in reference: ['6']"
+    ]
+  },
+  "W25Q32JV_SOIC8": {
+    "lcsc": "C179173",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:45Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.625,
+    "reasons": [
+      "8 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.625 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 90,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        762.0,
+        -1016.0
+      ]
+    }
+  },
+  "WS2812B": {
+    "lcsc": "C52917433",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:10:17Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.3,
+    "reasons": [
+      "4 pad(s) off by more than 0.1 mm (worst pad 1: 0.1118 mm)",
+      "4 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.3 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 0,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        -1018.2499,
+        -763.6001
+      ]
+    }
+  },
+  "XC6206_3V3": {
+    "lcsc": "C5446",
+    "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
+    "checked_at": "2026-10-25T00:07:47Z",
+    "status": "mismatch",
+    "worst_delta_mm": 0.255,
+    "reasons": [
+      "1 pad(s) off by more than 0.1 mm (worst pad 3: 0.1301 mm)",
+      "3 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.255 mm)"
+    ],
+    "transform": {
+      "rotation_deg": 180,
+      "mirror_y": false,
+      "align": "centroid",
+      "offset_mm": [
+        1016.0327,
+        762.0
+      ]
+    }
+  }
+}
