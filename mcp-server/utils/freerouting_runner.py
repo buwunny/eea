@@ -17,15 +17,136 @@ from .vias import add_board_vias
 ROUTE_TIME_BUDGET_SECONDS = 30
 
 
-def enforce_minimum_track_width(board, pcbnew):
-    """Honor KiCad's existing minimum without weakening its DRC constraints."""
+def _widen_narrow_tracks(board, pcbnew):
+    """Widen tracks below the board minimum to it; returns the widened tracks."""
     minimum = board.GetDesignSettings().m_TrackMinWidth
-    changed = 0
+    widened = []
     for track in board.GetTracks():
         if track.GetClass() in ('PCB_TRACK', 'PCB_ARC') and track.GetWidth() < minimum:
             track.SetWidth(minimum)
-            changed += 1
-    return changed
+            widened.append(track)
+    return widened
+
+
+def enforce_minimum_track_width(board, pcbnew):
+    """Honor KiCad's existing minimum without weakening its DRC constraints."""
+    return len(_widen_narrow_tracks(board, pcbnew))
+
+
+def clearance_conflicts(board, pcbnew, tracks):
+    """Tracks among `tracks` that now sit closer than the required clearance to other-net pads, tracks or vias.
+
+    Uses KiCad's own item shapes and per-item clearances (the larger of the two applies), so the result
+    matches the clearance check of kicad-cli DRC for these items.
+    """
+    copper = {}
+    def items(layer):
+        if layer not in copper:
+            pads = [p for fp in board.GetFootprints() for p in fp.Pads() if p.IsOnLayer(layer)]
+            copper[layer] = pads + [t for t in board.GetTracks() if t.IsOnLayer(layer)]
+        return copper[layer]
+    conflicts = []
+    for track in tracks:
+        layer = track.GetLayer()
+        shape = track.GetEffectiveShape(layer)
+        for other in items(layer):
+            if other.GetNetCode() == track.GetNetCode():
+                continue
+            clearance = max(track.GetOwnClearance(layer), other.GetOwnClearance(layer))
+            if shape.Collide(other.GetEffectiveShape(layer), clearance - 1):
+                conflicts.append(track)
+                break
+    return conflicts
+
+
+def _remove(board, item):
+    """Remove an item without letting Python free it: board.Remove hands ownership to the SWIG wrapper,
+    and garbage-collecting that wrapper later frees memory KiCad's connectivity data may still use."""
+    board.Remove(item)
+    item.thisown = False
+
+
+def _trim_dangling_tracks(board, pcbnew, netcodes):
+    """Remove track segments of these nets that end on nothing (no same-net pad, track or via).
+
+    Freerouting connects pins, not loose track ends, so the stubs left after deleting a segment must go
+    for the gap to become an unrouted pin-to-pin connection again. Repeats until no stub is left.
+    """
+    removed = 0
+    while True:
+        tracks = [t for t in board.GetTracks() if t.GetNetCode() in netcodes]
+        pads = [p for fp in board.GetFootprints() for p in fp.Pads() if p.GetNetCode() in netcodes]
+
+        def attached(track, point):
+            layer = track.GetLayer()
+            if any(p.IsOnLayer(layer) and p.HitTest(point) for p in pads):
+                return True
+            for other in tracks:
+                if other is track or other.GetNetCode() != track.GetNetCode():
+                    continue
+                if other.GetClass() == 'PCB_VIA':
+                    if other.HitTest(point):
+                        return True
+                elif other.GetLayer() == layer and point in (other.GetStart(), other.GetEnd()):
+                    return True
+            return False
+
+        stubs = [t for t in tracks if t.GetClass() in ('PCB_TRACK', 'PCB_ARC')
+                 and not (attached(t, t.GetStart()) and attached(t, t.GetEnd()))]
+        if not stubs:
+            return removed
+        for track in stubs:
+            _remove(board, track)
+        removed += len(stubs)
+
+
+def _export_dsn(board, pcbnew, build, planes):
+    if not pcbnew.ExportSpecctraDSN(board, str(build/'board.dsn')):
+        raise RuntimeError('DSN export failed')
+    if planes:
+        prepare_plane_dsn(build/'board.dsn', [p['layer'] for p in planes])
+
+
+def _run_freerouting(board, pcbnew, build, jar, max_passes, time_budget_s):
+    """Route the exported DSN and import the session; existing tracks in the DSN are kept by Freerouting."""
+    (build/'board.ses').unlink(missing_ok=True)
+    result = subprocess.run(['java', '-jar', str(jar), '-de', str(build/'board.dsn'), '-do', str(build/'board.ses'),
+                             '-mp', str(max_passes), '--gui.enabled=false', '--router.automatic_neckdown=false'],
+                            capture_output=True, text=True, timeout=time_budget_s)
+    if result.returncode or not (build/'board.ses').exists():
+        raise RuntimeError('Freerouting did not produce a session')
+    if not pcbnew.ImportSpecctraSES(board, str(build/'board.ses')):
+        raise RuntimeError('SES import failed')
+
+
+REPAIR_ATTEMPTS = 3
+
+
+def repair_widened_tracks(board, pcbnew, build, jar, planes, widened, max_passes, time_budget_s, workspace):
+    """Re-route connections whose widened (neck-down) segments broke clearance.
+
+    Freerouting can neck a track below its class width to squeeze past a pad; widening it to the board
+    minimum may then cut the clearance. Those segments are removed and only the resulting gaps are routed
+    again (Freerouting keeps the existing wiring). Returns (report, widened count, remaining conflicts).
+    """
+    report = {'attempts': 0, 'rerouted_segments': 0, 'nets': []}
+    corrected = 0
+    conflicts = clearance_conflicts(board, pcbnew, widened)
+    while conflicts and report['attempts'] < REPAIR_ATTEMPTS:
+        report['attempts'] += 1
+        report['rerouted_segments'] += len(conflicts)
+        report['nets'] = sorted(set(report['nets']) | {str(t.GetNetname()) for t in conflicts})
+        netcodes = {t.GetNetCode() for t in conflicts}
+        for track in conflicts:
+            _remove(board, track)
+        report['rerouted_segments'] += _trim_dangling_tracks(board, pcbnew, netcodes)
+        progress(workspace, f"Re-routing {len(conflicts)} segment(s) that widening pushed into clearance ({', '.join(report['nets'])})")
+        _export_dsn(board, pcbnew, build, planes)
+        _run_freerouting(board, pcbnew, build, jar, max_passes, time_budget_s)
+        widened = _widen_narrow_tracks(board, pcbnew)
+        corrected += len(widened)
+        conflicts = clearance_conflicts(board, pcbnew, widened)
+    return report, corrected, conflicts
 
 
 def _apply_class(netclass, pcbnew, spec):
@@ -346,20 +467,23 @@ def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None
                 if board.GetCopperLayerCount() != len(copper):
                     raise RuntimeError(f'board has {board.GetCopperLayerCount()} copper layers, design expects {len(copper)}')
                 planes, plane_warnings = add_inner_planes(board, pcbnew, design, trace_width_mm, clearance_mm)
-            if not pcbnew.ExportSpecctraDSN(board,str(build/'board.dsn')): raise RuntimeError('DSN export failed')
-            if planes:
-                prepare_plane_dsn(build/'board.dsn', [p['layer'] for p in planes])
+            _export_dsn(board, pcbnew, build, planes)
             dsn_problems = check_dsn_rules(build/'board.dsn', netclasses)
             if dsn_problems:
                 rule_warnings.append(f"Net class rules differ in the DSN read by Freerouting: {'; '.join(dsn_problems[:5])}")
             progress(workspace, f'Routing with Freerouting ({max_passes} passes, up to {time_budget_s:g} seconds)')
-            (build/'board.ses').unlink(missing_ok=True)
-            result=subprocess.run(['java','-jar',str(jar),'-de',str(build/'board.dsn'),'-do',str(build/'board.ses'),'-mp',str(max_passes),'--gui.enabled=false','--router.automatic_neckdown=false'],capture_output=True,text=True,timeout=time_budget_s)
-            if result.returncode or not (build/'board.ses').exists(): raise RuntimeError('Freerouting did not produce a session')
-            if not pcbnew.ImportSpecctraSES(board,str(build/'board.ses')): raise RuntimeError('SES import failed')
+            _run_freerouting(board, pcbnew, build, jar, max_passes, time_budget_s)
             # Freerouting's fanout may still create micro-neckdowns even with the option disabled.
-            # Widen those to the unchanged board minimum; native DRC must check clearances afterward.
-            corrected += enforce_minimum_track_width(board, pcbnew)
+            # Widen those to the unchanged board minimum, then re-route any whose widening broke clearance.
+            widened = _widen_narrow_tracks(board, pcbnew)
+            corrected += len(widened)
+            repair, repaired_widths, left = repair_widened_tracks(board, pcbnew, build, jar, planes, widened,
+                                                                 max_passes, time_budget_s, workspace)
+            corrected += repaired_widths
+            if left:
+                rule_warnings.append(f"{len(left)} widened neck-down segment(s) still violate clearance after "
+                                     f"{repair['attempts']} re-route attempt(s) on {', '.join(sorted({str(t.GetNetname()) for t in left}))}; "
+                                     'move the nearby parts apart or give the board more room')
             zone_warning=list(plane_warnings)
             try:
                 ground=next((n for name,n in board.GetNetsByName().items() if str(name).upper() in ('GND','0')),None)
@@ -393,6 +517,7 @@ def autoroute(workspace, trace_width_mm=None, clearance_mm=None, max_passes=None
                       'routed_track_widths':routed_track_widths(board, netclasses),
                       'minimum_track_width_mm':pcbnew.ToMM(board.GetDesignSettings().m_TrackMinWidth),
                       'corrected_narrow_segments':corrected,
+                      'clearance_repair':{**repair, 'remaining_conflicts':len(left)},
                       'warnings':['Run KiCad DRC to verify routing and clearances']+warnings+rule_warnings+zone_warning,
                       'artifacts':['build/board.dsn','build/board.ses','build/board.kicad_pcb','build/board.kicad_pro']}
             (build/'routes.json').write_text(json.dumps(report,indent=2)+'\n')

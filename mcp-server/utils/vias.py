@@ -261,6 +261,7 @@ def add_board_vias(board, pcbnew, design, planes, stitching=True,
                                if z.IsOnLayer(layer) and z.HitTestFilledArea(layer, v.GetPosition(), 0)) < needed]
             for via in dangling:
                 board.Remove(via)
+                via.thisown = False  # Remove hands ownership to Python; freeing it later can crash pcbnew
                 stitched.remove(via)
             if dangling:
                 filler.Fill(board.Zones())
