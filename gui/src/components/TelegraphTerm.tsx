@@ -5,14 +5,9 @@ import "@xterm/xterm/css/xterm.css";
 import { Copy } from "lucide-react";
 import { wsUrl } from "../api";
 const prompts = [
-  [
-    "555 LED Flasher",
-    "Design a USB-C powered 555 LED flasher at 2 Hz using the curated parts. Simulate, route, verify DRC, and export manufacturing files.",
-  ],
-  [
-    "USB-C 3.3 V LDO",
-    "Design a USB-C powered AMS1117 3.3 V regulator board using the curated parts. Verify and export manufacturing files.",
-  ],
+  ["555 Flasher", "Build a USB-C 555 LED flasher at 2 Hz, ready to manufacture."],
+  ["Fan Thermostat", "Build a 9 V fan controller that turns on at 50 °C."],
+  ["ESP32-C3 Board", "Build an ESP32-C3 board with USB-C, on 4 layers."],
 ];
 export default function TelegraphTerm({
   workspacePath,
