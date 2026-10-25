@@ -45,6 +45,11 @@ def milestone(layer_count=None):
                                layer_count=layer_count, netclasses=r.get('netclasses'))
 
 
+def esp_ref(design):
+    """The module's reference in a composed design (block renumbering decides it, e.g. U2 or U3)."""
+    return next(c['ref'] for c in design['components'] if c['part_id'] == ESP)
+
+
 def outward(design, catalog, ref):
     c = next(c for c in design['components'] if c['ref'] == ref)
     d = keepouts.local_direction(catalog[c['part_id']])
@@ -208,10 +213,11 @@ class ZoneFillTests(unittest.TestCase):
 
 class PlacementTests(unittest.TestCase):
     def assert_antenna_ok(self, design, catalog):
-        self.assertLessEqual(edge_gap(design, catalog, 'U2'), keepouts.EDGE_TOLERANCE_MM + 0.5)
+        ref = esp_ref(design)
+        self.assertLessEqual(edge_gap(design, catalog, ref), keepouts.EDGE_TOLERANCE_MM + 0.5)
         ko = design_keepouts(design, catalog)[0]['box']
         for c in design['components']:
-            if c['ref'] == 'U2':
+            if c['ref'] == ref:
                 continue
             b = body_box(c, catalog)
             self.assertFalse(b[0] < ko[2] and ko[0] < b[2] and b[1] < ko[3] and ko[1] < b[3], f"{c['ref']} inside keep-out")
@@ -234,8 +240,8 @@ class PlacementTests(unittest.TestCase):
         catalog = load_catalog()
         _, d = milestone()
         self.assert_antenna_ok(d, catalog)
-        u2 = next(c for c in d['components'] if c['ref'] == 'U2')
-        ox, oy = outward(d, catalog, 'U2')
+        u2 = next(c for c in d['components'] if c['ref'] == esp_ref(d))
+        ox, oy = outward(d, catalog, u2['ref'])
         # The edge it faces is the nearest one to the module.
         side = {(-1, 0): u2['x_mm'], (1, 0): d['board_width_mm'] - u2['x_mm'],
                 (0, -1): u2['y_mm'], (0, 1): d['board_height_mm'] - u2['y_mm']}
@@ -273,7 +279,8 @@ class MilestoneBoardTests(unittest.TestCase):
             self.assertEqual(drc['unconnected_items'], 0)
             self.assertNotIn('keepout', {v['type'] for v in drc['violations']})
             dsn = (Path(directory) / 'build/board.dsn').read_text()
-            self.assertEqual(len(re.findall(r'\(keepout ""', dsn)), layer_count)  # Freerouting reads one per copper layer
+            # Freerouting reads the rule area as one polygon keep-out per copper layer (NPTH holes add circles).
+            self.assertEqual(len(re.findall(r'\(keepout ""\s*\(polygon', dsn)), layer_count)
             board = pcbnew.LoadBoard(str(Path(directory) / 'build/board.kicad_pcb'))
             [zone] = [z for z in board.Zones() if z.GetIsRuleArea()]
             outline = zone.Outline()
@@ -283,7 +290,7 @@ class MilestoneBoardTests(unittest.TestCase):
             self.assertFalse([t for t in tracks if outline.Collide(t.GetStart(), 0) or outline.Collide(t.GetEnd(), 0)])
             self.assertFalse([v for v in vias if outline.Collide(v.GetPosition(), 0)])
             catalog = load_catalog()
-            self.assertLessEqual(edge_gap(d, catalog, 'U2'), keepouts.EDGE_TOLERANCE_MM + 0.5)
+            self.assertLessEqual(edge_gap(d, catalog, esp_ref(d)), keepouts.EDGE_TOLERANCE_MM + 0.5)
             return board, vias, route, zone
 
     def test_two_layer_milestone_builds_with_clean_drc(self):

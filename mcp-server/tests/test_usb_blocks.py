@@ -10,6 +10,7 @@ from utils.design_blocks import BLOCKS, compose_design
 from utils.pcb_builder import load_catalog, normalize_design, build_board
 from utils.design_blocks import EXAMPLES
 from utils.electrical import inspect_electrical
+from utils.mcu_checks import split_findings
 
 
 def compose_example(name):
@@ -82,7 +83,9 @@ class MilestoneTests(unittest.TestCase):
                 r = compose_example(name)
                 electrical, _ = inspect_electrical(normalized(r), catalog)
                 self.assertEqual([i for i in electrical['issues'] if i['code'].startswith('usb_')], [])
-                self.assertEqual(electrical['issues'], [])
+                # Advisory notes (e.g. RP2040 RUN relying on its internal pull-up) are expected; nothing may block.
+                blocking, _ = split_findings(electrical['issues'])
+                self.assertEqual(blocking, [])
 
     def test_milestones_route_with_zero_drc(self):
         from utils.freerouting_runner import autoroute

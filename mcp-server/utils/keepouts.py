@@ -120,4 +120,3 @@ def inspect_keepouts(design, catalog):
             warnings.append(f"{c['ref']} has an antenna keep-out but sits {gap:.1f} mm from the board edge it faces; "
                             'place the module on a board edge with the antenna facing outward')
     return warnings
-
