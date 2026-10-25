@@ -250,7 +250,7 @@ def _atomic_bytes(destination, payload):
     destination = Path(destination)
     temp = None
     try:
-        with tempfile.NamedTemporaryFile('wb', dir=destination.parent, prefix='.' + destination.name, delete=False) as stream:
+        with tempfile.NamedTemporaryFile('wb', dir=destination.parent, prefix='.' + destination.name, suffix='.eea-tmp', delete=False) as stream:
             temp = Path(stream.name)
             stream.write(payload)
         os.replace(temp, destination)

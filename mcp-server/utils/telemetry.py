@@ -74,9 +74,12 @@ def workspace_path() -> Path:
     return Path(os.environ.get('EEA_WORKSPACE', Path(__file__).resolve().parents[2] / 'workspace')).resolve()
 
 
+TEMP_SUFFIX = '.eea-tmp'  # atomic-write temp files; excluded from workspace git
+
+
 def atomic_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile('w', dir=path.parent, prefix='.' + path.name, delete=False) as stream:
+    with tempfile.NamedTemporaryFile('w', dir=path.parent, prefix='.' + path.name, suffix=TEMP_SUFFIX, delete=False) as stream:
         temp = Path(stream.name)
         try:
             json.dump(payload, stream, indent=2, allow_nan=False)
@@ -129,10 +132,11 @@ def record(tool: str, summary: str, stage: str | None = None, state: str = 'comp
             exclude_path = workspace / exclude_path
         exclude_path.parent.mkdir(parents=True, exist_ok=True)
         rules = exclude_path.read_text() if exclude_path.exists() else ''
-        rule = '/' + LOCK_NAME
-        if rule not in rules.splitlines():
+        # Temp files from atomic writes can appear and vanish while `git add -A` scans the tree.
+        missing = [r for r in ('/' + LOCK_NAME, '*' + TEMP_SUFFIX) if r not in rules.splitlines()]
+        if missing:
             with exclude_path.open('a') as stream:
-                stream.write(('\n' if rules and not rules.endswith('\n') else '') + rule + '\n')
+                stream.write(('\n' if rules and not rules.endswith('\n') else '') + ''.join(r + '\n' for r in missing))
         history = git(workspace, 'log', '-30', '--format=%H%x09%s%x09%cI')
         with ACTIVITY_LOCK:
             telemetry = read_telemetry(workspace)
