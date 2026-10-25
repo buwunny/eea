@@ -6,7 +6,7 @@ import { Copy } from "lucide-react";
 import { wsUrl } from "../api";
 const prompts = [
   ["555 Flasher", "Build a USB-C 555 LED flasher at 2 Hz, ready to manufacture."],
-  ["Fan Thermostat", "Build a 9 V fan controller that turns on at 50 °C."],
+  ["3.3 V Supply", "Build a USB-C to 3.3 V power board with a power LED."],
   ["ESP32-C3", "Build an ESP32-C3 board with USB-C, on 4 layers."],
 ];
 export default function TelegraphTerm({
