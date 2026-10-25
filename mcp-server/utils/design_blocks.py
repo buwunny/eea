@@ -88,6 +88,7 @@ def _ldo(p):
     nets = {'VIN': ['U.3', 'CI.1'], 'VOUT': ['U.2', 'CO.1'], 'GND': ['U.1', 'CI.2', 'CO.2']}
     return {'components': comps, 'nets': nets, 'ports': {'VIN': 'VIN', 'VOUT': 'VOUT', 'GND': 'GND'},
             'clusters': [_cluster('U', CI=3, CO=3)],
+            'sim_default': {'sources': [{'net': 'VIN', 'value': 5.0}], 'probes': ['VOUT']},
             'notes': ['10 uF on VIN and 22 uF on VOUT per the AMS1117 support-part rules.']}
 
 
@@ -446,6 +447,7 @@ def _usb_micro_b(p):
     nets = {'VBUS': ['J.1'], 'USB_DN': ['J.2'], 'USB_DP': ['J.3'], 'GND': ['J.5', 'J.SH']}
     return {'components': comps, 'nets': nets,
             'ports': {'VBUS': 'VBUS', 'USB_DP': 'USB_DP', 'USB_DN': 'USB_DN', 'GND': 'GND'},
+            'sim_default': {'sources': [{'net': 'VBUS', 'value': 5.0}]},
             'notes': ['USB Micro-B (device): pin 1 VBUS, 2 D-, 3 D+, 4 ID (not connected), 5 GND, shell to GND. '
                       'Name the data connections USB_DP / USB_DN so placement keeps them short. No ESD part is in the catalog yet.']}
 

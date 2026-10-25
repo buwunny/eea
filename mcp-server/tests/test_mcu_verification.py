@@ -139,6 +139,33 @@ class VerificationModeTests(unittest.TestCase):
         self.assertEqual(default_sim_config(esp32_board())['probe_nets'], ['+3V3', 'VBUS'])
 
 
+class FloatingNetTests(unittest.TestCase):
+    """Dropping an unmodeled MCU strands parts: a series resistor between two MCU-only nets has no DC path to
+    ground (singular matrix in ngspice), as do LED chains driven only by a GPIO."""
+    def board(self):
+        return esp32_board(extra_components=[{'ref': 'R9', 'part_id': 'R', 'value': '270'}, {'ref': 'D9', 'part_id': 'LED'},
+                                             {'ref': 'R10', 'part_id': 'R', 'value': '27'}],
+                           extra_nets={'STATUS': ['U2.IO10', 'R9.1'], 'LED_A': ['R9.2', 'D9.A'], 'GND': ['D9.K'],
+                                       'LINK_A': ['U2.IO4', 'R10.1'], 'LINK_B': ['U2.IO5', 'R10.2']})
+
+    def test_shunt_is_added_only_when_parts_are_left_out(self):
+        from utils.simulation import spice_text
+        self.assertIn('.options rshunt=1e12', spice_text(self.board(), {**LOAD_STEP, 'probe_nets': ['+3V3']}))
+        flasher = normalize_design([{'ref': 'R1', 'part_id': 'R', 'value': '1k'}, {'ref': 'D1', 'part_id': 'LED'}],
+                                   [{'name': 'VCC', 'connections': ['R1.1']}, {'name': 'A', 'connections': ['R1.2', 'D1.A']},
+                                    {'name': 'GND', 'connections': ['D1.K']}], 30, 20)
+        self.assertNotIn('rshunt', spice_text(flasher, {'sources': [{'name': 'V1', 'positive_net': 'VCC', 'value': 5}],
+                                                         'probe_nets': ['A'], 'analysis_type': 'transient', 'end_time_ms': 1, 'step_time_ms': 0.01}))
+
+    @unittest.skipUnless(NGSPICE, 'ngspice required')
+    def test_board_with_floating_led_chain_still_simulates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = ReadinessTests().workspace(directory, self.board())
+            report = simulate(None, None, LOAD_STEP, root)
+            self.assertTrue(report['verified'], report.get('warnings'))
+            self.assertTrue(report['power_blocks_verified'])
+
+
 class ReadinessTests(unittest.TestCase):
     def workspace(self, directory, design):
         root = Path(directory)

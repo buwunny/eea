@@ -365,6 +365,10 @@ def spice_text(design, config):
     def pin(c, number):
         return names.get(pin_nets.get(f"{c['ref']}.{number}"), f"NC_{c['ref']}_{number}")
     lines = ['EEA validated circuit', '.options method=gear']
+    # Leaving out unmodeled parts (e.g. an MCU) can strand nets with no DC path to ground, which makes the
+    # matrix singular. A 1 TOhm shunt on every node fixes that without measurably loading the circuit.
+    if simulation_coverage(design)['unmodeled_components']:
+        lines.append('.options rshunt=1e12')
     sources, _ = sources_for(design, config)
     for source in sources:
         positive = names[source['positive_net']]
@@ -635,6 +639,7 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
         try:
             # A failed backend may have written partial data; the next must produce its own.
             data_file.unlink(missing_ok=True)
+            result = None
             progress(workspace, f'Simulating with {native_backend}')
             result=subprocess.run(command,cwd=workspace,capture_output=True,text=True,timeout=30)
             rows=[]
@@ -650,7 +655,13 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
             backend=native_backend; verified=True
             break
         except (OSError,subprocess.TimeoutExpired,ValueError) as error:
-            warnings.append(f'{native_backend} unavailable or failed: {error}')
+            detail = ''
+            if result is not None:
+                # Keep the simulator's own complaint (e.g. singular matrix) so the failure is diagnosable.
+                lines_out = [l.strip() for l in ((getattr(result, 'stdout', '') or '') + '\n' + (getattr(result, 'stderr', '') or '')).splitlines()
+                             if any(k in l.lower() for k in ('error', 'singular', 'too small', 'aborted'))]
+                detail = ('; ' + ' | '.join(dict.fromkeys(lines_out))[:300]) if lines_out else ''
+            warnings.append(f'{native_backend} unavailable or failed: {error}{detail}')
     if not verified and config['analysis_type']=='dc':
         report={'status':'degraded','backend':'unavailable','verified':False,'sim_passed':False,'functional_verified':False,'nominal_verified':False,**coverage,**provenance,'requirements_met':None,'requirements_report':evaluate_requirements(requirements,source_design,sources,None,False),'tolerance_analysis':tolerance_555(design,requirements,sources),'sim_summary':'DC sweep unavailable without ngspice','warnings':warnings+['No analytical DC fallback is provided'],'measurements':{},'analysis_type':'dc','x_axis_label':'Supply voltage (V)','x_data':[],'signals':{}}
         plan = verification_plan(design)
@@ -658,8 +669,12 @@ def _simulate_point(components, nets, sim_config, workspace, override=None, pers
         if persist: atomic_json(build/'sim_results.json', report)
         return report
     if not verified:
-        progress(workspace, 'Estimating 555 timing; native simulation unavailable')
         timer = next((c for c in design['components'] if c['part_id'] == 'NE555'), {})
+        native_errors = [w for w in warnings if w.startswith(tuple(f'{b} unavailable or failed' for b, _ in native_commands))]
+        if not timer and native_errors:
+            # The 555 estimate cannot apply; report why the simulator failed instead of a generic fallback error.
+            raise ValueError('Native simulation failed: ' + ' / '.join(native_errors))
+        progress(workspace, 'Estimating 555 timing; native simulation unavailable')
         if sim_config.get('sources') is not None:
             supply_net = next((n['name'] for n in design['nets'] if f"{timer.get('ref')}.8" in n['connections']), None)
             if any(s.get('waveform') for s in sources):
