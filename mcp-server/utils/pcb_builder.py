@@ -282,9 +282,14 @@ def write_board(design, destination, segments=None, zones=''):
     from .stackups import header_lines
     lines = ['(kicad_pcb (version 20221018) (generator eea)', *header_lines(design), ' (net 0 "")']
     lines.extend(f' (net {code} {q(name)})' for name,code in codes.items())
+    from .paste_windows import design_via_rules, window_footprint
+    via_rules, plane_nets = design_via_rules(design)
     for c in design['components']:
         part = catalog[c['part_id']]
         fp = part['footprint_sexpr']
+        # Windowpane paste on exposed pads (see utils/paste_windows.py); pads expected to get thermal vias are avoided.
+        fp, _ = window_footprint(fp, c['rotation_deg'], via_rules, {k.split('.', 1)[1] for k, n in assignments.items()
+                                                                  if k.startswith(c['ref'] + '.') and n in plane_nets})
         fp = fp.replace('(layer "F.Cu")', f'(layer "F.Cu") (at {c["x_mm"]:g} {c["y_mm"]:g} {c["rotation_deg"]:g})', 1)
         # KiCad stores pad angles as absolute, so pads must carry the footprint rotation too.
         if c['rotation_deg'] % 360:

@@ -44,7 +44,8 @@ PCBNEW_RULE_ATTRS = {
 PROFILES = {
     'conservative': {
         'description': 'Generic conservative rules (default): the limits this server has always used, '
-                       'accepted by practically any PCB fabricator',
+                       'accepted by practically any PCB fabricator. Net classes may go down to 0.15 mm clearance near '
+                       'fine-pitch parts, within common fab capability (JLCPCB 2-layer minimum 0.127 mm)',
         'layer_counts': (2, 4),
         'rules': {'min_track_mm': 0.2, 'min_clearance_mm': 0.15, 'min_via_dia_mm': 0.6, 'min_via_drill_mm': 0.3,
                   'min_hole_mm': 0.3, 'min_annular_ring_mm': 0.15, 'min_hole_to_hole_mm': 0.25,

@@ -89,6 +89,13 @@ def _add_via(board, pcbnew, rules, x, y, net):
     return via
 
 
+def tent_thermal_via(via, pcbnew):
+    """Bottom side tented (B.Mask covers it, so solder cannot wick through); top side left open, inside the
+    exposed pad's own mask opening. Other vias keep the board default (tented on both sides)."""
+    via.SetFrontTentingMode(pcbnew.TENTING_MODE_NOT_TENTED)
+    via.SetBackTentingMode(pcbnew.TENTING_MODE_TENTED)
+
+
 def _axis_positions(span, rules):
     """2 or 3 evenly spread via centres fitted inside a pad side of length `span` (mm), or []."""
     usable = span - rules.diameter
@@ -99,32 +106,48 @@ def _axis_positions(span, rules):
     return []
 
 
+def exposed_pad_indices(pads):
+    """Indices of exposed pads in `pads`, a list of dicts {number, area, smd, front_cu, angle, drilled, copper}
+    (None entries and pads without copper are ignored). Shared by the thermal vias and the windowpane paste:
+    a pad is exposed when it is an SMD pad on F.Cu, on a 90 degree grid, much larger than the package's other
+    pads (not just one of several similar large ones), and not already paired with a through-hole pad of the
+    same number (KiCad *_ThermalVias variants).
+    """
+    pads = [p if p and p['copper'] else None for p in pads]
+    live = [p for p in pads if p]
+    if len(live) < 3:
+        return []
+    found = []
+    for index, pad in enumerate(pads):
+        if pad is None or not pad['smd'] or not pad['front_cu'] or round(pad['angle'], 3) % 90:
+            continue
+        others = [p['area'] for p in live if p is not pad and p['number'] != pad['number']]
+        area = pad['area']
+        if not others or area < MIN_EXPOSED_PAD_AREA_MM2 or area < EXPOSED_PAD_AREA_RATIO * statistics.median(others):
+            continue
+        if any(p is not pad and p['area'] >= area / 2 for p in live):
+            continue  # several similar large pads (e.g. connector shield tabs) are mechanical, not thermal
+        if any(p['number'] == pad['number'] and p['drilled'] for p in live if p is not pad):
+            continue
+        found.append(index)
+    return found
+
+
 def exposed_pads(board, pcbnew, net_names):
     """SMD pads on F.Cu that are much larger than the package's other pads, on one of `net_names`:
-    QFN/DFN exposed pads, module ground pads and SOT-223 tabs.
-
-    Footprints that already carry through-hole pads with the same number (KiCad *_ThermalVias
-    variants) are skipped; so are pads rotated off a 90 degree grid.
+    QFN/DFN exposed pads, module ground pads and SOT-223 tabs (rules in `exposed_pad_indices`).
     """
     found = []
+    copper = _copper_layers(board, pcbnew)
     for fp in board.GetFootprints():
         pads = list(fp.Pads())
-        if len(pads) < 3:
-            continue
-        areas = {id(p): pcbnew.ToMM(p.GetBoundingBox().GetWidth()) * pcbnew.ToMM(p.GetBoundingBox().GetHeight()) for p in pads}
-        for pad in pads:
-            if (pad.GetAttribute() != pcbnew.PAD_ATTRIB_SMD or not pad.IsOnLayer(pcbnew.F_Cu)
-                    or pad.GetNetname() not in net_names or round(pad.GetOrientation().AsDegrees(), 3) % 90):
-                continue
-            others = [areas[id(p)] for p in pads if p is not pad and p.GetNumber() != pad.GetNumber()]
-            area = areas[id(pad)]
-            if not others or area < MIN_EXPOSED_PAD_AREA_MM2 or area < EXPOSED_PAD_AREA_RATIO * statistics.median(others):
-                continue
-            if any(p is not pad and areas[id(p)] >= area / 2 for p in pads):
-                continue  # several similar large pads (e.g. connector shield tabs) are mechanical, not thermal
-            if any(p.GetNumber() == pad.GetNumber() and p.GetDrillSizeX() > 0 for p in pads):
-                continue
-            found.append((fp, pad))
+        infos = [{'number': p.GetNumber(), 'smd': p.GetAttribute() == pcbnew.PAD_ATTRIB_SMD, 'front_cu': p.IsOnLayer(pcbnew.F_Cu),
+                  'angle': p.GetOrientation().AsDegrees(), 'drilled': p.GetDrillSizeX() > 0,
+                  'copper': any(p.IsOnLayer(layer) for layer in copper),
+                  'area': pcbnew.ToMM(p.GetBoundingBox().GetWidth()) * pcbnew.ToMM(p.GetBoundingBox().GetHeight())} for p in pads]
+        for index in exposed_pad_indices(infos):
+            if pads[index].GetNetname() in net_names:
+                found.append((fp, pads[index]))
     return found
 
 
@@ -143,6 +166,7 @@ def add_thermal_vias(board, pcbnew, rules, net_names, items, holes):
                 if pad.GetEffectiveShape(pcbnew.F_Cu).Collide(pcbnew.VECTOR2I(pcbnew.FromMM(x), pcbnew.FromMM(y)), 0) and \
                         _clear(pcbnew, rules, x, y, pad.GetNetCode(), items, holes):
                     via = _add_via(board, pcbnew, rules, x, y, pad.GetNet())
+                    tent_thermal_via(via, pcbnew)
                     items.append((pad.GetNetCode(), _copper_layers(board, pcbnew), via))
                     holes.append((x, y, rules.drill / 2))
                     count += 1
@@ -199,6 +223,9 @@ def add_board_vias(board, pcbnew, design, planes, stitching=True,
     ground fills (In1 plane and the B.Cu pour) are removed again so none dangles.
     """
     rules = _Rules(board, pcbnew, via_drill_mm, via_diameter_mm)
+    # Routing and stitching vias are tented on both sides by the board default; state it instead of relying on it.
+    board.GetDesignSettings().m_TentViasFront = True
+    board.GetDesignSettings().m_TentViasBack = True
     report = {'thermal_vias': 0, 'stitching_vias': 0, 'thermal_pads': [],
               'via_drill_mm': round(rules.drill, 4), 'via_diameter_mm': round(rules.diameter, 4)}
     if not planes:
