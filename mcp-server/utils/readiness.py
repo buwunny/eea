@@ -38,6 +38,7 @@ def _cross_check_reasons(footprints):
             groups.setdefault(item['cross_check'], []).append(item['component'])
     labels = {'mismatch': 'WARNING: pads differ from the sourced part footprint for',
               'pass': 'Pads match the sourced part footprint (machine check, not a review) for',
+              'explained': 'Pads differ from the sourced part footprint for a recorded datasheet reason (not a review) for',
               'no_reference': 'No reference footprint for the sourced part for', 'error': 'Footprint cross-check failed for',
               'missing': 'No footprint cross-check recorded for'}
     return [f"{labels.get(status, status)} {', '.join(sorted(refs))}" for status, refs in sorted(groups.items(), key=lambda g: g[0] != 'mismatch')]

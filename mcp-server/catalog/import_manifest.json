@@ -1271,7 +1271,7 @@
    "part_id": "Relay_SPDT_5V",
    "symbol": "Relay:SANYOU_SRD_Form_C",
    "category": "relay",
-   "typical_application": "5 V SPDT relay: drive the coil with a low-side N-MOSFET or NPN with a flyback diode (1N4007) across the coil.",
+   "typical_application": "5 V SPDT relay: drive the coil (COIL_A/COIL_B) with a low-side N-MOSFET or NPN and a flyback diode (1N4007) across the coil; switched circuit on COM with NO (open at rest) and NC (closed at rest).",
    "required_support_parts": [
     "1N4007 flyback diode across coil",
     "NPN/N-MOSFET coil driver"
@@ -1279,6 +1279,13 @@
    "max_ratings": {
     "coil_v": 5,
     "contact_a": 10
+   },
+   "pin_names": {
+    "1": "COM",
+    "2": "COIL_A",
+    "3": "NO",
+    "4": "NC",
+    "5": "COIL_B"
    }
   },
   {

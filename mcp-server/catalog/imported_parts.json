@@ -7467,27 +7467,27 @@
   "pins": [
    {
     "number": "1",
-    "name": "1",
+    "name": "COM",
     "function": "Passive terminal"
    },
    {
     "number": "2",
-    "name": "2",
+    "name": "COIL_A",
     "function": "Passive terminal"
    },
    {
     "number": "3",
-    "name": "3",
+    "name": "NO",
     "function": "Passive terminal"
    },
    {
     "number": "4",
-    "name": "4",
+    "name": "NC",
     "function": "Passive terminal"
    },
    {
     "number": "5",
-    "name": "5",
+    "name": "COIL_B",
     "function": "Passive terminal"
    }
   ],
@@ -7544,7 +7544,7 @@
   "spice_model": null,
   "spice_pin_map": {},
   "footprint_source": "KiCad library import: Relay_THT:Relay_SPDT_SANYOU_SRD_Series_Form_C with symbol Relay:SANYOU_SRD_Form_C",
-  "typical_application": "5 V SPDT relay: drive the coil with a low-side N-MOSFET or NPN with a flyback diode (1N4007) across the coil.",
+  "typical_application": "5 V SPDT relay: drive the coil (COIL_A/COIL_B) with a low-side N-MOSFET or NPN and a flyback diode (1N4007) across the coil; switched circuit on COM with NO (open at rest) and NC (closed at rest).",
   "required_support_parts": [
    "1N4007 flyback diode across coil",
    "NPN/N-MOSFET coil driver"

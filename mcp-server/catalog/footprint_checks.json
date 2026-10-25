@@ -6,12 +6,13 @@
   "1N4007": {
     "lcsc": "C106903",
     "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
-    "checked_at": "2026-10-25T00:04:32Z",
+    "checked_at": "2026-10-25T00:48:50Z",
     "status": "mismatch",
     "worst_delta_mm": 0.73,
     "reasons": [
       "2 pad(s) off by more than 0.1 mm (worst pad 1: 0.73 mm)",
-      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)"
+      "2 pad(s) differ in size by more than 0.15 mm (worst pad 1: 0.4 mm)",
+      "pad spacing differs: catalog 10.16 mm, reference 8.70 mm"
     ],
     "transform": {
       "rotation_deg": 0,
@@ -978,12 +979,13 @@
   "Relay_SPDT_5V": {
     "lcsc": "C35449",
     "source": "JLCEDA/EasyEDA Official Library (easyeda.com products API)",
-    "checked_at": "2026-10-25T00:07:20Z",
+    "checked_at": "2026-10-25T00:48:52Z",
     "status": "mismatch",
     "worst_delta_mm": 4.5277,
     "reasons": [
       "5 pad(s) off by more than 0.1 mm (worst pad 5: 4.5277 mm)",
-      "5 pad(s) differ in size by more than 0.15 mm (worst pad 2: 0.294 mm)"
+      "5 pad(s) differ in size by more than 0.15 mm (worst pad 2: 0.294 mm)",
+      "pad positions match when the reference pads are renumbered (reference->catalog: 1->2, 2->3, 3->4, 4->5, 5->1); the libraries number pads differently, so confirm pin functions against the datasheet"
     ],
     "transform": {
       "rotation_deg": 90,
@@ -993,6 +995,17 @@
         -437.034,
         -190.6005
       ]
+    },
+    "renumbering": {
+      "reference_to_catalog": {
+        "1": "2",
+        "2": "3",
+        "3": "4",
+        "4": "5",
+        "5": "1"
+      },
+      "rotation_deg": 0,
+      "mirror_y": false
     }
   },
   "SMAJ5_0A": {

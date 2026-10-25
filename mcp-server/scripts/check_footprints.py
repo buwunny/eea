@@ -81,7 +81,8 @@ def main() -> int:
             result = {'status': 'error', 'reasons': [f'{type(exc).__name__}: {exc}'], 'worst_delta_mm': None, 'transform': None}
             time.sleep(args.delay)
         entry.update(status=result['status'], worst_delta_mm=result['worst_delta_mm'], reasons=result['reasons'],
-                     **({'transform': result['transform']} if result.get('transform') else {}))
+                     **({'transform': result['transform']} if result.get('transform') else {}),
+                     **({'renumbering': result['renumbering']} if result.get('renumbering') else {}))
         results[pid] = entry
         print(f"{pid:28} {lcsc or '-':10} {entry['status']:13} {entry['worst_delta_mm']}  {'; '.join(entry['reasons'])[:110]}")
     out = Path(args.out)

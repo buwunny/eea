@@ -1,0 +1,22 @@
+{
+ "_meta": {
+  "note": "Hand-written explanations for footprint cross-check mismatches (scripts/check_footprints.py). An entry applies only while the check still reports the same lcsc and worst_delta_mm; any other result stays a mismatch. An explanation is evidence, never a footprint review.",
+  "fields": "lcsc, worst_delta_mm (the exact result explained), reason, evidence (manufacturer drawing used), recorded_by, recorded_at"
+ },
+ "1N4007": {
+  "lcsc": "C106903",
+  "worst_delta_mm": 0.73,
+  "reason": "Axial DO-41 lead-bend pitch is a board choice, not a property of the part: the catalog uses KiCad's 10.16 mm (400 mil) horizontal pattern, EasyEDA uses 8.70 mm. Both clear the DO-41 body (5.2 mm max). Catalog drill 1.1 mm / pad 2.2 mm vs EasyEDA 1.0 mm / 1.8 mm; both fit the 0.71-0.86 mm lead. If JLCPCB assembles this THT part, confirm they form leads to 10.16 mm.",
+  "evidence": "DO-41 (DO-204AL) package outline in the 1N4001-1N4007 datasheet; KiCad Diode_THT:D_DO-41_SOD81_P10.16mm_Horizontal",
+  "recorded_by": "Claude (AI datasheet comparison, not a human review)",
+  "recorded_at": "2026-10-25"
+ },
+ "Relay_SPDT_5V": {
+  "lcsc": "C35449",
+  "worst_delta_mm": 4.5277,
+  "reason": "Same land pattern, different pad numbers: EasyEDA's pad 5 is COM, 1 and 4 the coil, 2 and 3 the contacts, while the catalog (KiCad symbol and footprint) uses 1 COM, 2/5 coil, 3 NO, 4 NC. Pad positions agree within 0.1 mm after renumbering. Catalog positions (12.2 mm coil-to-contact, 12.0 mm row spacing, COM offset 2.0 mm) and drills (1.3 mm COM/contacts, 1.0 mm coil) follow the manufacturer drawing; EasyEDA uses 1.52 mm holes on every pin. Contact roles also agree: in the datasheet bottom view (COM on the right) NC is the upper contact (the only one in Form B, layout 1b) and NO the lower (the only one in Form A, layout 1a); mirrored to top view that is COM left, NC upper, which is catalog pad 4 at y = -6 mm, with NO = pad 3 at y = +6 mm.",
+  "evidence": "Sanyou SRD datasheet p.3 (P.C.B. layout and wiring diagram 1c, bottom view), http://www.sanyourelay.ca/public/products/pdf/SRD.pdf; Songle SRD datasheet p.1 drilling plan (12.2 / 2 / 12 mm); KiCad Relay:SANYOU_SRD_Form_C symbol contact drawing",
+  "recorded_by": "Claude (AI datasheet comparison, not a human review)",
+  "recorded_at": "2026-10-25"
+ }
+}

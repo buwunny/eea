@@ -9,6 +9,7 @@ import math
 from pathlib import Path
 
 CHECKS_FILE = Path(__file__).resolve().parents[1] / 'catalog' / 'footprint_checks.json'
+EXPLANATIONS_FILE = Path(__file__).resolve().parents[1] / 'catalog' / 'footprint_check_explanations.json'
 EASYEDA_MM_PER_UNIT = 0.254  # EasyEDA canvas unit is 10 mil
 DEFAULT_POSITION_TOL_MM = 0.1
 DEFAULT_SIZE_TOL_MM = 0.15
@@ -108,6 +109,57 @@ def _evaluate(cat_pads, ref_pads, rotation, mirror, align):
     return worst, offset, deltas
 
 
+def _assign_by_position(cat_pads, ref_pads):
+    """Pair pads by position only (ignoring numbers); exact for small parts, greedy for large ones."""
+    if len(cat_pads) <= 8:
+        best = min(itertools.permutations(ref_pads),
+                   key=lambda perm: max(math.hypot(p['x'] - q['x'], p['y'] - q['y']) for p, q in zip(cat_pads, perm)))
+        return list(zip(cat_pads, best))
+    left, pairs = list(ref_pads), []
+    for p in cat_pads:
+        q = min(left, key=lambda c: math.hypot(p['x'] - c['x'], p['y'] - c['y']))
+        left.remove(q)
+        pairs.append((p, q))
+    return pairs
+
+
+def _renumbered_match(cat, ref, position_tol_mm):
+    """Reference-to-catalog pad renaming under which the pad positions agree, or None.
+
+    A match here proves only that the land patterns have the same shape: the two libraries number the
+    pads differently, so pin functions must still be compared against the datasheet.
+    """
+    if len(cat) != len(ref):
+        return None
+    for rotation, mirror in itertools.product((0, 90, 180, 270), (False, True)):
+        moved = _transform(ref, rotation, mirror)
+        a, b = _centroid(cat), _centroid(moved)
+        shifted = [{**q, 'x': q['x'] + a[0] - b[0], 'y': q['y'] + a[1] - b[1]} for q in moved]
+        pairs = _assign_by_position(cat, shifted)
+        if max(math.hypot(p['x'] - q['x'], p['y'] - q['y']) for p, q in pairs) <= position_tol_mm:
+            mapping = {q['number']: p['number'] for p, q in pairs}
+            if any(k != v for k, v in mapping.items()):
+                return {'reference_to_catalog': dict(sorted(mapping.items())), 'rotation_deg': rotation, 'mirror_y': mirror}
+    return None
+
+
+def _pitch_reason(cat, ref, position_tol_mm):
+    """For two-pad parts the pad spacing is the main fact (e.g. axial lead bend pitch)."""
+    if len(cat) != 2 or len(ref) != 2:
+        return None
+    pitch = lambda pads: math.hypot(pads[0]['x'] - pads[1]['x'], pads[0]['y'] - pads[1]['y'])
+    a, b = pitch(cat), pitch(ref)
+    if abs(a - b) <= position_tol_mm:
+        return None
+    return f'pad spacing differs: catalog {a:.2f} mm, reference {b:.2f} mm'
+
+
+def _renumber_reason(match):
+    pairs = ', '.join(f'{k}->{v}' for k, v in match['reference_to_catalog'].items() if k != v)
+    return (f'pad positions match when the reference pads are renumbered (reference->catalog: {pairs}); '
+            'the libraries number pads differently, so confirm pin functions against the datasheet')
+
+
 def compare_pads(catalog_pads, reference_pads, position_tol_mm=DEFAULT_POSITION_TOL_MM, size_tol_mm=DEFAULT_SIZE_TOL_MM) -> dict:
     """Compare pad lists after the best rigid alignment (8 rotations/mirrors x pad-1 or centroid anchoring).
 
@@ -133,7 +185,12 @@ def compare_pads(catalog_pads, reference_pads, position_tol_mm=DEFAULT_POSITION_
             reasons.append(f'pads only in reference: {extra[:10]}')
         if not missing and not extra:
             reasons.append('pad numbers repeat a different number of times')
-        return _result('mismatch', reasons=reasons)
+        result = _result('mismatch', reasons=reasons)
+        match = _renumbered_match(cat, ref, position_tol_mm)
+        if match:
+            result['reasons'].append(_renumber_reason(match))
+            result['renumbering'] = match
+        return result
     best = None
     for rotation, mirror, align in itertools.product((0, 90, 180, 270), (False, True), ('pad1', 'centroid')):
         worst, offset, deltas = _evaluate(cat, ref, rotation, mirror, align)
@@ -154,7 +211,16 @@ def compare_pads(catalog_pads, reference_pads, position_tol_mm=DEFAULT_POSITION_
     status = 'mismatch' if reasons else 'pass'
     if status == 'pass' and mirror:
         reasons.append('matches only when mirrored: confirm the pin order is not reversed')
-    return _result(status, deltas, worst_pos, worst_size, transform, reasons)
+    match = _renumbered_match(cat, ref, position_tol_mm) if bad_pos else None
+    pitch = _pitch_reason(cat, ref, position_tol_mm) if bad_pos else None
+    if pitch:
+        reasons.append(pitch)
+    if match:
+        reasons.append(_renumber_reason(match))
+    result = _result(status, deltas, worst_pos, worst_size, transform, reasons)
+    if match:
+        result['renumbering'] = match
+    return result
 
 
 def _result(status, deltas=None, worst_pos=None, worst_size=None, transform=None, reasons=None):
@@ -163,12 +229,34 @@ def _result(status, deltas=None, worst_pos=None, worst_size=None, transform=None
             'worst_delta_mm': worst, 'transform': transform, 'reasons': reasons or []}
 
 
-def load_footprint_checks(path: Path | None = None) -> dict:
+def _read_entries(path: Path) -> dict:
     try:
-        data = json.loads((path or CHECKS_FILE).read_text())
+        data = json.loads(path.read_text())
     except (FileNotFoundError, ValueError):
         return {}
     return {k: v for k, v in data.items() if not k.startswith('_') and isinstance(v, dict)} if isinstance(data, dict) else {}
+
+
+def apply_explanation(check: dict, explanation: dict | None) -> dict:
+    """Mark a mismatch 'explained' when a recorded datasheet explanation covers this exact result.
+
+    The explanation is bound to the LCSC code and worst delta it was written for; any other result
+    (new sourced part, changed footprint) stays a mismatch and says the explanation is stale.
+    An explained difference is still not a review.
+    """
+    if check.get('status') != 'mismatch' or not explanation:
+        return check
+    if explanation.get('lcsc') != check.get('lcsc') or explanation.get('worst_delta_mm') != check.get('worst_delta_mm'):
+        return {**check, 'reasons': [*check.get('reasons', []),
+                                     'a recorded explanation was written for a different cross-check result; compare the land pattern again']}
+    keep = ('reason', 'evidence', 'recorded_by', 'recorded_at')
+    return {**check, 'status': 'explained', 'explanation': {k: explanation[k] for k in keep if explanation.get(k)}}
+
+
+def load_footprint_checks(path: Path | None = None, explanations_path: Path | None = None) -> dict:
+    checks = _read_entries(path or CHECKS_FILE)
+    explanations = _read_entries(explanations_path or EXPLANATIONS_FILE)
+    return {pid: apply_explanation(check, explanations.get(pid)) for pid, check in checks.items()}
 
 
 def describe_check(part_id: str, checks: dict | None = None) -> dict:
@@ -179,4 +267,6 @@ def describe_check(part_id: str, checks: dict | None = None) -> dict:
     out = {k: check[k] for k in ('status', 'lcsc', 'worst_delta_mm', 'checked_at', 'source') if check.get(k) is not None}
     if check.get('reasons'):
         out['reasons'] = check['reasons']
+    if check.get('explanation'):
+        out['explanation'] = check['explanation']
     return out

@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from utils.footprint_check import compare_pads, describe_check, load_footprint_checks, parse_easyeda_pads
+from utils.footprint_check import apply_explanation, compare_pads, describe_check, load_footprint_checks, parse_easyeda_pads
 from utils.pcb_builder import normalize_design
 from utils.part_search import part_details
 from utils.readiness import update_readiness
@@ -95,6 +95,27 @@ class ComparePadsTests(unittest.TestCase):
         self.assertEqual(result['status'], 'pass', result['reasons'])
         self.assertEqual(len(result['pads']), 4)
 
+    def test_same_shape_with_other_pad_numbers_is_reported_but_still_mismatches(self):
+        relay = [('1', 0, 0), ('2', 1.95, 6.05), ('3', 14.15, 6.05), ('4', 14.2, -6.0), ('5', 1.95, -5.95)]
+        cat = [{'number': n, 'x_mm': x, 'y_mm': y, 'width_mm': 3.0, 'height_mm': 3.0} for n, x, y in relay]
+        rename = {'1': '5', '2': '1', '3': '2', '4': '3', '5': '4'}  # catalog -> reference numbering
+        ref = [{**p, 'number': rename[p['number']], 'x_mm': p['x_mm'] + 50, 'y_mm': p['y_mm'] - 20} for p in cat]
+        result = compare_pads(cat, ref)
+        self.assertEqual(result['status'], 'mismatch')
+        self.assertEqual(result['renumbering']['reference_to_catalog'], {v: k for k, v in rename.items()})
+        self.assertTrue(any('renumbered' in r and 'confirm pin functions' in r for r in result['reasons']), result['reasons'])
+
+    def test_different_shape_gets_no_renumbering(self):
+        ref = moved(soic8(), lambda x, y, w, h: (x * 1.2, y, w, h))
+        self.assertNotIn('renumbering', compare_pads(soic8(), ref))
+
+    def test_two_pad_spacing_difference_is_named(self):
+        cat = [{'number': '1', 'x_mm': 0, 'y_mm': 0, 'width_mm': 2.2, 'height_mm': 2.2}, {'number': '2', 'x_mm': 10.16, 'y_mm': 0, 'width_mm': 2.2, 'height_mm': 2.2}]
+        ref = [{**cat[0]}, {**cat[1], 'x_mm': 8.7}]
+        result = compare_pads(cat, ref)
+        self.assertEqual(result['status'], 'mismatch')
+        self.assertIn('pad spacing differs: catalog 10.16 mm, reference 8.70 mm', result['reasons'])
+
     def test_numbering_difference_is_reported(self):
         ref = soic8()[:-1]
         result = compare_pads(soic8(), ref)
@@ -157,6 +178,37 @@ class EvidenceIntegrationTests(unittest.TestCase):
             self.assertEqual(describe_check('R', checks)['status'], 'mismatch')
             self.assertEqual(describe_check('NOPE', checks)['status'], 'missing')
 
+    def test_explanation_applies_only_to_the_exact_result_it_was_written_for(self):
+        check = {'status': 'mismatch', 'lcsc': 'C1', 'worst_delta_mm': 0.73, 'reasons': ['off']}
+        note = {'lcsc': 'C1', 'worst_delta_mm': 0.73, 'reason': 'lead pitch', 'evidence': 'datasheet', 'recorded_by': 'x'}
+        explained = apply_explanation(check, note)
+        self.assertEqual(explained['status'], 'explained')
+        self.assertEqual(explained['explanation']['reason'], 'lead pitch')
+        for stale in ({**note, 'worst_delta_mm': 0.5}, {**note, 'lcsc': 'C2'}):
+            result = apply_explanation(check, stale)
+            self.assertEqual(result['status'], 'mismatch')
+            self.assertTrue(any('different cross-check result' in r for r in result['reasons']))
+        self.assertEqual(apply_explanation({'status': 'pass', 'lcsc': 'C1'}, note)['status'], 'pass')
+        self.assertIs(apply_explanation(check, None), check)
+
+    def test_load_applies_explanations_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, notes = Path(directory) / 'checks.json', Path(directory) / 'notes.json'
+            path.write_text(json.dumps(self.CHECKS))
+            notes.write_text(json.dumps({'_meta': {}, 'R': {'lcsc': 'C17414', 'worst_delta_mm': 0.42, 'reason': 'style', 'evidence': 'drawing'}}))
+            checks = load_footprint_checks(path, notes)
+            self.assertEqual(checks['R']['status'], 'explained')
+            self.assertEqual(describe_check('R', checks)['explanation']['evidence'], 'drawing')
+            self.assertEqual(checks['LED']['status'], 'pass')
+
+    def test_recorded_explanations_match_current_checks(self):
+        from utils.footprint_check import CHECKS_FILE, EXPLANATIONS_FILE
+        notes = json.loads(EXPLANATIONS_FILE.read_text())
+        checks = load_footprint_checks()
+        for pid in (k for k in notes if not k.startswith('_')):
+            with self.subTest(part=pid):
+                self.assertEqual(checks[pid]['status'], 'explained', f'{pid}: explanation is stale; recheck and update {EXPLANATIONS_FILE.name}')
+
     def test_part_details_shows_cross_check_but_never_promotes_review(self):
         with patch('utils.part_search.describe_check', return_value={'status': 'pass', 'lcsc': 'C7593'}):
             detail = part_details('NE555')
@@ -176,10 +228,15 @@ class EvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(by_ref['R1']['cross_check'], 'mismatch')
         self.assertEqual(by_ref['D1']['cross_check'], 'pass')
         self.assertNotEqual(by_ref['D1']['status'], 'reviewed')
+        with patch('utils.footprint_check.load_footprint_checks', return_value={**self.CHECKS, 'R': {**self.CHECKS['R'], 'status': 'explained'}}):
+            design = normalize_design(components, nets, 40, 30)
+        self.assertFalse([w for w in design['warnings'] if 'sourced LCSC part' in w])
+        self.assertEqual({r['component']: r for r in design['footprint_reviews']}['R1']['cross_check'], 'explained')
 
     def test_readiness_mentions_cross_check_but_stays_incomplete(self):
         from test_readiness import ReadinessTests
         for status, text in (('mismatch', 'WARNING: pads differ'), ('pass', 'machine check, not a review'),
+                             ('explained', 'recorded datasheet reason (not a review)'),
                              ('no_reference', 'No reference footprint'), ('missing', 'No footprint cross-check recorded')):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
                 root = ReadinessTests().fixture(directory)
