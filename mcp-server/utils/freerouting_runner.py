@@ -11,6 +11,7 @@ import subprocess
 import time
 from .telemetry import progress
 from .pcb_builder import finite, pad_positions, write_board, ROOT
+from .vias import add_board_vias
 
 
 ROUTE_TIME_BUDGET_SECONDS = 30
@@ -176,7 +177,7 @@ def resolve_router_limits(max_passes, time_budget_s, pad_count):
     return max_passes, time_budget_s, source
 
 
-def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None):
+def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None, stitching=True):
     trace_width_mm=finite(trace_width_mm,'trace_width_mm',0.1,2)
     clearance_mm=finite(clearance_mm,'clearance_mm',0.1,2)
     workspace=Path(workspace); build=workspace/'build'; design=json.loads((build/'design.json').read_text())
@@ -224,9 +225,16 @@ def autoroute(workspace, trace_width_mm=0.25, clearance_mm=0.2, max_passes=None,
                 if ground or planes: pcbnew.ZONE_FILLER(board).Fill(board.Zones())
             except (AttributeError,TypeError,RuntimeError) as error:
                 zone_warning.append(f'GND zone could not be filled: {error}')
+            via_report = {}
+            if multilayer:
+                try:
+                    via_report = add_board_vias(board, pcbnew, design, planes, stitching)
+                except (AttributeError, TypeError, RuntimeError, ValueError) as error:
+                    zone_warning.append(f'Thermal and stitching vias were not added: {error}')
             pcbnew.SaveBoard(str(build/'board.kicad_pcb'),board)
-            extra = {**layer_info, 'planes': planes,
-                     'plane_vias': sum(1 for t in board.GetTracks() if t.GetClass() == 'PCB_VIA' and t.GetNetname() in {p['net'] for p in planes}),
+            extra = {**layer_info, 'planes': planes, **via_report,
+                     'plane_vias': sum(1 for t in board.GetTracks() if t.GetClass() == 'PCB_VIA' and t.GetNetname() in {p['net'] for p in planes})
+                                   - via_report.get('thermal_vias', 0) - via_report.get('stitching_vias', 0),
                      'inner_layer_tracks': {layer: sum(1 for t in board.GetTracks() if t.GetClass() in ('PCB_TRACK', 'PCB_ARC') and t.GetLayerName() == layer) for layer in copper[1:-1]}} if multilayer else {}
             for plane in planes:
                 split = sum(1 for t in board.GetTracks() if t.GetClass() in ('PCB_TRACK', 'PCB_ARC') and t.GetLayerName() == plane['layer'] and t.GetNetname() != plane['net'])

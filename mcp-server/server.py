@@ -129,11 +129,13 @@ def run_spice_simulation(components: list[dict] | None = None, nets: list[dict] 
 
 
 @mcp.tool()
-def autoroute_pcb(trace_width_mm: float = 0.25, clearance_mm: float = 0.2, max_passes: int | None = None, time_budget_s: float | None = None) -> dict:
+def autoroute_pcb(trace_width_mm: float = 0.25, clearance_mm: float = 0.2, max_passes: int | None = None, time_budget_s: float | None = None,
+                  stitching: bool = True) -> dict:
     """Route with Freerouting or explicitly reported Python fallback. max_passes / time_budget_s are optional caps
     (defaults: 6 passes for small boards of <= 30 pads else 20; 180 s; env EEA_ROUTER_MAX_PASSES / EEA_ROUTER_TIME_BUDGET_S).
-    The passes and budget used are reported."""
-    return execute('autoroute_pcb', 'AUTOROUTING', pipeline.autoroute_op(trace_width_mm, clearance_mm, max_passes, time_budget_s))
+    The passes and budget used are reported. On 4-layer boards, exposed pads on a plane net get thermal vias and,
+    unless stitching=False, GND stitching vias are placed along the board edge (thermal_vias / stitching_vias)."""
+    return execute('autoroute_pcb', 'AUTOROUTING', pipeline.autoroute_op(trace_width_mm, clearance_mm, max_passes, time_budget_s, stitching))
 
 
 @mcp.tool()

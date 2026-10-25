@@ -33,9 +33,9 @@ def simulate_op(components=None, nets=None, sim_config=None):
     return lambda: simulate(components, nets, sim_config, workspace_path())
 
 
-def autoroute_op(trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None):
+def autoroute_op(trace_width_mm=0.25, clearance_mm=0.2, max_passes=None, time_budget_s=None, stitching=True):
     def operation():
-        report = autoroute(workspace_path(), trace_width_mm, clearance_mm, max_passes, time_budget_s)
+        report = autoroute(workspace_path(), trace_width_mm, clearance_mm, max_passes, time_budget_s, stitching)
         report['three_d'] = export_3d(workspace_path())
         return report
     return operation
