@@ -572,6 +572,7 @@ export default function App() {
                     <LedgerBOM
                       parts={telemetry.bom}
                       cost={telemetry.metrics.estimated_cost_usd}
+                      sourcingDate={telemetry.sourcing_data_date}
                       canDownload={!isDemo && exportReady}
                       projectId={project?.id}
                       canExport={!isDemo && !!pcb && !!project && connected}

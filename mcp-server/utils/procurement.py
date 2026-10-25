@@ -63,6 +63,26 @@ def sourcing_issues(component, part):
     return sorted(required - source.keys())
 
 
+def trust_fields(component, part):
+    """Additive part-trust facts for the BOM: catalog tier, footprint review status, SPICE coverage, stock."""
+    from . import spice_models
+    from .simulation import SPICE_PARTS
+    if component['part_id'] in SPICE_PARTS:
+        spice = 'curated'
+    elif spice_models.is_generic(part.get('spice_model')):
+        spice = 'generic'
+    else:
+        spice = 'none'
+    review = part.get('footprint_review')
+    out = {'tier': part.get('tier', 'curated'),
+           'footprint_review': review.get('status', 'unreviewed') if isinstance(review, dict) else 'unreviewed',
+           'spice': spice}
+    stock = (part.get('sourcing') or {}).get('stock')
+    if isinstance(stock, int) and not isinstance(stock, bool):
+        out['stock'] = stock
+    return out
+
+
 def bom_entry(component, part):
     source = component.get('sourcing', {})
     missing = sourcing_issues(component, part)
@@ -77,4 +97,5 @@ def bom_entry(component, part):
            if part.get('sourcing', {}).get('mpn') and code == part.get('lcsc') else {}),
         'sourcing': source, 'sourcing_status': 'declared_unverified' if source else 'missing',
         'sourcing_missing_fields': missing,
+        **trust_fields(component, part),
     }

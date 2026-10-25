@@ -977,7 +977,7 @@ aside > .split-view {
   border-bottom: 1px solid var(--rule-strong);
 }
 .ledger td {
-  height: 32px;
+  height: 60px; /* keep in sync with ROW_HEIGHT in LedgerBOM.tsx */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1427,3 +1427,65 @@ aside > .split-view {
 .progress-gauge svg { width: 100%; display: block; }
 .progress-gauge text { font-family: var(--serif); font-weight: 600; fill: #b8a685; }
 .progress-gauge .gauge-number { font: 400 13px var(--mono); fill: var(--text); }
+
+/* Part trust stamps */
+.ledger td .part-value {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ledger td .part-mpn {
+  display: block;
+  font-size: 10.5px;
+  line-height: 13px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 3px;
+  max-height: 24px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.stamp {
+  font: 600 8.5px/11px var(--mono);
+  letter-spacing: 0.06em;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  outline: 1px solid var(--rule);
+  outline-offset: 1px;
+  opacity: 0.92;
+  cursor: help;
+}
+.stamp.warn { color: var(--caution); }
+.stamp.info { color: var(--brass); }
+.stamp.ok { color: var(--ok); }
+.ledger-note {
+  flex: none;
+  margin: 0;
+  font: italic 500 13px var(--serif);
+  color: var(--faint);
+}
+.model-plaque {
+  margin: 6px 12px 0;
+  padding: 3px 8px;
+  font: 600 10px/14px var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--sunken);
+  background: linear-gradient(var(--brass), var(--brass-dim));
+  border: 1px solid var(--brass-dim);
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+  cursor: help;
+}
+.model-plaque.unmodeled {
+  color: var(--text);
+  background: transparent;
+  border: 1px dashed var(--caution);
+  box-shadow: none;
+  color: var(--caution);
+}

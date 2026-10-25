@@ -13,6 +13,13 @@ export interface Part {
   footprint: string;
   lcsc?: string;
   price_usd: number;
+  mpn?: string;
+  /** JLCPCB parts library: base = basic, expand = extended (assembly fee per unique part). */
+  library_type?: "base" | "expand" | string | null;
+  tier?: "curated" | "imported";
+  footprint_review?: string;
+  spice?: "curated" | "generic" | "none";
+  stock?: number;
 }
 export interface Commit {
   hash: string;
@@ -49,6 +56,8 @@ export interface Telemetry {
     sim_summary?: string;
   };
   bom: Part[];
+  /** Date of the catalog price/stock snapshot (YYYY-MM-DD). */
+  sourcing_data_date?: string | null;
   git_commits: Commit[];
 }
 export interface Simulation {
@@ -56,6 +65,9 @@ export interface Simulation {
   sim_passed?: boolean;
   functional_verified?: boolean;
   coverage_complete?: boolean;
+  generic_model_components?: { ref: string; part_id: string; template: string }[];
+  unmodeled_components?: string[];
+  excluded_components?: string[];
   backend?: string;
   analysis_type: string;
   x_axis_label: string;

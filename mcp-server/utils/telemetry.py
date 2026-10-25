@@ -101,6 +101,16 @@ def read_telemetry(workspace: Path) -> dict:
     return {'project_name': 'EEA', 'pipeline_stage': 'ARCHITECTURE', 'stages': {s: 'pending' for s in STAGES}, 'metrics': {}, 'bom': [], 'git_commits': []}
 
 
+def sourcing_data_date() -> str | None:
+    """Snapshot date of catalog/sourcing.json prices and stock, or None when unavailable."""
+    try:
+        from .pcb_builder import _read_json_file
+        date = _read_json_file('sourcing.json')[1].get('_meta', {}).get('data_date')
+        return date if isinstance(date, str) else None
+    except Exception:
+        return None
+
+
 def record(tool: str, summary: str, stage: str | None = None, state: str = 'completed', metrics: dict | None = None, bom: list | None = None, warnings: list | None = None) -> dict:
     """Write first, then commit all workspace outputs; commit failures are explicit."""
     with LOCK, workspace_lock(workspace_path()):
@@ -134,6 +144,7 @@ def record(tool: str, summary: str, stage: str | None = None, state: str = 'comp
             telemetry.setdefault('metrics', {}).update(metrics or {})
             if bom is not None:
                 telemetry['bom'] = bom
+                telemetry['sourcing_data_date'] = sourcing_data_date()
             telemetry['warnings'] = warnings or []
             telemetry['git_commits'] = [{'hash': fields[0], 'message': fields[1], 'timestamp': fields[2]} for line in history.stdout.splitlines() if len(fields := line.split('\t', 2)) == 3]
             atomic_json(workspace / 'telemetry.json', telemetry)

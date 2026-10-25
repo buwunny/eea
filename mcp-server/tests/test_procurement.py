@@ -33,6 +33,26 @@ class ProcurementTests(unittest.TestCase):
         self.assertEqual(item['lcsc'], '')
         self.assertIn('power_rating_w', item['sourcing_missing_fields'])
 
+    def test_bom_entry_reports_trust_fields(self):
+        from utils.pcb_builder import load_catalog
+        catalog = load_catalog()
+        item = bom_entry({'ref': 'U1', 'part_id': 'NE555', 'value': 'NE555'}, catalog['NE555'])
+        self.assertEqual((item['tier'], item['spice']), ('curated', 'curated'))
+        self.assertIsInstance(item['footprint_review'], str)
+        generic = {'footprint': 'X:Y', 'tier': 'imported', 'spice_model': {'kind': 'generic', 'template': 'ldo'},
+                   'sourcing': {'stock': 1200}}
+        item = bom_entry({'ref': 'U2', 'part_id': 'NOT_A_BUILTIN', 'value': 'x'}, generic)
+        self.assertEqual((item['tier'], item['spice'], item['stock']), ('imported', 'generic', 1200))
+        self.assertEqual(item['footprint_review'], 'unreviewed')
+        item = bom_entry({'ref': 'U3', 'part_id': 'NOT_A_BUILTIN', 'value': 'x'}, {'footprint': 'X:Y'})
+        self.assertEqual(item['spice'], 'none')
+        self.assertNotIn('stock', item)
+        self.assertIn('sourcing_status', item)
+
+    def test_sourcing_data_date_comes_from_snapshot_meta(self):
+        from utils.telemetry import sourcing_data_date
+        self.assertRegex(sourcing_data_date() or '', r'^\d{4}-\d{2}-\d{2}$')
+
     def test_normalization_preserves_sourcing_and_uses_its_tolerance(self):
         from utils.pcb_builder import normalize_design
         component = {key: value for key, value in self.component.items() if key != 'tolerance_pct'}

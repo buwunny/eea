@@ -117,6 +117,27 @@ function CathodeRay({
           <span>{simulation?.x_axis_label ?? "Time (ms)"}</span>
         </div>
       </div>
+      {!!simulation?.generic_model_components?.length && (
+        <p
+          className="model-plaque"
+          title="These parts are simulated with generic approximate models, not vendor models. Treat results as indicative."
+          aria-label={`Approximate models in use: ${simulation.generic_model_components.map((g) => `${g.ref} ${g.template}`).join(", ")}. Results are indicative.`}
+        >
+          APPROXIMATE MODELS:{" "}
+          {simulation.generic_model_components
+            .map((g) => `${g.ref} ${g.template}`)
+            .join(", ")}
+        </p>
+      )}
+      {!!simulation?.unmodeled_components?.length && (
+        <p
+          className="model-plaque unmodeled"
+          title="These functional components have no SPICE model and are excluded, so the simulation does not cover them."
+          aria-label={`Not simulated, no model: ${simulation.unmodeled_components.join(", ")}`}
+        >
+          NOT SIMULATED: {simulation.unmodeled_components.join(", ")}
+        </p>
+      )}
       <div className="scope-readouts">
         <div>
           <small>Frequency</small>
