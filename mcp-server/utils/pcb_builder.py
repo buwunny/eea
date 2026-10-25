@@ -72,7 +72,8 @@ def finite(value, name, minimum=None, maximum=None):
         raise ValueError(f'{name} is outside supported limits')
     return n
 
-def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None, requirements=None):
+def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, auto_place=None, requirements=None,
+                     layer_count=2, stackup=None):
     """Validate and normalize a design.
 
     auto_place: None (default) auto-places only components missing x_mm or y_mm (or with
@@ -82,6 +83,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     Refs that were placed by the server are listed in design['auto_placed'].
     """
     from .placement import auto_place as _auto_place
+    from .stackups import resolve_stackup
+    layer_count, stackup = resolve_stackup(layer_count, stackup)
     width = finite(board_width_mm, 'board_width_mm', 5, 300)
     height = finite(board_height_mm, 'board_height_mm', 5, 300)
     if not isinstance(components, list) or not 1 <= len(components) <= 200:
@@ -189,7 +192,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     from .placement_constraints import resolve_bypasses, inspect_placement
     bypasses, placement_issues = resolve_bypasses(cs, ns)
     auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses) if movable else []
-    design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,'warnings':warnings,
+    design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,
+              'layer_count':layer_count,'stackup':stackup,'warnings':warnings,
               'bom':[bom_entry(c, cat[c['part_id']]) for c in cs]}
     if any(c['part_id'] in ('R','C') and not item['lcsc'] for c, item in zip(cs, design['bom'])):
         warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')
@@ -255,9 +259,8 @@ def write_board(design, destination, segments=None, zones=''):
     catalog = load_catalog()
     codes = {n['name']:i+1 for i,n in enumerate(design['nets'])}
     assignments = {p:n['name'] for n in design['nets'] for p in n['connections']}
-    lines = ['(kicad_pcb (version 20221018) (generator eea)', ' (general (thickness 1.6))', ' (paper "A4")',
-             ' (layers (0 "F.Cu" signal) (31 "B.Cu" signal) (36 "B.SilkS" user "b.silkscreen") (37 "F.SilkS" user "f.silkscreen") (38 "B.Mask" user) (39 "F.Mask" user) (44 "Edge.Cuts" user) (46 "B.CrtYd" user) (47 "F.CrtYd" user) (48 "B.Fab" user) (49 "F.Fab" user) (34 "B.Paste" user) (35 "F.Paste" user))',
-             ' (setup (pad_to_mask_clearance 0))',' (net 0 "")']
+    from .stackups import header_lines
+    lines = ['(kicad_pcb (version 20221018) (generator eea)', *header_lines(design), ' (net 0 "")']
     lines.extend(f' (net {code} {q(name)})' for name,code in codes.items())
     for c in design['components']:
         part = catalog[c['part_id']]
@@ -316,7 +319,8 @@ def build_board(design, build_dir):
     src = build.parent/'src'; src.mkdir(exist_ok=True)
     # Revalidate even callers passing a handcrafted normalized design.
     auto_placed = list(design.get('auto_placed') or [])
-    design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'], requirements=design.get('requirements'))
+    design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'], requirements=design.get('requirements'),
+                              layer_count=design.get('layer_count', 2), stackup=design.get('stackup'))
     design['auto_placed'] = auto_placed or design['auto_placed']
     atomic_json(build/'design.json', design)
     write_board(design,build/'board.kicad_pcb')
@@ -340,4 +344,4 @@ def build_board(design, build_dir):
         warnings.append('SKiDL process unavailable; deterministic XML netlist used')
     if backend!='skidl':
         write_netlist(design,build/'board.net')
-    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'bom':design['bom'],'placement_checks':design['placement_checks'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}
+    return {'status':'success' if backend=='skidl' else 'degraded','backend':backend,'component_count':len(design['components']),'net_count':len(design['nets']),'layer_count':design['layer_count'],'stackup':design['stackup'],'bom':design['bom'],'placement_checks':design['placement_checks'],'electrical_checks':design['electrical_checks'],'power_budget':design['power_budget'],'footprint_reviews':design['footprint_reviews'],'warnings':warnings,'auto_placed':design['auto_placed'],'artifacts':['build/board.kicad_pcb','build/board.net','build/design.json'],'verified':False}

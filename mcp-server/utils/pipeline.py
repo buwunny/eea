@@ -15,9 +15,9 @@ from .freerouting_runner import autoroute
 from .kicad_runner import verify_drc, export_manufacturing, export_3d
 
 
-def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40, requirements=None):
+def synthesize_op(components, nets, board_width_mm=50, board_height_mm=40, requirements=None, layer_count=2, stackup=None):
     def operation():
-        design = normalize_design(components, nets, board_width_mm, board_height_mm)
+        design = normalize_design(components, nets, board_width_mm, board_height_mm, layer_count=layer_count, stackup=stackup)
         if requirements is not None:
             design['requirements'] = normalize_requirements(requirements, board_width_mm, board_height_mm)
         workspace = workspace_path()
@@ -129,8 +129,9 @@ def _stage_ok(name, report):
 
 @workspace_operation
 def build_and_verify(components, nets, board_width_mm=50, board_height_mm=40, sim_config=None,
-                     trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False, requirements=None):
-    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm, requirements))]
+                     trace_width_mm=0.25, clearance_mm=0.2, export=False, skip_simulation=False, requirements=None,
+                     layer_count=2, stackup=None):
+    steps = [('synthesize_pcb', 'SCHEMATIC_PCB', synthesize_op(components, nets, board_width_mm, board_height_mm, requirements, layer_count, stackup))]
     if not skip_simulation:
         # Reuses build/design.json just written by synthesize.
         steps.append(('run_spice_simulation', 'SIMULATION', simulate_op(None, None, sim_config)))

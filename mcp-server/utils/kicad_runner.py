@@ -10,6 +10,7 @@ import zipfile
 import tempfile
 import os
 import math
+import re
 from .telemetry import progress, atomic_json
 from .pcb_builder import pad_positions
 
@@ -104,6 +105,20 @@ def inspect_drc_report(workspace, severity='all', offset=0, limit=20):
             'next_offset': offset+limit if offset+limit < len(selected) else None,
             'findings': page,
             'warnings': report.get('warnings', []) + ([] if fresh else ['DRC report is stale for the current board; rerun verification.'])}
+
+
+FAB_LAYERS = ['F.Paste', 'B.Paste', 'F.SilkS', 'B.SilkS', 'F.Mask', 'B.Mask', 'Edge.Cuts']
+
+
+def board_copper_layers(board):
+    """Copper layer names from a .kicad_pcb (layers ...) table, front to back."""
+    text = Path(board).read_text(encoding='utf-8')
+    start = text.find('(layers')
+    table = text[start:text.find('(setup', start)] if start >= 0 else ''
+    names = re.findall(r'\(\s*\d+\s+"((?:F|B|In\d+)\.Cu)"\s+(?:signal|power|mixed|jumper)\b', table)
+    inner = sorted((n for n in names if n.startswith('In')), key=lambda n: int(n[2:-3]))
+    layers = (['F.Cu'] if 'F.Cu' in names else []) + inner + (['B.Cu'] if 'B.Cu' in names else [])
+    return layers or ['F.Cu', 'B.Cu']
 
 
 def _run(args, workspace, timeout=90):
@@ -210,6 +225,8 @@ def export_manufacturing(workspace, bom):
     report = {'backend': 'kicad-cli', 'status': 'degraded', 'manufacturing_ready': False,
               'fabrication_files_ready': False, 'fabrication_review_ready': False, 'assembly_ready': False,
               'verified': False, 'board_sha256': digest, 'artifacts': ['manufacturing/bom.csv']}
+    copper = board_copper_layers(board)
+    report.update(layer_count=len(copper), copper_layers=copper)
     design_path = workspace / 'build/design.json'
     report['source_design_sha256'] = hashlib.sha256(design_path.read_bytes()).hexdigest() if design_path.exists() else None
     with (manufacturing / 'bom.csv').open('w', newline='', encoding='utf-8') as stream:
@@ -226,13 +243,13 @@ def export_manufacturing(workspace, bom):
             staging = Path(staging)
             gerbers = staging / 'gerbers'
             gerbers.mkdir()
-            _run(['pcb', 'export', 'gerbers', '--layers', 'F.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts', '--no-protel-ext', '--output', str(gerbers) + os.sep, str(board)], workspace)
+            _run(['pcb', 'export', 'gerbers', '--layers', ','.join(copper + FAB_LAYERS), '--no-protel-ext', '--output', str(gerbers) + os.sep, str(board)], workspace)
             _run(['pcb', 'export', 'drill', '--output', str(gerbers) + os.sep, str(board)], workspace)
             raw_positions = staging / 'positions-kicad.csv'
             _run(['pcb', 'export', 'pos', '--format', 'csv', '--units', 'mm', '--output', str(raw_positions), str(board)], workspace)
             convert_positions(raw_positions, staging / 'cpl.csv')
             names = {file.name for file in gerbers.iterdir() if file.is_file() and file.stat().st_size > 0}
-            required = {f'{board.stem}-{layer}.gbr' for layer in ('F_Cu', 'B_Cu', 'Edge_Cuts')}
+            required = {f'{board.stem}-{layer.replace(".", "_")}.gbr' for layer in copper + ['Edge.Cuts']}
             if not required.issubset(names):
                 raise RuntimeError('KiCad did not produce all copper and board-outline Gerbers')
             if not any(name.endswith('.drl') for name in names):
@@ -248,7 +265,7 @@ def export_manufacturing(workspace, bom):
             os.replace(staging / 'cpl.csv', manufacturing / 'cpl.csv')
             os.replace(staging / 'gerbers.zip', manufacturing / 'gerbers.zip')
         report.update(status='success', manufacturing_ready=True, fabrication_files_ready=True, verified=True,
-                      summary='Gerbers, drill, BOM and pick-and-place files exported', warnings=[],
+                      summary='Gerbers, drill, BOM and pick-and-place files exported' + (f'; order as a {len(copper)}-layer board' if len(copper) > 2 else ''), warnings=[],
                       artifacts=['manufacturing/gerbers.zip', 'manufacturing/bom.csv', 'manufacturing/cpl.csv'])
     except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
         (manufacturing / 'gerbers.zip').unlink(missing_ok=True)

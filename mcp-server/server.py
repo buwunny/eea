@@ -80,7 +80,8 @@ def get_part_details(part_id: str) -> dict:
 @mcp.tool()
 def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40,
                      sim_config: dict | None = None, trace_width_mm: float = 0.25, clearance_mm: float = 0.2,
-                     export: bool = False, skip_simulation: bool = False, requirements: dict | None = None) -> dict:
+                     export: bool = False, skip_simulation: bool = False, requirements: dict | None = None,
+                     layer_count: int = 2, stackup: str | None = None) -> dict:
     """FASTEST PATH: one call runs synthesize -> simulate -> autoroute -> DRC (-> export if export=True and DRC is clean).
     Prefer this over calling the individual tools. Stops at the first hard failure and returns
     {status, stages: {tool: short report}, failed_stage, next_action, summary}; fix the design and call again.
@@ -90,16 +91,21 @@ def build_and_verify(components: list[dict], nets: list[dict], board_width_mm: f
     Optional requirements persist target_freq_hz, frequency_tolerance_pct, supply_voltage_v,
     min_supply_voltage_v/max_supply_voltage_v and max_board_width_mm/max_board_height_mm.
     Component tolerance_pct enables conservative standard-555 RC corner estimates.
-    sim_config also accepts source waveforms, loads and a sweep (see run_spice_simulation)."""
+    sim_config also accepts source waveforms, loads and a sweep (see run_spice_simulation).
+    layer_count=4 builds a Signal/GND/Power/Signal board (default stackup JLC04161H-7628) with GND on In1.Cu and the
+    main supply rail on In2.Cu as planes; it needs Freerouting (Java + vendor/freerouting.jar)."""
     return pipeline.build_and_verify(components, nets, board_width_mm, board_height_mm, sim_config,
-                                     trace_width_mm, clearance_mm, export, skip_simulation, requirements)
+                                     trace_width_mm, clearance_mm, export, skip_simulation, requirements,
+                                     layer_count, stackup)
 
 
 @mcp.tool()
-def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40, requirements: dict | None = None) -> dict:
+def synthesize_pcb(components: list[dict], nets: list[dict], board_width_mm: float = 50, board_height_mm: float = 40, requirements: dict | None = None,
+                   layer_count: int = 2, stackup: str | None = None) -> dict:
     """Validate structured connectivity and embed curated footprints in a board. Prefer build_and_verify, which also
-    simulates, routes and runs DRC in one call. x_mm / y_mm may be omitted: the server auto-places components."""
-    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm, requirements))
+    simulates, routes and runs DRC in one call. x_mm / y_mm may be omitted: the server auto-places components.
+    layer_count is 2 (default) or 4; stackup optionally names a preset (2L_1.6mm, JLC04161H-7628)."""
+    return execute('synthesize_pcb', 'SCHEMATIC_PCB', pipeline.synthesize_op(components, nets, board_width_mm, board_height_mm, requirements, layer_count, stackup))
 
 
 @mcp.tool()
