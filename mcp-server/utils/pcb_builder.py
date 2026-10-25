@@ -87,7 +87,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     Refs that were placed by the server are listed in design['auto_placed'].
     """
     from .placement import auto_place as _auto_place, normalize_cluster_metadata, resolve_clusters, inspect_clusters
-    from .stackups import resolve_stackup
+    from .stackups import resolve_stackup, get_stackup
     layer_count, stackup = resolve_stackup(layer_count, stackup)
     from .fab_profiles import resolve_profile
     fabricator_profile = resolve_profile(fabricator_profile, layer_count)
@@ -203,7 +203,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     clusters = resolve_clusters(cs)
     auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses, clusters=clusters) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,
-              'layer_count':layer_count,'stackup':stackup,'warnings':warnings,
+              'layer_count':layer_count,'stackup':stackup,'thickness_mm':get_stackup(stackup)['nominal_thickness_mm'],'warnings':warnings,
               'bom':[bom_entry(c, cat[c['part_id']]) for c in cs]}
     if any(c['part_id'] in ('R','C') and not item['lcsc'] for c, item in zip(cs, design['bom'])):
         warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')

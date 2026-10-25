@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLLoader } from "three/examples/jsm/loaders/VRMLLoader.js";
 import { Box3, Vector3, Object3D } from "three";
 import { artifact } from "../api";
+import type { DesignAdvice } from "../types";
 const chips = [
   [-1.15, -0.6, 0.65, 0.38],
   [-0.55, 0.65, 0.35, 0.2],
@@ -75,7 +76,7 @@ function IllustrativeBoard() {
     </group>
   );
 }
-export interface Design {
+export interface Design extends DesignAdvice {
   board_width_mm: number;
   board_height_mm: number;
   components: {
@@ -88,11 +89,14 @@ export interface Design {
 }
 function ProceduralBoard({ design }: { design: Design }) {
   const scale = 4.4 / Math.max(design.board_width_mm, design.board_height_mm);
+  // Legacy design files predate stackup metadata. Inner copper is buried in the substrate.
+  const thickness = typeof design.thickness_mm === "number" && Number.isFinite(design.thickness_mm) && design.thickness_mm > 0
+    ? design.thickness_mm : 1.6;
   return (
     <group scale={scale}>
-      <mesh position={[0, -0.8, 0]}>
+      <mesh position={[0, -thickness / 2, 0]}>
         <boxGeometry
-          args={[design.board_width_mm, 1.6, design.board_height_mm]}
+          args={[design.board_width_mm, thickness, design.board_height_mm]}
         />
         <meshStandardMaterial color="#173d2a" roughness={0.65} />
       </mesh>

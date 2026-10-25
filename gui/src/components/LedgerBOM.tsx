@@ -56,6 +56,7 @@ export default function LedgerBOM({
   parts,
   cost,
   sourcingDate,
+  layerCount,
   canDownload,
   projectId,
   canExport,
@@ -65,6 +66,7 @@ export default function LedgerBOM({
   parts: Part[];
   cost: number;
   sourcingDate?: string | null;
+  layerCount?: number;
   canDownload: boolean;
   projectId?: string;
   canExport?: boolean;
@@ -133,6 +135,7 @@ export default function LedgerBOM({
         </table>
       </div>
       <p className="ledger-note">
+        {layerCount ? `${layerCount}-layer PCB · ` : ""}
         {sourcingDate
           ? `Prices are estimates from ${sourcingDate}`
           : "Prices are estimates"}

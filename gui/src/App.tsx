@@ -107,6 +107,7 @@ export default function App() {
   const viewing = selected !== "latest" && snapshot?.hash === selected ? snapshot : null;
   const shownPcb = viewing ? viewing.pcb : pcb;
   const shownModel = viewing ? viewing.model : model;
+  const shownDesign = isDemo ? { layer_count: 2, fabricator_profile: "conservative" } : viewing ? viewing.design : designAdvice;
   const sim = isDemo
     ? demoStep >= 2
       ? {
@@ -477,6 +478,12 @@ export default function App() {
               )}
             </div>
             <aside>
+              {shownDesign?.layer_count && (
+                <div className="board-specs" aria-label="Board fabrication">
+                  <span className="stamp info">{shownDesign.layer_count}-LAYER</span>
+                  {shownDesign.fabricator_profile && <span className="stamp info">{shownDesign.fabricator_profile}</span>}
+                </div>
+              )}
               <NixieStepper telemetry={telemetry} />
               {shortWindow && (
                 <nav className="instrument-nav" aria-label="Instruments">
@@ -573,6 +580,7 @@ export default function App() {
                       parts={telemetry.bom}
                       cost={telemetry.metrics.estimated_cost_usd}
                       sourcingDate={telemetry.sourcing_data_date}
+                      layerCount={shownDesign?.layer_count}
                       canDownload={!isDemo && exportReady}
                       projectId={project?.id}
                       canExport={!isDemo && !!pcb && !!project && connected}

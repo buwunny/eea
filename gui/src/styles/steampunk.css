@@ -1464,6 +1464,7 @@ aside > .split-view {
 .stamp.warn { color: var(--caution); }
 .stamp.info { color: var(--brass); }
 .stamp.ok { color: var(--ok); }
+.board-specs { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; }
 .ledger-note {
   flex: none;
   margin: 0;

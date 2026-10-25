@@ -55,6 +55,11 @@ class StackupTests(unittest.TestCase):
         self.assertEqual((d['layer_count'], d['stackup']), (4, 'JLC04161H-7628'))
         self.assertEqual((design(2)['layer_count'], design(2)['stackup']), (2, '2L_1.6mm'))
 
+    def test_design_thickness_follows_stackup(self):
+        preset = {**stackups.STACKUPS['JLC04161H-7628'], 'nominal_thickness_mm': 0.8}
+        with patch.dict(stackups.STACKUPS, {'JLC04161H-7628': preset}):
+            self.assertEqual(design()['thickness_mm'], 0.8)
+
     def test_two_layer_header_is_unchanged(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'board.kicad_pcb'

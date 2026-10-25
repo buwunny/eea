@@ -100,6 +100,10 @@ export interface DrcReport {
 }
 export interface BoardFocus { x: number; y: number; label: string; request: number }
 export interface DesignAdvice {
+  layer_count?: number;
+  stackup?: string;
+  thickness_mm?: number;
+  fabricator_profile?: string;
   placement_checks?: { status: string; issues: { message: string; component?: string; capacitor?: string }[] };
   electrical_checks?: { issues: { code: string; component: string | null; net: string | null; message: string; severity: string }[] };
   power_budget?: {

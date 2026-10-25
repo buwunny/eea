@@ -1,5 +1,6 @@
 """Composable design blocks: compose, build, route, DRC and simulate."""
 import copy
+import json
 import sys
 import tempfile
 import unittest
@@ -19,7 +20,8 @@ def compose_example(name, **kw):
 
 
 def build(result, workspace):
-    design = normalize_design(result['components'], result['nets'], result['board_width_mm'], result['board_height_mm'])
+    design = normalize_design(result['components'], result['nets'], result['board_width_mm'], result['board_height_mm'],
+                              **{k: result[k] for k in ('layer_count', 'stackup', 'fabricator_profile', 'netclasses') if k in result})
     report = build_board(design, Path(workspace) / 'build')
     return design, report
 
@@ -30,6 +32,33 @@ def assert_clean(test, design, report):
 
 
 class BlockTests(unittest.TestCase):
+    def test_composition_fabrication_defaults_and_overrides(self):
+        demo = compose_example('flasher_555_usb_c')
+        self.assertEqual((demo['layer_count'], demo['stackup'], demo['fabricator_profile']),
+                         (2, '2L_1.6mm', 'conservative'))
+        rp = compose_example('rp2040_usb_board')
+        self.assertEqual((rp['layer_count'], rp['stackup'], rp['fabricator_profile']),
+                         (4, 'JLC04161H-7628', 'jlcpcb_4l'))
+        self.assertIn('layer_count', rp['next_action'])
+        for kwargs in ({'layer_count': 2}, {'stackup': '2L_1.6mm'}, {'fabricator_profile': 'jlcpcb_2l'}):
+            with self.subTest(kwargs), self.assertRaises(ValueError):
+                compose_example('rp2040_usb_board', **kwargs)
+        explicit = compose_example('flasher_555_usb_c', stackup='JLC04161H-7628', fabricator_profile='jlcpcb_4l')
+        self.assertEqual((explicit['layer_count'], explicit['fabricator_profile']), (4, 'jlcpcb_4l'))
+        custom = compose_example('rp2040_usb_board', fabricator_profile='conservative')
+        self.assertEqual(custom['fabricator_profile'], 'conservative')
+
+    def test_rp2040_fabrication_settings_survive_build(self):
+        r = compose_example('rp2040_usb_board')
+        d = normalize_design(r['components'], r['nets'], r['board_width_mm'], r['board_height_mm'],
+                             **{k: r[k] for k in ('layer_count', 'stackup', 'fabricator_profile', 'netclasses')})
+        with tempfile.TemporaryDirectory() as directory:
+            build_board(d, Path(directory) / 'build')
+            saved = json.loads((Path(directory) / 'build/design.json').read_text())
+        self.assertEqual(saved['layer_count'], 4)
+        self.assertEqual(saved['fabricator_profile'], 'jlcpcb_4l')
+        self.assertEqual(saved['thickness_mm'], 1.6)
+
     def test_listing(self):
         blocks = list_design_blocks()['blocks']
         self.assertEqual(len(blocks), 25)

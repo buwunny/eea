@@ -764,6 +764,7 @@ BLOCKS = {
                   'DTR': _port('signal_out', 'DTR# modem output (auto-reset circuits)', optional=True, max_current_ma=4),
                   'RTS': _port('signal_out', 'RTS# modem output (auto-reset circuits)', optional=True, max_current_ma=4)}},
     'rp2040_core': {
+        'min_layer_count': 4, 'fabricator_profile': 'jlcpcb_4l',
         'title': 'RP2040 microcontroller core (partial)', 'build': _rp2040, 'params': {},
         'description': 'RP2040 with W25Q32JV QSPI flash, BOOTSEL button, 12 MHz crystal (generic HC49), 27 R USB series resistors and per-pin decoupling, clustered around the QFN. Partial: see notes.',
         'parts_used': ['RP2040_QFN56', 'W25Q32JV_SOIC8', 'Crystal_HC49', 'C', 'R', 'Button_Tactile_SMD'],
@@ -876,7 +877,9 @@ EXAMPLES = {
 
 def list_design_blocks():
     blocks = [{'name': n, 'title': b['title'], 'description': b['description'], 'params': b['params'],
-               'ports': b['ports'], 'parts_used': b['parts_used']} for n, b in BLOCKS.items()]
+               'ports': b['ports'], 'parts_used': b['parts_used'],
+               'min_layer_count': b.get('min_layer_count', 2),
+               'fabricator_profile': b.get('fabricator_profile', 'conservative')} for n, b in BLOCKS.items()]
     return {'status': 'success', 'blocks': blocks,
             'summary': f"{len(blocks)} blocks: {', '.join(BLOCKS)}. Wire ports with compose_design(blocks, connections); "
                        'GND ports are merged automatically. See list_example_compositions().'}
@@ -902,7 +905,8 @@ class _UF:
         self.p[self.find(a)] = self.find(b)
 
 
-def compose_design(blocks, connections, board_width_mm=None, board_height_mm=None):
+def compose_design(blocks, connections, board_width_mm=None, board_height_mm=None,
+                   layer_count=None, stackup=None, fabricator_profile=None):
     if not isinstance(blocks, list) or not blocks:
         raise ValueError(f'blocks must be a non-empty list of {{block, id, params}}; valid blocks: {", ".join(BLOCKS)}')
     if not isinstance(connections, list):
@@ -1116,6 +1120,16 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
             calcs[f'{iid}.{k}'] = v
         notes += [f'{iid} ({inst[iid]["block"]}): {n}' for n in inst[iid]['built'].get('notes', [])]
 
+    from .stackups import resolve_stackup
+    from .fab_profiles import resolve_profile
+    minimum_layers = max(BLOCKS[inst[iid]['block']].get('min_layer_count', 2) for iid in order)
+    layer_count, stackup = resolve_stackup(minimum_layers if layer_count is None and stackup is None else layer_count, stackup)
+    if layer_count < minimum_layers:
+        raise ValueError(f'composed blocks require at least {minimum_layers} copper layers')
+    if fabricator_profile is None:
+        fabricator_profile = next((BLOCKS[inst[iid]['block']]['fabricator_profile'] for iid in order
+                                   if 'fabricator_profile' in BLOCKS[inst[iid]['block']]), None)
+    fabricator_profile = resolve_profile(fabricator_profile, layer_count)
     width, height = _board_size(components, nets, board_width_mm, board_height_mm, warnings)
     # Net classes declared by blocks (internal net names) mapped to the final net names. They carry no
     # dimensions: synthesis sizes them for the fabricator profile and the pads they reach.
@@ -1129,7 +1143,8 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
                         declared.setdefault(cls, []).append(name)
     result = {'status': 'success', 'components': components, 'nets': nets, 'board_width_mm': width, 'board_height_mm': height,
               'sim_config': sim, 'calculations': calcs, 'warnings': warnings, 'notes': notes, 'clusters': clusters,
-              'next_action': 'Call build_and_verify with components, nets, board size and sim_config '
+              'layer_count': layer_count, 'stackup': stackup, 'fabricator_profile': fabricator_profile,
+              'next_action': 'Call build_and_verify with components, nets, board size, sim_config, layer_count, stackup and fabricator_profile '
                              '(cluster fields on the components keep each block placed together)'}
     if declared:
         result['netclasses'] = {cls: {'nets': sorted(names)} for cls, names in declared.items()}

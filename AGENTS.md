@@ -134,6 +134,7 @@ Curated (hand-reviewed) and imported (KiCad libraries) tiers, merged by `load_ca
 ### 3.4 Tool input shapes
 - `components`: `[{"ref": "U1", "part_id": "NE555", "value": "NE555", "x_mm": 25.0, "y_mm": 20.0, "rotation_deg": 0}]` — `x_mm`/`y_mm` optional (auto-placed). Optional `cluster: "<anchor ref>"` + `cluster_max_distance_mm` (default 8, outline-to-outline) keeps a part next to its anchor; `compose_design` sets these from block clusters.
 - `nets`: `[{"name": "GND", "connections": ["U1.1", "C1.2", "J1.GND"]}]` (pin number or pin name)
+- `build/design.json` records `layer_count`, the `stackup` preset name, resolved `thickness_mm`, and `fabricator_profile`; the HUD, BOM note and procedural 3D preview read these for the displayed revision.
 - `sim_config`: `{"step_time_ms": 0.5, "end_time_ms": 1000, "probe_nets": ["OUT", "THR"], "target_freq_hz": 2.0}` — waveforms, loads and sweeps are documented in the `run_spice_simulation` docstring.
 
 ---
@@ -195,7 +196,7 @@ Every element should look like a 19th-century brass-and-mahogany laboratory inst
 2. **Left — TelegraphTerm:** header with active dir and MCP badge; xterm + fit addon; quick-copy prompt chips.
 3. **Center — AetherScope:** `[2D KiCanvas PCB] | [3D Interactive Spin]` (KiCanvasBoard keeps the old board visible while the new one loads; Board3D renders VRML/GLB or a procedural extrusion). Git time-travel slider at the bottom.
 4. **Right — HUD:** NixieStepper with ProgressGauge (stages); CathodeRay (Recharts signals + readouts, "APPROXIMATE MODELS" plaque for generic models, "NOT SIMULATED" for unmodeled parts); NixieCounter for DRC and unconnected counts; DrcInspector (click a violation to focus the board); ReadinessChecklist; PowerInspector; LedgerBOM (trust badges, MPN, "Prices are estimates from <date>", Gerber download).
-5. Panes are resizable via SplitView (keyboard and pointer).
+5. Panes are resizable via SplitView (keyboard and pointer). The HUD shows copper layer count and fabricator profile, including when browsing history; demo metadata stays 2-layer/conservative.
 6. **"Simulate Demo Flow"** replays the 555 self-healing sequence (unrouted → failed SPICE → fixed resistor → routed → 0 DRC) without the backend.
 
 Gotcha: LedgerBOM's `ROW_HEIGHT` constant must match `.ledger td` in `steampunk.css`.

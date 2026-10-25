@@ -227,13 +227,17 @@ def list_example_compositions() -> dict:
 
 @mcp.tool()
 def compose_design(blocks: list[dict], connections: list[dict], board_width_mm: float | None = None,
-                   board_height_mm: float | None = None) -> dict:
+                   board_height_mm: float | None = None, layer_count: int | None = None,
+                   stackup: str | None = None, fabricator_profile: str | None = None) -> dict:
     """Wire design blocks into one circuit. blocks: [{"block": "timer_555_astable", "id": "tmr", "params": {"freq_hz": 2}}];
     connections: [{"name": "VBUS", "ports": ["pwr.VBUS", "tmr.VCC"]}]. Unconnected GND ports join net GND.
     Returns components, nets, board size, sim_config, block-declared netclasses (e.g. USB data nets) and electrical
-    warnings to pass to build_and_verify.
+    warnings to pass to build_and_verify. Pass the returned layer_count, stackup and fabricator_profile too.
+    Defaults follow block requirements (RP2040: 4 layers, jlcpcb_4l; otherwise 2 layers, conservative).
+    Explicit layer_count/stackup must meet the blocks' minimum layer count; fabricator_profile may be overridden.
     No files are written."""
-    return _calc(design_blocks.compose_design, blocks, connections, board_width_mm, board_height_mm)
+    return _calc(design_blocks.compose_design, blocks, connections, board_width_mm, board_height_mm,
+                 layer_count, stackup, fabricator_profile)
 
 
 def _calc(function, *args):
