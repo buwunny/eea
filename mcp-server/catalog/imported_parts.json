@@ -7460,6 +7460,14 @@
    "min_layer_count": 4,
    "fabricator_profile": "jlcpcb_4l",
    "reason": "0.4 mm pitch QFN-56: its pads only escape with 4 layers and JLCPCB 4-layer track/clearance rules"
+  },
+  "internal_pull_ups": {
+   "RUN": {
+    "resistance_kohm": "50-80",
+    "recommended_capacitor": null,
+    "note": "RUN is a Digital In pad whose default is pull-up; if unused it may be left to its pull-up or tied high. An external capacitor only lengthens the power-on reset and is optional.",
+    "source": "Raspberry Pi RP2040 datasheet RP-008371-DS-1, pin table (Table 614 Pin Types / Miscellaneous pins: RUN, Digital In (FT), Pull-Up), Section 2.12.5 External Reset, and Table 625 Digital IO (pull-up resistance RPU 50-80 kohm)"
+   }
   }
  },
  "Relay_SPDT_5V": {
@@ -9407,6 +9415,14 @@
     "spdx": "CC-BY-SA-4.0",
     "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",
     "notice": "catalog/NOTICE.md"
+   }
+  },
+  "internal_pull_ups": {
+   "NRST": {
+    "resistance_kohm": "30-50 (typ 40)",
+    "recommended_capacitor": "100 nF to GND (optional filter; ST reference reset circuit)",
+    "note": "NRST has a permanent internal weak pull-up, so an external pull-up resistor is not required.",
+    "source": "STMicroelectronics STM32F103x8/xB datasheet (DS5319), Electrical characteristics, 'NRST pin characteristics' table: RPU weak pull-up equivalent resistor 30/40/50 kohm min/typ/max. Values taken from a datasheet mirror search result; the ST PDF could not be fetched, so re-check the table and page against the current revision"
    }
   }
  },

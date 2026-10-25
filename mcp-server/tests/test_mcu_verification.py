@@ -84,10 +84,57 @@ class StaticCheckTests(unittest.TestCase):
     def test_stm32_nrst_and_boot0_use_catalog_pin_names(self):
         comps = [{'ref': 'U1', 'part_id': 'STM32F103C8T6'}, {'ref': 'R1', 'part_id': 'R', 'value': '10k'}]
         floating = normalize_design(comps[:1], [{'name': 'GND', 'connections': ['U1.VSS']}], 40, 40)
-        self.assertIn(('reset_pin_floating', 'U1'), codes(floating))
+        # NRST has a datasheet-documented internal pull-up (catalog internal_pull_ups): no longer flagged.
+        self.assertNotIn(('reset_pin_floating', 'U1'), codes(floating))
         self.assertIn(('strap_pin_undefined', 'U1'), codes(floating))
         pulled = normalize_design(comps, [{'name': 'GND', 'connections': ['U1.VSS', 'R1.2']}, {'name': 'BOOT0', 'connections': ['U1.BOOT0', 'R1.1']}], 40, 40)
         self.assertNotIn(('strap_pin_undefined', 'U1'), codes(pulled))
+
+    def test_internal_pull_up_passes_with_note_but_held_reset_still_blocks(self):
+        comps = [{'ref': 'U1', 'part_id': 'STM32F103C8T6'}]
+        design = normalize_design(comps, [{'name': 'GND', 'connections': ['U1.VSS']}], 40, 40)
+        found = {(i['code'], i['component']): i for i in design['electrical_checks']['issues']}
+        note = found[('reset_internal_pull_up', 'U1')]
+        self.assertEqual((note['severity'], note['classification']), ('info', 'advisory'))
+        self.assertIn('100 nF', note['message'])
+        reset = next(c for c in design['electrical_checks']['static_checks'] if c['check'] == 'reset_pull_up')
+        self.assertEqual(reset['status'], 'passed')
+        held = normalize_design(comps, [{'name': 'GND', 'connections': ['U1.VSS', 'U1.NRST']}], 40, 40)
+        self.assertIn(('reset_pin_held', 'U1'), codes(held))
+        rp = normalize_design([{'ref': 'U1', 'part_id': 'RP2040_QFN56'}], [{'name': 'GND', 'connections': ['U1.GND']}], 40, 40)
+        self.assertIn(('reset_internal_pull_up', 'U1'), codes(rp))
+        self.assertNotIn(('reset_pin_floating', 'U1'), codes(rp))
+
+    def test_esp32_en_has_no_internal_pull_up_and_stays_a_real_check(self):
+        from utils.pcb_builder import load_catalog
+        self.assertFalse(load_catalog()['ESP32_C3_WROOM_02'].get('internal_pull_ups'))
+        found = codes(esp32_board(drop=('R1',)))
+        self.assertIn(('reset_pull_up_missing', 'U2'), found)
+        self.assertNotIn('reset_internal_pull_up', {c for c, _ in found})
+
+    def test_classification_table(self):
+        from utils.mcu_checks import finding_class
+        for code in ('missing_decoupling', 'reset_pin_floating', 'reset_pin_held', 'reset_pull_up_missing',
+                     'usb_data_pin_mismatch', 'usb_data_net_unrelated', 'strap_pin_undefined', 'brand_new_code'):
+            self.assertEqual(finding_class(code), 'blocking', code)
+        for code in ('led_current_limit_missing', 'insufficient_decoupling', 'reset_internal_pull_up'):
+            self.assertEqual(finding_class(code), 'advisory', code)
+
+    def test_advisory_finding_does_not_block_readiness_but_stays_visible(self):
+        with tempfile.TemporaryDirectory() as directory:
+            design = esp32_board(extra_components=[{'ref': 'D1', 'part_id': 'LED'}],
+                                 extra_nets={'LEDN': ['D1.A', 'U2.IO4'], 'GND': ['D1.K']})
+            root = ReadinessTests.workspace(self, directory, design)
+            check = update_readiness(root)['checks']['static_electrical']
+            self.assertEqual(check['status'], 'passed', check)
+            self.assertIn('led_current_limit_missing', {i['code'] for i in check['advisories']})
+
+    def test_blocking_finding_still_blocks_with_advisories_listed_separately(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = ReadinessTests.workspace(self, directory, esp32_board(drop=("C2", "C3")))
+            check = update_readiness(root)['checks']['static_electrical']
+            self.assertEqual(check['status'], 'needs_attention')
+            self.assertTrue(all(i['classification'] == 'blocking' for i in check['issues']))
 
     def test_undefined_strapping_pin_is_flagged(self):
         self.assertIn(('strap_pin_undefined', 'U2'), codes(esp32_board(drop=('R2',))))
@@ -253,7 +300,7 @@ class ReadinessTests(unittest.TestCase):
             [{'ref': 'U1', 'part_id': 'NE555'}, {'ref': 'C1', 'part_id': 'C', 'value': '100n'}],
             [{'name': '5V', 'connections': ['U1.8', 'U1.4', 'C1.1']}, {'name': 'GND', 'connections': ['U1.1', 'C1.2']}], 40, 40)
         with tempfile.TemporaryDirectory() as directory:
-            root = self.workspace(directory, design)
+            root = ReadinessTests.workspace(self, directory, design)
             result = update_readiness(root)
             self.assertEqual(result['checks']['nominal_simulation']['status'], 'incomplete')
             self.assertNotIn('static_electrical', result['checks'])

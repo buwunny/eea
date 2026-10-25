@@ -8,6 +8,35 @@ how much weight the list carries.
 from __future__ import annotations
 import re
 
+# The single place that decides which static findings block `static_electrical` / assembly_ready.
+# Blocking: the board would not work or is unsafe (missing supply bypass, floating/held reset or
+# EN, USB data wiring errors, undefined strapping pins, rail/rating violations).
+# Advisory: heuristics and counts; shown as warnings, never block. Unknown codes block, so a new
+# check must be classified here deliberately to become advisory.
+ADVISORY_CODES = frozenset({
+    'led_current_limit_missing',   # a series resistor is only a hint, the driver may limit current
+    'insufficient_decoupling',     # fewer capacitors than supply pins; the rail has some bypass
+    'reset_internal_pull_up',      # informational: reset pin relies on a datasheet-documented internal pull-up
+})
+BLOCKING_CODES = frozenset({
+    'missing_decoupling', 'unconnected_supply', 'missing_ground',
+    'reset_pin_floating', 'reset_pin_held', 'reset_pull_up_missing', 'strap_pin_undefined',
+    'usb_data_pin_mismatch', 'usb_data_net_unrelated', 'usb_data_multiple_devices',
+    'supply_short', 'supply_voltage_range', 'regulator_rail_conflict', 'output_contention',
+    'rail_current_budget', 'resistor_power_rating', 'capacitor_polarity', 'capacitor_voltage_rating',
+})
+
+
+def finding_class(code):
+    return 'advisory' if code in ADVISORY_CODES else 'blocking'
+
+
+def split_findings(issues):
+    """(blocking, advisory) lists of issues by code; unclassified codes count as blocking."""
+    blocking = [i for i in issues if finding_class(i['code']) == 'blocking']
+    return blocking, [i for i in issues if finding_class(i['code']) == 'advisory']
+
+
 # Parts whose supply pins are checked here; NE555/LM358/... keep their existing SUPPLIES rule.
 BYPASS_CATEGORIES = {'mcu', 'interface', 'memory', 'logic', 'driver', 'power'}
 # Pin-count decoupling and EN/RESET/strap rules only make sense for these.
@@ -47,6 +76,24 @@ def is_supply_pin(pin, category):
     return any(_SUPPLY_PIN.match(token) for token in _tokens(pin['name']))
 
 
+def is_regulator_output(pin, category):
+    """Output pin of a power part (imported: 'Power output'; curated: prose such as 'Regulated 3.3 V output')."""
+    if category != 'power' or is_ground_pin(pin):
+        return False
+    function = pin['function']
+    return (function == 'Power output' or bool(re.search(r'\boutput\b', function, re.I))
+            or any(re.match(r'^V?OUT\w*$', token) for token in _tokens(pin['name'])))
+
+
+def _internal_pull_up(part, pin):
+    """Catalog `internal_pull_ups` entry (pin name -> {resistance_kohm, source, ...}) for this pin, or None."""
+    table = part.get('internal_pull_ups') or {}
+    for token in _tokens(pin['name']):
+        if token in {k.upper() for k in table}:
+            return next(v for k, v in table.items() if k.upper() == token)
+    return None
+
+
 def is_reset_pin(pin):
     return any(_RESET_TOKEN.match(token) for token in _tokens(pin['name']))
 
@@ -68,8 +115,9 @@ def inspect_mcu(design, catalog, rails):
     by_ref = {c['ref']: c for c in components}
     issues, checks = [], []
 
-    def issue(code, component, net, message):
-        issues.append({'severity': 'warning', 'code': code, 'component': component, 'net': net, 'message': message})
+    def issue(code, component, net, message, severity='warning'):
+        issues.append({'severity': severity, 'code': code, 'component': component, 'net': net, 'message': message,
+                       'classification': finding_class(code)})
 
     def record(check, component, net, passed, **details):
         checks.append({'check': check, 'component': component, 'net': net,
@@ -170,7 +218,16 @@ def inspect_mcu(design, catalog, rails):
             conn = f'{ref}.{p["number"]}'
             net = lookup.get(conn)
             # 2. EN / RESET / RUN: pull-up, tied high or driven by another device.
-            if is_reset_pin(p):
+            internal = _internal_pull_up(catalog[pid], p)
+            if is_reset_pin(p) and internal and net not in ground:
+                # Datasheet-documented internal pull-up: no external resistor needed (floating is fine,
+                # held low or tied wrongly is not).
+                cap = internal.get('recommended_capacitor')
+                issue('reset_internal_pull_up', ref, net, f'{ref} {p["name"]} relies on its internal pull-up ({internal["resistance_kohm"]} kohm, '
+                      f'{internal["source"]}); no external pull-up required'
+                      + (f'; the datasheet usually adds {cap}' if cap else ''), severity='info')
+                record('reset_pull_up', ref, net, True, pin=p['number'], internal_pull_up=internal['resistance_kohm'], note=internal.get('note'))
+            elif is_reset_pin(p):
                 pulls = resistors_between(net, positive) if net else []
                 driver = driven_by_other(net, ref) if net else None
                 ok = bool(net) and net not in ground and (net in positive or bool(pulls) or bool(driver))

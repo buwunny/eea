@@ -43,7 +43,9 @@ def inspect_electrical(design, catalog):
     by_ref = {c['ref']: c for c in components}
     issues, rails = [], {}
     def issue(code, component, net, message, severity='warning'):
-        issues.append({'severity': severity, 'code': code, 'component': component, 'net': net, 'message': message})
+        from .mcu_checks import finding_class
+        issues.append({'severity': severity, 'code': code, 'component': component, 'net': net, 'message': message,
+                       'classification': finding_class(code)})
     def pin(c, number):
         return lookup.get(f"{c['ref']}.{number}")
     for net in nets:

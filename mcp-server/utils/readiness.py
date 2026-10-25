@@ -99,9 +99,14 @@ def _static_electrical_state(design, catalog):
         return _state('incomplete', f'Electrical checks could not be evaluated: {error}')
     issues = electrical.get('issues', [])
     checks = electrical.get('static_checks', [])
-    if issues:
-        return _state('needs_attention', f"{len(issues)} electrical finding(s): {issues[0]['message']}",
-                      issues=issues, checks=checks, verified=False)
+    from .mcu_checks import split_findings
+    blocking, advisory = split_findings(issues)  # classification lives in mcu_checks.py
+    if blocking:
+        return _state('needs_attention', f"{len(blocking)} blocking electrical finding(s): {blocking[0]['message']}",
+                      issues=blocking, advisories=advisory, checks=checks, verified=False)
+    if advisory:
+        return _state('passed', f'No blocking static findings; {len(advisory)} advisory note(s) remain visible (static, not functional, evidence).',
+                      advisories=advisory, checks=checks, verified=False)
     return _state('passed', 'Supply bypass, EN/RESET, strapping and USB data checks found no issues (static, not functional, evidence).',
                   checks=checks, verified=False)
 

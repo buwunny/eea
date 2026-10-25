@@ -163,8 +163,9 @@ class FourLayerRoutingTests(unittest.TestCase):
 
     def test_routes_with_ground_plane_on_in1(self):
         self.assertEqual((self.route['status'], self.route['backend']), ('success', 'freerouting'), self.route)
-        self.assertIn({'net': 'GND', 'layer': 'In1.Cu'}, self.route['planes'])
-        self.assertIn({'net': '+3V3', 'layer': 'In2.Cu'}, self.route['planes'])
+        self.assertEqual([(p['net'], p['layer']) for p in self.route['planes'][:1]], [('GND', 'In1.Cu')])
+        self.assertTrue(all(p['reason'] for p in self.route['planes']))
+        self.assertEqual([(p['net'], p['layer']) for p in self.route['planes'][1:]], [('+3V3', 'In2.Cu')])
         import pcbnew
         board = pcbnew.LoadBoard(str(self.workspace / 'build/board.kicad_pcb'))
         ground = [z for z in board.Zones() if z.GetNetname() == 'GND' and z.GetFirstLayer() == pcbnew.In1_Cu]

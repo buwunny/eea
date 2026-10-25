@@ -128,32 +128,69 @@ def _astar(start, goal, blocked, width, height, deadline=None):
 PLANE_TRACE_COST = 50  # discourages, but does not forbid, signal traces on the plane layers
 
 
-def select_plane_nets(design):
-    """(ground net, main supply net) for the In1/In2 planes; either may be None.
+def plane_selection(design):
+    """(ground net, supply net, reasons) for the In1/In2 planes; either net may be None.
 
-    Ground: GND if present, otherwise the 0 V net with most connections. Supply: the
-    positive rail inspect_electrical identifies with the most connections (lowest voltage
-    on a tie), usually +3V3. Without a recognised rail (e.g. a net named VCC), the net
-    feeding the most known IC supply pins is used.
+    Ground: GND if present, otherwise the 0 V net with most connections.
+    Supply, in order: (1) the rail feeding the most IC supply pins (catalog pin functions
+    via mcu_checks.is_supply_pin, passives and connectors excluded; a regulator's output
+    pin counts for the rail it regulates), (2) rails sourced by a regulator output,
+    (3) connection count, (4) name. Without any IC supply pin, the recognised positive
+    rail with the most connections wins (lowest voltage on a tie).
+    reasons maps 'ground' / 'supply' to a short human-readable explanation.
     """
     from .electrical import inspect_electrical, named_voltage, SUPPLIES
+    from .mcu_checks import BYPASS_CATEGORIES, is_regulator_output, is_supply_pin
     from .pcb_builder import load_catalog
+    catalog = load_catalog()
     counts = {n['name']: len(n['connections']) for n in design['nets']}
     zero = [n for n in design['nets'] if n.get('voltage_v', named_voltage(n['name'])) == 0]
     ground = next((n['name'] for n in zero if n['name'].upper() == 'GND'), None)
-    if ground is None and zero:
+    reasons = {}
+    if ground is not None:
+        reasons['ground'] = 'net named GND'
+    elif zero:
         ground = max(zero, key=lambda n: counts[n['name']])['name']
-    _, budget = inspect_electrical(design, load_catalog())
+        reasons['ground'] = '0 V net with the most connections'
+    lookup = {pin: n['name'] for n in design['nets'] for pin in n['connections']}
+    by_ref = {c['ref']: c for c in design['components']}
+    supply_pins, sourced = {}, {}
+    for conn, net in lookup.items():
+        ref, number = conn.split('.', 1)
+        component = by_ref.get(ref)
+        part = catalog.get(component['part_id']) if component else None
+        if not part or net == ground or part.get('category') not in BYPASS_CATEGORIES:
+            continue
+        pin = next((p for p in part['pins'] if p['number'] == number), None)
+        if pin is None or number in component.get('nc_pins', []):
+            continue
+        output = is_regulator_output(pin, part.get('category'))
+        if output:
+            sourced[net] = sourced.get(net, 0) + 1
+        if output or is_supply_pin(pin, part.get('category')):
+            supply_pins[net] = supply_pins.get(net, 0) + 1
+    for c in design['components']:  # legacy SUPPLIES parts whose pins are not all classified
+        net = lookup.get(f"{c['ref']}.{SUPPLIES[c['part_id']][0]}") if c['part_id'] in SUPPLIES else None
+        if net and net != ground and net not in supply_pins:
+            supply_pins[net] = 1
+    if supply_pins:
+        supply = min(supply_pins, key=lambda n: (-supply_pins[n], -sourced.get(n, 0), -counts[n], n))
+        tied = sorted(n for n in supply_pins if supply_pins[n] == supply_pins[supply] and n != supply)
+        reasons['supply'] = (f'feeds {supply_pins[supply]} IC supply pin(s)'
+                             + (f'; ahead of {", ".join(tied)} on regulated-output/connection count' if tied else ''))
+        return ground, supply, reasons
+    _, budget = inspect_electrical(design, catalog)
     rails = [r for r in budget.get('rails', []) if r['net'] in counts and r['net'] != ground]
     if rails:
-        return ground, min(rails, key=lambda r: (-counts[r['net']], r['voltage_v'], r['net']))['net']
-    lookup = {pin: n['name'] for n in design['nets'] for pin in n['connections']}
-    fed = {}
-    for c in design['components']:
-        net = lookup.get(f"{c['ref']}.{SUPPLIES[c['part_id']][0]}") if c['part_id'] in SUPPLIES else None
-        if net and net != ground:
-            fed[net] = fed.get(net, 0) + 1
-    supply = min(fed, key=lambda n: (-fed[n], -counts[n], n)) if fed else None
+        supply = min(rails, key=lambda r: (-counts[r['net']], r['voltage_v'], r['net']))['net']
+        reasons['supply'] = 'no IC supply pins found; positive rail with the most connections'
+        return ground, supply, reasons
+    return ground, None, reasons
+
+
+def select_plane_nets(design):
+    """(ground net, main supply net); see plane_selection for the rule."""
+    ground, supply, _ = plane_selection(design)
     return ground, supply
 
 
@@ -174,14 +211,14 @@ def _add_zone(board, pcbnew, design, net, layer, trace_width_mm, clearance_mm):
 
 def add_inner_planes(board, pcbnew, design, trace_width_mm, clearance_mm):
     """Planes before routing: GND on In1.Cu, main supply on In2.Cu, filled before DSN export."""
-    ground, supply = select_plane_nets(design)
+    ground, supply, reasons = plane_selection(design)
     nets = board.GetNetsByName(); planes, warnings = [], []
     for name, role, layer_name, layer in ((ground, 'ground', 'In1.Cu', pcbnew.In1_Cu), (supply, 'supply', 'In2.Cu', pcbnew.In2_Cu)):
         if name is None:
             warnings.append(f'No {role} net found for the {layer_name} plane; the layer stays empty')
             continue
         _add_zone(board, pcbnew, design, nets[name], layer, trace_width_mm, clearance_mm)
-        planes.append({'net': name, 'layer': layer_name})
+        planes.append({'net': name, 'layer': layer_name, 'reason': reasons.get(role, '')})
     if planes:
         pcbnew.ZONE_FILLER(board).Fill(board.Zones())
     return planes, warnings
