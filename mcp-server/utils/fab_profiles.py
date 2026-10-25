@@ -144,3 +144,33 @@ def check_class(class_name, spec, name=None):
     if ring < rules['min_annular_ring_mm'] - 1e-9:
         raise ValueError(f'net class {class_name}: via annular ring {ring:g} mm ((via_dia_mm - via_drill_mm) / 2) is below '
                          f'the {profile_name} fabricator minimum of {rules["min_annular_ring_mm"]:g} mm')
+
+
+def fabrication_defaults(part_ids, catalog, layer_count=None, stackup=None, fabricator_profile=None):
+    """Resolve (layer_count, stackup, fabricator_profile, notes) against the parts' own requirements.
+
+    Catalog parts may carry fabrication = {min_layer_count, fabricator_profile, reason} (e.g. a fine-pitch QFN).
+    Omitted settings default to what the parts need; an explicit layer count below a part's minimum is refused.
+    An explicit fabricator_profile is always honored. notes says which defaults the parts chose.
+    """
+    from .stackups import resolve_stackup
+    needs = [(pid, catalog[pid]['fabrication']) for pid in dict.fromkeys(part_ids)
+             if pid in catalog and isinstance(catalog[pid].get('fabrication'), dict)]
+    minimum = max([int(f.get('min_layer_count', 2)) for _, f in needs] + [2])
+    notes = []
+    if layer_count is None and stackup is None and minimum > 2:
+        layer_count = minimum
+        notes.append(f"{layer_count} copper layers chosen because {', '.join(p for p, f in needs if f.get('min_layer_count', 2) == minimum)} "
+                     'need them')
+    layer_count, stackup = resolve_stackup(layer_count, stackup)
+    if layer_count < minimum:
+        owners = [f"{p} ({f.get('reason', 'part requirement')})" for p, f in needs if f.get('min_layer_count', 2) > layer_count]
+        raise ValueError(f"{'; '.join(owners)}: needs at least {minimum} copper layers; pass layer_count={minimum}")
+    if fabricator_profile is None:
+        recommended = next((f['fabricator_profile'] for _, f in needs if f.get('fabricator_profile') in PROFILES
+                            and layer_count in PROFILES[f['fabricator_profile']]['layer_counts']), None)
+        if recommended:
+            fabricator_profile = recommended
+            notes.append(f"fabricator_profile {recommended} chosen because "
+                         f"{', '.join(p for p, f in needs if f.get('fabricator_profile') == recommended)} need it")
+    return layer_count, stackup, resolve_profile(fabricator_profile, layer_count), notes

@@ -7455,6 +7455,11 @@
     "attribution": "KiCad Libraries Team, https://www.kicad.org/libraries/license/",
     "notice": "catalog/NOTICE.md"
    }
+  },
+  "fabrication": {
+   "min_layer_count": 4,
+   "fabricator_profile": "jlcpcb_4l",
+   "reason": "0.4 mm pitch QFN-56: its pads only escape with 4 layers and JLCPCB 4-layer track/clearance rules"
   }
  },
  "Relay_SPDT_5V": {

@@ -764,7 +764,6 @@ BLOCKS = {
                   'DTR': _port('signal_out', 'DTR# modem output (auto-reset circuits)', optional=True, max_current_ma=4),
                   'RTS': _port('signal_out', 'RTS# modem output (auto-reset circuits)', optional=True, max_current_ma=4)}},
     'rp2040_core': {
-        'min_layer_count': 4, 'fabricator_profile': 'jlcpcb_4l',
         'title': 'RP2040 microcontroller core (partial)', 'build': _rp2040, 'params': {},
         'description': 'RP2040 with W25Q32JV QSPI flash, BOOTSEL button, 12 MHz crystal (generic HC49), 27 R USB series resistors and per-pin decoupling, clustered around the QFN. Partial: see notes.',
         'parts_used': ['RP2040_QFN56', 'W25Q32JV_SOIC8', 'Crystal_HC49', 'C', 'R', 'Button_Tactile_SMD'],
@@ -875,11 +874,16 @@ EXAMPLES = {
 }
 
 
+def _block_fabrication(block):
+    """Minimum layer count and recommended profile implied by the parts a block uses."""
+    from .fab_profiles import fabrication_defaults
+    layers, _, profile, _ = fabrication_defaults(block['parts_used'], load_catalog())
+    return {'min_layer_count': layers, 'fabricator_profile': profile}
+
+
 def list_design_blocks():
     blocks = [{'name': n, 'title': b['title'], 'description': b['description'], 'params': b['params'],
-               'ports': b['ports'], 'parts_used': b['parts_used'],
-               'min_layer_count': b.get('min_layer_count', 2),
-               'fabricator_profile': b.get('fabricator_profile', 'conservative')} for n, b in BLOCKS.items()]
+               'ports': b['ports'], 'parts_used': b['parts_used'], **_block_fabrication(b)} for n, b in BLOCKS.items()]
     return {'status': 'success', 'blocks': blocks,
             'summary': f"{len(blocks)} blocks: {', '.join(BLOCKS)}. Wire ports with compose_design(blocks, connections); "
                        'GND ports are merged automatically. See list_example_compositions().'}
@@ -1120,16 +1124,10 @@ def compose_design(blocks, connections, board_width_mm=None, board_height_mm=Non
             calcs[f'{iid}.{k}'] = v
         notes += [f'{iid} ({inst[iid]["block"]}): {n}' for n in inst[iid]['built'].get('notes', [])]
 
-    from .stackups import resolve_stackup
-    from .fab_profiles import resolve_profile
-    minimum_layers = max(BLOCKS[inst[iid]['block']].get('min_layer_count', 2) for iid in order)
-    layer_count, stackup = resolve_stackup(minimum_layers if layer_count is None and stackup is None else layer_count, stackup)
-    if layer_count < minimum_layers:
-        raise ValueError(f'composed blocks require at least {minimum_layers} copper layers')
-    if fabricator_profile is None:
-        fabricator_profile = next((BLOCKS[inst[iid]['block']]['fabricator_profile'] for iid in order
-                                   if 'fabricator_profile' in BLOCKS[inst[iid]['block']]), None)
-    fabricator_profile = resolve_profile(fabricator_profile, layer_count)
+    # Layer count and fabricator profile follow the parts' own requirements (catalog `fabrication`).
+    from .fab_profiles import fabrication_defaults
+    layer_count, stackup, fabricator_profile, _ = fabrication_defaults(
+        [c['part_id'] for c in components], load_catalog(), layer_count, stackup, fabricator_profile)
     width, height = _board_size(components, nets, board_width_mm, board_height_mm, warnings)
     # Net classes declared by blocks (internal net names) mapped to the final net names. They carry no
     # dimensions: synthesis sizes them for the fabricator profile and the pads they reach.

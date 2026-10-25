@@ -132,5 +132,42 @@ class ProfileDrcTests(unittest.TestCase):
         self.assertEqual(counts, {'jlcpcb_4l': 0, 'conservative': 1})
 
 
+
+class PartRequirementTests(unittest.TestCase):
+    """Fine-pitch parts carry their own layer/profile needs, so a direct build_and_verify cannot drop them."""
+    RP = [{'ref': 'U1', 'part_id': 'RP2040_QFN56'}]
+
+    def test_catalog_records_the_rp2040_requirement(self):
+        from utils.pcb_builder import load_catalog
+        need = load_catalog()['RP2040_QFN56']['fabrication']
+        self.assertEqual((need['min_layer_count'], need['fabricator_profile']), (4, 'jlcpcb_4l'))
+
+    def test_omitted_settings_follow_the_part_with_a_note(self):
+        design = normalize_design(self.RP, [], 40, 40)
+        self.assertEqual((design['layer_count'], design['stackup'], design['fabricator_profile']), (4, 'JLC04161H-7628', 'jlcpcb_4l'))
+        self.assertTrue(any('RP2040_QFN56' in w and '4 copper layers' in w for w in design['warnings']), design['warnings'])
+        from utils.pcb_builder import build_board
+        with tempfile.TemporaryDirectory() as directory:  # the build report re-normalizes; the note must survive
+            report = build_board(design, Path(directory) / 'build')
+        self.assertTrue(any('RP2040_QFN56' in w and '4 copper layers' in w for w in report['warnings']), report['warnings'])
+
+    def test_too_few_layers_is_refused_and_explicit_profile_is_kept(self):
+        for kwargs in ({'layer_count': 2}, {'stackup': '2L_1.6mm'}):
+            with self.subTest(kwargs), self.assertRaisesRegex(ValueError, 'RP2040_QFN56.*layer_count=4'):
+                normalize_design(self.RP, [], 40, 40, **kwargs)
+        design = normalize_design(self.RP, [], 40, 40, fabricator_profile='conservative')
+        self.assertEqual((design['layer_count'], design['fabricator_profile']), (4, 'conservative'))
+
+    def test_parts_without_requirements_are_unchanged(self):
+        design = normalize_design([{'ref': 'R1', 'part_id': 'R', 'value': '1k'}], [], 30, 20)
+        self.assertEqual((design['layer_count'], design['fabricator_profile']), (2, 'conservative'))
+        self.assertFalse([w for w in design['warnings'] if 'chosen because' in w])
+
+    def test_block_listing_reports_part_requirements(self):
+        from utils.design_blocks import list_design_blocks
+        blocks = {b['name']: b for b in list_design_blocks()['blocks']}
+        self.assertEqual((blocks['rp2040_core']['min_layer_count'], blocks['rp2040_core']['fabricator_profile']), (4, 'jlcpcb_4l'))
+        self.assertEqual((blocks['led_indicator']['min_layer_count'], blocks['led_indicator']['fabricator_profile']), (2, 'conservative'))
+
 if __name__ == '__main__':
     unittest.main()

@@ -335,7 +335,7 @@ def build_part(part_id: str, symbol_spec: str, footprint_spec: str | None, symbo
         'import': {'symbol': symbol_spec, 'footprint': footprint_spec, 'kicad_symbol_library_version': symbol['library_version'],
                    'footprint_file_version': fp['file_version'], 'footprint_generator': fp['generator'], 'license': LICENSE},
     }
-    for field in ('ratings_note', 'notes'):
+    for field in ('ratings_note', 'notes', 'fabrication'):
         if overrides.get(field):
             part[field] = overrides[field]
     return part

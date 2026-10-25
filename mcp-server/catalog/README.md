@@ -21,7 +21,7 @@ Each part has pins (number + name + function), a SPICE model and pin mapping (or
 
 - Imported parts have an `unreviewed` footprint and only the ratings/support parts written in the manifest.
 - Symbols whose pins have no matching pad are skipped with a reason.
-- Manifest entries may carry `pin_names` (rename pins, e.g. the `+`/`-` of op-amp units) and `spice` (below).
+- Manifest entries may carry `pin_names` (rename pins, e.g. the `+`/`-` of op-amp units), `spice` (below) and `fabrication` (`min_layer_count`, `fabricator_profile`, `reason`) for parts that only route on a finer process, such as the RP2040's 0.4 mm QFN.
 - Every imported part records its source symbol/footprint and library version in `import`.
 
 **Licensing.** The imported data is CC-BY-SA-4.0 with the KiCad libraries exception: designs and generated files are exempt, but redistributing `imported_parts.json` is not. Keep `NOTICE.md` and `licenses/` with it and share that file under CC-BY-SA-4.0.

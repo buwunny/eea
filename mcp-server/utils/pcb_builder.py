@@ -76,7 +76,8 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
                      layer_count=None, stackup=None, netclasses=None, fabricator_profile=None):
     """Validate and normalize a design.
 
-    layer_count defaults to the stackup's copper count (2 when neither is given).
+    layer_count defaults to the stackup's copper count, else to what the parts need (catalog `fabrication`,
+    e.g. RP2040: 4 layers and jlcpcb_4l), else 2. A layer count below a part's minimum is refused.
     netclasses (optional) and fabricator_profile (default 'conservative') resolve to
     design['netclasses'] (see utils/netclasses.py) and the KiCad design rules in board.kicad_pro.
 
@@ -87,17 +88,18 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     Refs that were placed by the server are listed in design['auto_placed'].
     """
     from .placement import auto_place as _auto_place, normalize_cluster_metadata, resolve_clusters, inspect_clusters
-    from .stackups import resolve_stackup, get_stackup
-    layer_count, stackup = resolve_stackup(layer_count, stackup)
-    from .fab_profiles import resolve_profile
-    fabricator_profile = resolve_profile(fabricator_profile, layer_count)
+    from .stackups import get_stackup
+    from .fab_profiles import fabrication_defaults
+    part_ids = [c.get('part_id') for c in components if isinstance(c, dict)] if isinstance(components, list) else []
+    layer_count, stackup, fabricator_profile, fabrication_notes = fabrication_defaults(
+        part_ids, load_catalog(), layer_count, stackup, fabricator_profile)
     width = finite(board_width_mm, 'board_width_mm', 5, 300)
     height = finite(board_height_mm, 'board_height_mm', 5, 300)
     if not isinstance(components, list) or not 1 <= len(components) <= 200:
         raise ValueError('components must contain 1 to 200 entries')
     if not isinstance(nets, list) or len(nets) > 500:
         raise ValueError('nets must be a list of at most 500 entries')
-    cat, refs, cs, warnings = load_catalog(), {}, [], []
+    cat, refs, cs, warnings = load_catalog(), {}, [], list(fabrication_notes)
     movable = set()
     for i, c in enumerate(components):
         if not isinstance(c, dict):
@@ -203,7 +205,7 @@ def normalize_design(components, nets, board_width_mm=50, board_height_mm=40, au
     clusters = resolve_clusters(cs)
     auto_placed = _auto_place(cs, ns, cat, width, height, movable, bypass_constraints=bypasses, clusters=clusters) if movable else []
     design = {'components':cs,'nets':ns,'auto_placed':auto_placed,'board_width_mm':width,'board_height_mm':height,
-              'layer_count':layer_count,'stackup':stackup,'thickness_mm':get_stackup(stackup)['nominal_thickness_mm'],'warnings':warnings,
+              'layer_count':layer_count,'stackup':stackup,'fabrication_notes':fabrication_notes,'thickness_mm':get_stackup(stackup)['nominal_thickness_mm'],'warnings':warnings,
               'bom':[bom_entry(c, cat[c['part_id']]) for c in cs]}
     if any(c['part_id'] in ('R','C') and not item['lcsc'] for c, item in zip(cs, design['bom'])):
         warnings.append('Resistor and capacitor LCSC codes are left blank: select orderable parts matching each value, rating and tolerance before assembly')
@@ -367,10 +369,15 @@ def build_board(design, build_dir):
     src = build.parent/'src'; src.mkdir(exist_ok=True)
     # Revalidate even callers passing a handcrafted normalized design.
     auto_placed = list(design.get('auto_placed') or [])
+    # Re-normalizing with explicit layer settings would drop the note saying the parts chose them.
+    fabrication_notes = [n for n in design.get('fabrication_notes') or [] if isinstance(n, str)]
     design = normalize_design(design['components'],design['nets'],design['board_width_mm'],design['board_height_mm'], requirements=design.get('requirements'),
                               layer_count=design.get('layer_count'), stackup=design.get('stackup'),
                               netclasses=design.get('netclass_input'), fabricator_profile=design.get('fabricator_profile'))
     design['auto_placed'] = auto_placed or design['auto_placed']
+    if fabrication_notes and not design['fabrication_notes']:
+        design['fabrication_notes'] = fabrication_notes
+        design['warnings'] = fabrication_notes + design['warnings']
     atomic_json(build/'design.json', design)
     write_board(design,build/'board.kicad_pcb')
     write_project(design, build/'board.kicad_pro')
